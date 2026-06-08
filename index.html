@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Game Collection</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            accent: "#22d3ee",
+                            "accent-dim": "#0891b2",
+                            ink: "#0a0a0a",
+                            surface: "#111111",
+                        },
+                        fontFamily: {
+                            sans: [
+                                "Inter",
+                                "ui-sans-serif",
+                                "system-ui",
+                                "-apple-system",
+                                "Segoe UI",
+                                "Roboto",
+                                "sans-serif",
+                            ],
+                        },
+                        animation: {
+                            fadeIn: "fadeIn 0.25s ease",
+                            fadeInUp: "fadeInUp 0.35s ease",
+                            slideUp: "slideUp 0.25s ease",
+                        },
+                        keyframes: {
+                            fadeIn: {
+                                "0%": { opacity: "0" },
+                                "100%": { opacity: "1" },
+                            },
+                            fadeInUp: {
+                                "0%": {
+                                    opacity: "0",
+                                    transform: "translateY(12px)",
+                                },
+                                "100%": {
+                                    opacity: "1",
+                                    transform: "translateY(0)",
+                                },
+                            },
+                            slideUp: {
+                                "0%": {
+                                    opacity: "0",
+                                    transform: "translateY(24px)",
+                                },
+                                "100%": {
+                                    opacity: "1",
+                                    transform: "translateY(0)",
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+        <link
+            rel="preconnect"
+            href="https://fonts.googleapis.com"
+        />
+        <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossorigin
+        />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            html {
+                background: #0a0a0a;
+            }
+            body {
+                font-feature-settings: "ss01", "cv11";
+                letter-spacing: -0.005em;
+            }
+            #filtersSection.collapsed {
+                max-height: 0 !important;
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+                border-top-width: 0 !important;
+            }
+            #filtersSection:not(.collapsed) {
+                max-height: 1200px;
+            }
+            #filtersSection::-webkit-scrollbar,
+            .scroll-thin::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            #filtersSection::-webkit-scrollbar-thumb,
+            .scroll-thin::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.12);
+                border-radius: 999px;
+            }
+            #filtersSection::-webkit-scrollbar-thumb:hover,
+            .scroll-thin::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.24);
+            }
+            .chip {
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: rgba(255, 255, 255, 0.02);
+                color: #d4d4d8;
+                padding: 6px 12px;
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 500;
+                letter-spacing: 0.01em;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                white-space: nowrap;
+            }
+            .chip:hover {
+                border-color: rgba(34, 211, 238, 0.5);
+                color: #fff;
+            }
+            .chip.active {
+                background: #22d3ee;
+                border-color: #22d3ee;
+                color: #06212a;
+                font-weight: 600;
+            }
+            .ghost-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 9px 14px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: rgba(255, 255, 255, 0.02);
+                color: #e4e4e7;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.15s ease;
+            }
+            .ghost-btn:hover {
+                border-color: rgba(34, 211, 238, 0.5);
+                color: #fff;
+            }
+            .accent-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 9px 14px;
+                border: 1px solid rgba(34, 211, 238, 0.35);
+                background: rgba(34, 211, 238, 0.08);
+                color: #67e8f9;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.15s ease;
+            }
+            .accent-btn:hover {
+                background: rgba(34, 211, 238, 0.15);
+                color: #fff;
+            }
+            .card {
+                background: #111111;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 14px;
+                overflow: hidden;
+                cursor: pointer;
+                transition:
+                    border-color 0.2s ease,
+                    transform 0.2s ease;
+                display: flex;
+                flex-direction: column;
+            }
+            .card:hover {
+                border-color: rgba(34, 211, 238, 0.55);
+                transform: translateY(-2px);
+            }
+            /* Not-yet-purchased (Date Purchased = TBC) cards */
+            .card.tbc {
+                border-style: dashed;
+                border-color: rgba(168, 85, 247, 0.5);
+                background:
+                    linear-gradient(
+                        180deg,
+                        rgba(168, 85, 247, 0.06),
+                        rgba(168, 85, 247, 0) 60%
+                    ),
+                    #111111;
+            }
+            .card.tbc:hover {
+                border-color: rgba(192, 132, 252, 0.85);
+            }
+            .card.tbc img {
+                filter: grayscale(0.5) brightness(0.62);
+                transition: filter 0.2s ease;
+            }
+            .card.tbc:hover img {
+                filter: grayscale(0.15) brightness(0.85);
+            }
+            .tbc-stamp {
+                transform: rotate(-8deg);
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+            }
+            .stat-tile {
+                background: #111111;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+                padding: 14px 18px;
+                min-width: 130px;
+            }
+            .dot {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+            }
+            /* Condition circle with the grade initial inside (card view) */
+            .cond {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                font-size: 11px;
+                font-weight: 700;
+                line-height: 1;
+            }
+            @keyframes spin {
+                from {
+                    transform: rotate(0deg);
+                }
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            .spin {
+                animation: spin 0.9s linear infinite;
+            }
+            .skeleton {
+                background: linear-gradient(
+                    90deg,
+                    #1a1a1a 0%,
+                    #232323 50%,
+                    #1a1a1a 100%
+                );
+                background-size: 200% 100%;
+                animation: skeleton 1.4s ease-in-out infinite;
+            }
+            @keyframes skeleton {
+                0% {
+                    background-position: 200% 0;
+                }
+                100% {
+                    background-position: -200% 0;
+                }
+            }
+        </style>
+    </head>
+    <body class="min-h-screen bg-ink text-zinc-100 font-sans antialiased">
+        <div class="w-full px-6 md:px-10 py-10">
+            <!-- Header -->
+            <header class="mb-10 animate-fadeInUp">
+                <div class="flex items-center gap-3 mb-2">
+                    <div
+                        class="w-2 h-2 rounded-full bg-accent shadow-[0_0_12px_rgba(34,211,238,0.6)]"
+                    ></div>
+                    <span
+                        class="text-xs uppercase tracking-[0.2em] text-zinc-500 font-medium"
+                        >Collection</span
+                    >
+                </div>
+                <h1
+                    class="text-4xl md:text-5xl font-bold tracking-tight text-white"
+                >
+                    Game Collection
+                </h1>
+                <p class="text-zinc-500 mt-2 text-sm">
+                    Physical games, conditions, and live CeX pricing.
+                </p>
+            </header>
+
+            <!-- Stats -->
+            <div
+                id="stats"
+                class="flex gap-3 flex-wrap mb-6 animate-fadeInUp"
+            ></div>
+
+            <!-- CeX value bar -->
+            <div
+                class="bg-surface border border-white/8 rounded-xl px-5 py-4 mb-6 flex items-center gap-5 flex-wrap animate-fadeInUp"
+            >
+                <button
+                    id="calcCexBtn"
+                    onclick="calculateCollectionValue()"
+                    class="accent-btn"
+                >
+                    <span id="calcCexIcon">£</span>
+                    <span>Calculate CeX value</span>
+                </button>
+                <div
+                    id="cexTotals"
+                    class="hidden flex flex-wrap items-center gap-6"
+                >
+                    <div>
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            Sell
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-white"
+                            id="totalSell"
+                        >
+                            —
+                        </div>
+                    </div>
+                    <div>
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            Cash
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-emerald-400"
+                            id="totalCash"
+                        >
+                            —
+                        </div>
+                    </div>
+                    <div>
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            Voucher
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-amber-400"
+                            id="totalVoucher"
+                        >
+                            —
+                        </div>
+                    </div>
+                    <div class="border-l border-white/10 pl-6">
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            Paid (CeX)
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-accent"
+                            id="totalPaidCex"
+                        >
+                            —
+                        </div>
+                    </div>
+                    <div>
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            Paid (Other)
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-cyan-300"
+                            id="totalPaidOther"
+                        >
+                            —
+                        </div>
+                    </div>
+                    <div>
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            Total paid
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-amber-300"
+                            id="totalPaidAll"
+                        >
+                            —
+                        </div>
+                    </div>
+                    <div class="border-l border-white/10 pl-6">
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            Items
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-white"
+                            id="totalCexItems"
+                        >
+                            —
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div
+                class="bg-surface border border-white/8 rounded-xl p-4 mb-8 animate-fadeInUp"
+            >
+                <div class="flex gap-3 items-center flex-wrap">
+                    <div class="flex-1 min-w-[260px] relative">
+                        <input
+                            type="text"
+                            id="searchBox"
+                            placeholder="Search by title, console, notes…"
+                            onkeyup="filterCards()"
+                            class="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition"
+                        />
+                    </div>
+                    <button
+                        id="refreshButton"
+                        onclick="refreshData()"
+                        class="ghost-btn"
+                        title="Refresh from Google Sheets"
+                    >
+                        <span id="refreshIcon">↻</span>
+                        <span>Refresh</span>
+                    </button>
+                    <div class="relative">
+                        <button
+                            id="sortButton"
+                            onclick="toggleSortDropdown()"
+                            class="ghost-btn min-w-[220px] justify-between"
+                        >
+                            <span id="sortButtonText">Title (A–Z)</span>
+                            <span class="text-xs text-zinc-500">▾</span>
+                        </button>
+                        <div
+                            id="sortDropdown"
+                            class="hidden absolute right-0 mt-2 w-[240px] bg-[#161616] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50"
+                        >
+                            <div
+                                class="px-4 py-2.5 text-sm text-accent bg-accent/10 cursor-pointer"
+                                data-active="true"
+                                onclick="selectSort('title','Title (A–Z)', this)"
+                            >
+                                Title (A–Z)
+                            </div>
+                            <div
+                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
+                                onclick="selectSort('console','Console', this)"
+                            >
+                                Console
+                            </div>
+                            <div
+                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
+                                onclick="selectSort('current-desc','Current price (high → low)', this)"
+                            >
+                                Current price (high → low)
+                            </div>
+                            <div
+                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
+                                onclick="selectSort('paid-desc','Price paid (high → low)', this)"
+                            >
+                                Price paid (high → low)
+                            </div>
+                            <div
+                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
+                                onclick="selectSort('paid-asc','Price paid (low → high)', this)"
+                            >
+                                Price paid (low → high)
+                            </div>
+                            <div
+                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
+                                onclick="selectSort('date-newest','Date purchased (newest)', this)"
+                            >
+                                Date purchased (newest)
+                            </div>
+                        </div>
+                    </div>
+                    <button class="ghost-btn" onclick="toggleFilters()">
+                        <span>Filters</span>
+                        <span
+                            id="filterToggleIcon"
+                            class="text-xs text-zinc-500 transition-transform"
+                            >▾</span
+                        >
+                    </button>
+                </div>
+
+                <!-- Filters panel -->
+                <div
+                    id="filtersSection"
+                    class="transition-all duration-300 overflow-hidden collapsed mt-4 pt-4 border-t border-white/8"
+                >
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-5"
+                    >
+                        <div>
+                            <h3
+                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
+                            >
+                                Status
+                            </h3>
+                            <div
+                                id="statusFilters"
+                                class="flex gap-2 flex-wrap"
+                            ></div>
+                        </div>
+                        <div>
+                            <h3
+                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
+                            >
+                                Console
+                            </h3>
+                            <div
+                                id="consoleFilters"
+                                class="flex gap-2 flex-wrap"
+                            ></div>
+                        </div>
+                        <div>
+                            <h3
+                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
+                            >
+                                Condition (any of cover / insert / disc)
+                            </h3>
+                            <div
+                                id="conditionFilters"
+                                class="flex gap-2 flex-wrap"
+                            ></div>
+                        </div>
+                        <div>
+                            <h3
+                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
+                            >
+                                Playable
+                            </h3>
+                            <div
+                                id="playableFilters"
+                                class="flex gap-2 flex-wrap"
+                            ></div>
+                        </div>
+                        <div>
+                            <h3
+                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
+                            >
+                                Price paid
+                            </h3>
+                            <div
+                                id="priceFilters"
+                                class="flex gap-2 flex-wrap"
+                            ></div>
+                        </div>
+                        <div>
+                            <h3
+                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
+                            >
+                                CeX listing
+                            </h3>
+                            <div
+                                id="cexFilters"
+                                class="flex gap-2 flex-wrap"
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards grid -->
+            <div
+                id="cardsGrid"
+                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4"
+            ></div>
+        </div>
+
+        <!-- Toasts -->
+        <div
+            id="error"
+            class="fixed top-5 right-5 z-[200] px-4 py-3 rounded-lg max-w-md hidden bg-red-500/10 border border-red-500/30 text-red-300 text-sm backdrop-blur"
+        ></div>
+        <div
+            id="success"
+            class="fixed top-5 right-5 z-[200] px-4 py-3 rounded-lg max-w-md hidden bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm backdrop-blur"
+        ></div>
+
+        <!-- Loading overlay -->
+        <div
+            id="loadingOverlay"
+            class="fixed inset-0 z-[300] bg-black/70 backdrop-blur-sm hidden items-center justify-center"
+        >
+            <div
+                class="bg-surface border border-white/10 rounded-2xl px-8 py-6 text-center max-w-sm"
+            >
+                <div class="mb-3 text-zinc-500 text-xs uppercase tracking-wider">
+                    Fetching data
+                </div>
+                <div class="flex gap-1.5 justify-center mb-3">
+                    <div
+                        class="w-2 h-2 rounded-full bg-accent animate-bounce"
+                        style="animation-delay: 0s"
+                    ></div>
+                    <div
+                        class="w-2 h-2 rounded-full bg-accent animate-bounce"
+                        style="animation-delay: 0.15s"
+                    ></div>
+                    <div
+                        class="w-2 h-2 rounded-full bg-accent animate-bounce"
+                        style="animation-delay: 0.3s"
+                    ></div>
+                </div>
+                <p class="text-zinc-500 text-xs">Loading from Google Sheets…</p>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div
+            id="modal"
+            class="hidden fixed inset-0 z-[400] bg-black/85 animate-fadeIn items-center justify-center p-5"
+        >
+            <div
+                class="bg-surface border border-white/10 rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-hidden animate-slideUp flex flex-col md:flex-row md:items-stretch relative"
+            >
+                <button
+                    onclick="closeModal()"
+                    class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/70 border border-white/15 text-zinc-300 hover:text-white hover:border-accent flex items-center justify-center text-xl transition z-10"
+                >
+                    ×
+                </button>
+                <img
+                    id="modalPoster"
+                    class="hidden w-full md:w-[420px] md:min-w-[420px] aspect-[4/5] object-cover bg-black/40 md:self-start"
+                    alt=""
+                />
+                <div
+                    id="modalBody"
+                    class="p-8 flex-1 overflow-y-auto scroll-thin"
+                ></div>
+            </div>
+        </div>
+
+        <script>
+            // === CONFIG ============================================================
+            const GOOGLE_SHEETS_URL =
+                "https://docs.google.com/spreadsheets/d/18dLC8f0FOE-7UC0NqM6hj1flKxu-4rfd/export?format=csv";
+            const RAWG_API_KEY = "d6b5463dab6046898cccf5575f84f9d1";
+
+            const PRIMARY_PROXY =
+                "https://cex-proxy.raul-blideran98.workers.dev";
+
+            const CORS_PROXIES = [
+                ...(PRIMARY_PROXY
+                    ? [
+                          {
+                              url: (url) =>
+                                  `${PRIMARY_PROXY}/?url=${encodeURIComponent(url)}`,
+                              timeout: 10000,
+                          },
+                      ]
+                    : []),
+                {
+                    url: (url) =>
+                        `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                    timeout: 15000,
+                },
+                {
+                    url: (url) =>
+                        `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                    timeout: 8000,
+                },
+                {
+                    url: (url) =>
+                        `https://api.cors.lol/?url=${encodeURIComponent(url)}`,
+                    timeout: 8000,
+                },
+                { url: (url) => `https://cors.eu.org/${url}`, timeout: 8000 },
+            ];
+
+            const CACHE_KEY = "gamesCSVCache";
+            const CACHE_TIMESTAMP_KEY = "gamesCSVCacheTimestamp";
+            const CACHE_DURATION = 5 * 60 * 1000;
+
+            const CONDITION_DOT = {
+                Mint: "bg-emerald-400",
+                Good: "bg-cyan-400",
+                Damaged: "bg-amber-400",
+                Missing: "bg-zinc-500",
+                "N/A": "bg-zinc-700",
+            };
+
+            // Single-character grade shown inside the condition circle on cards.
+            const CONDITION_ABBR = {
+                Mint: "M",
+                Good: "G",
+                Damaged: "D",
+                Missing: "✕",
+                "N/A": "–",
+            };
+
+            // === STATE =============================================================
+            let allData = [];
+            let filteredData = [];
+            let headers = [];
+            let activeFilters = {
+                status: "all",
+                console: "all",
+                condition: "all",
+                playable: "all",
+                price: "all",
+                cex: "all",
+            };
+            let coverCache = {};
+            let cexCache = {};
+            let workingProxyIndex = 0;
+            let currentSort = "title";
+
+            // === UTILS =============================================================
+            function normalizeConsole(c) {
+                if (!c) return "Unknown";
+                return c.trim().replace(/playstation/i, "PlayStation");
+            }
+
+            function parsePrice(str) {
+                if (!str) return 0;
+                const cleaned = String(str)
+                    .replace(/[£$€,\s]/g, "")
+                    .trim();
+                return parseFloat(cleaned) || 0;
+            }
+
+            // A row is "to buy" (not yet purchased) when its Date Purchased is TBC.
+            function isTBC(row) {
+                return (
+                    (row["Date Purchased"] || "").trim().toUpperCase() === "TBC"
+                );
+            }
+
+            function parseUkDate(str) {
+                if (!str) return null;
+                const m = String(str).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                if (!m) return null;
+                return new Date(
+                    `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`,
+                );
+            }
+
+            function fmtMoney(n) {
+                return `£${n.toFixed(2)}`;
+            }
+
+            function escapeHtml(s) {
+                return String(s ?? "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            // === FETCH WITH PROXY FALLBACK =========================================
+            function fetchWithTimeout(url, timeoutMs) {
+                const controller = new AbortController();
+                const timer = setTimeout(
+                    () => controller.abort(),
+                    timeoutMs,
+                );
+                return fetch(url, {
+                    signal: controller.signal,
+                    cache: "no-store",
+                }).finally(() => clearTimeout(timer));
+            }
+
+            async function fetchWithProxy(url) {
+                for (
+                    let i = workingProxyIndex;
+                    i < CORS_PROXIES.length;
+                    i++
+                ) {
+                    const { url: proxyFn, timeout } = CORS_PROXIES[i];
+                    try {
+                        const proxyUrl = proxyFn(url);
+                        const resp = await fetchWithTimeout(proxyUrl, timeout);
+                        if (resp.ok) {
+                            workingProxyIndex = i;
+                            return resp;
+                        }
+                    } catch (e) {
+                        console.warn(`Proxy ${i} failed`, e.message);
+                    }
+                }
+                return null;
+            }
+
+            // === CeX ===============================================================
+            function extractCexSku(url) {
+                if (!url) return null;
+                const match = url.match(/[?&]id=([^&]+)/);
+                return match ? match[1] : null;
+            }
+
+            async function fetchCexDetails(sku) {
+                if (!sku) return null;
+                if (cexCache[sku]) return cexCache[sku];
+                try {
+                    const resp = await fetchWithProxy(
+                        `https://wss2.cex.uk.webuy.io/v3/boxes/${sku}/detail`,
+                    );
+                    if (!resp) return null;
+                    const json = await resp.json();
+                    const details =
+                        json?.response?.data?.boxDetails?.[0] ?? null;
+                    if (details) cexCache[sku] = details;
+                    return details;
+                } catch (e) {
+                    console.error("CeX fetch error", sku, e);
+                    return null;
+                }
+            }
+
+            function isCexUrl(url) {
+                try {
+                    const host = new URL(url).hostname.toLowerCase();
+                    return host.includes("webuy.") || host.includes("cex.");
+                } catch {
+                    return false;
+                }
+            }
+
+            function extractCexParam(url, name) {
+                const m = url.match(new RegExp(`[?&]${name}=([^&]*)`));
+                return m ? decodeURIComponent(m[1]) : null;
+            }
+
+            // Build the CeX product-image URL deterministically from a CeX product URL.
+            // Pattern: https://uk.static.webuy.com/product_images/Gaming/{Category}/{SKU}_{l|m|s}.jpg
+            // CeX stores all box art under the "* Software" directory even when the
+            // product listing's categoryName ends with "-GAMES" — empirically verified
+            // across all 33 rows in the source sheet, so we normalize the trailing
+            // segment to "Software".
+            function cexImageFromUrl(cexUrl, size = "l") {
+                const sku = extractCexSku(cexUrl);
+                if (!sku) return null;
+                const catSlug = extractCexParam(cexUrl, "categoryName");
+                if (!catSlug) return null;
+                const category = catSlug
+                    .split("-")
+                    .map((s) =>
+                        s.toUpperCase() === "GAMES"
+                            ? "Software"
+                            : s.charAt(0).toUpperCase() +
+                              s.slice(1).toLowerCase(),
+                    )
+                    .join(" ");
+                return `https://uk.static.webuy.com/product_images/Gaming/${encodeURIComponent(category)}/${sku}_${size}.jpg`;
+            }
+
+            // First-choice cover URL for a row: CeX box art when a CeX URL is present
+            // (synchronous), otherwise null and we fall back to RAWG.
+            function coverFromRow(row, size = "l") {
+                const links = parseCexLinks(row["CEX Listing"]);
+                if (links.length === 0) return null;
+                return cexImageFromUrl(links[0], size);
+            }
+
+            function parseCexLinks(linkStr) {
+                if (!linkStr) return [];
+                const links = [];
+                for (const part of linkStr.split(",")) {
+                    const t = part.trim();
+                    if (t.startsWith("http") && isCexUrl(t)) links.push(t);
+                }
+                return links;
+            }
+
+            async function calculateCollectionValue() {
+                const btn = document.getElementById("calcCexBtn");
+                const totalsEl = document.getElementById("cexTotals");
+                const iconEl = document.getElementById("calcCexIcon");
+
+                const uniqueSkus = new Set();
+                let totalPaidCex = 0;
+                let totalPaidOther = 0;
+                let itemCount = 0;
+
+                for (const row of allData) {
+                    if (isTBC(row)) continue; // not owned yet — skip from value
+                    const links = parseCexLinks(row["CEX Listing"]);
+                    const paid = parsePrice(row["Price Purchased"]);
+                    if (links.length === 0 && paid === 0) continue;
+                    itemCount++;
+                    if (links.length > 0) totalPaidCex += paid;
+                    else totalPaidOther += paid;
+                    for (const link of links) {
+                        const sku = extractCexSku(link);
+                        if (sku) uniqueSkus.add(sku);
+                    }
+                }
+
+                if (itemCount === 0) {
+                    showError("No CeX links or prices found");
+                    return;
+                }
+
+                const skuList = [...uniqueSkus];
+                btn.disabled = true;
+                btn.style.opacity = "0.5";
+                iconEl.classList.add("spin");
+                iconEl.style.display = "inline-block";
+
+                totalsEl.classList.remove("hidden");
+                totalsEl.classList.add("flex");
+                document.getElementById("totalSell").textContent = "…";
+                document.getElementById("totalCash").textContent = "…";
+                document.getElementById("totalVoucher").textContent = "…";
+                const totalPaidAll = totalPaidCex + totalPaidOther;
+                document.getElementById("totalPaidCex").textContent =
+                    totalPaidCex > 0 ? fmtMoney(totalPaidCex) : "—";
+                document.getElementById("totalPaidOther").textContent =
+                    totalPaidOther > 0 ? fmtMoney(totalPaidOther) : "—";
+                document.getElementById("totalPaidAll").textContent =
+                    totalPaidAll > 0 ? fmtMoney(totalPaidAll) : "—";
+                document.getElementById("totalCexItems").textContent =
+                    skuList.length > 0 ? `0/${skuList.length}` : `${itemCount}`;
+
+                let totalSell = 0;
+                let totalCash = 0;
+                let totalVoucher = 0;
+                let fetched = 0;
+                for (const sku of skuList) {
+                    const details = await fetchCexDetails(sku);
+                    if (details) {
+                        totalSell += details.sellPrice || 0;
+                        totalCash += details.cashPrice || 0;
+                        totalVoucher += details.exchangePrice || 0;
+                    }
+                    fetched++;
+                    document.getElementById("totalCexItems").textContent =
+                        `${fetched}/${skuList.length}`;
+                    document.getElementById("totalSell").textContent =
+                        fmtMoney(totalSell);
+                    document.getElementById("totalCash").textContent =
+                        fmtMoney(totalCash);
+                    document.getElementById("totalVoucher").textContent =
+                        fmtMoney(totalVoucher);
+                }
+
+                iconEl.classList.remove("spin");
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                document.getElementById("totalCexItems").textContent =
+                    `${itemCount}`;
+            }
+
+            // === TOASTS / OVERLAY ==================================================
+            function showError(message) {
+                const el = document.getElementById("error");
+                el.textContent = message;
+                el.classList.remove("hidden");
+                el.classList.add("block");
+                setTimeout(() => {
+                    el.classList.add("hidden");
+                    el.classList.remove("block");
+                }, 8000);
+            }
+            function showSuccess(message) {
+                const el = document.getElementById("success");
+                el.textContent = message;
+                el.classList.remove("hidden");
+                el.classList.add("block");
+                setTimeout(() => {
+                    el.classList.add("hidden");
+                    el.classList.remove("block");
+                }, 3000);
+            }
+            function showLoading(show) {
+                const o = document.getElementById("loadingOverlay");
+                if (show) {
+                    o.classList.remove("hidden");
+                    o.classList.add("flex");
+                } else {
+                    o.classList.add("hidden");
+                    o.classList.remove("flex");
+                }
+            }
+
+            // === CACHE =============================================================
+            function getCachedData() {
+                try {
+                    const cached = localStorage.getItem(CACHE_KEY);
+                    const ts = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+                    if (cached && ts) {
+                        if (Date.now() - parseInt(ts) < CACHE_DURATION)
+                            return cached;
+                    }
+                } catch (e) {}
+                return null;
+            }
+            function setCachedData(data) {
+                try {
+                    localStorage.setItem(CACHE_KEY, data);
+                    localStorage.setItem(
+                        CACHE_TIMESTAMP_KEY,
+                        Date.now().toString(),
+                    );
+                } catch (e) {}
+            }
+
+            // === DATA LOAD =========================================================
+            async function fetchDataFromSource(useCache = true) {
+                if (useCache) {
+                    const cached = getCachedData();
+                    if (cached) {
+                        parseCSV(cached);
+                        showSuccess(
+                            `Loaded ${allData.length} games from cache`,
+                        );
+                        // Stale-while-revalidate: silently pick up sheet edits.
+                        revalidateInBackground();
+                        return true;
+                    }
+                }
+                showLoading(true);
+                try {
+                    const bust = `${GOOGLE_SHEETS_URL}${GOOGLE_SHEETS_URL.includes("?") ? "&" : "?"}_=${Date.now()}`;
+                    const response = await fetchWithProxy(bust);
+                    if (!response)
+                        throw new Error("All proxies failed");
+                    const csvText = await response.text();
+                    setCachedData(csvText);
+                    parseCSV(csvText);
+                    showSuccess(`Loaded ${allData.length} games from sheet`);
+                    return true;
+                } catch (err) {
+                    showError(`Load failed: ${err.message}`);
+                    return false;
+                } finally {
+                    showLoading(false);
+                }
+            }
+
+            async function revalidateInBackground() {
+                try {
+                    const bust = `${GOOGLE_SHEETS_URL}${GOOGLE_SHEETS_URL.includes("?") ? "&" : "?"}_=${Date.now()}`;
+                    const response = await fetchWithProxy(bust);
+                    if (!response) return;
+                    const csvText = await response.text();
+                    const previous = localStorage.getItem(CACHE_KEY);
+                    if (previous === csvText) return;
+                    // Skip the re-render if a modal is open — user is mid-interaction.
+                    const modal = document.getElementById("modal");
+                    setCachedData(csvText);
+                    if (modal && !modal.classList.contains("hidden")) return;
+                    parseCSV(csvText);
+                    showSuccess(`Sheet updated — ${allData.length} games`);
+                } catch (e) {
+                    // silent
+                }
+            }
+
+            async function refreshData() {
+                const icon = document.getElementById("refreshIcon");
+                const btn = document.getElementById("refreshButton");
+                icon.classList.add("spin");
+                icon.style.display = "inline-block";
+                btn.disabled = true;
+                btn.style.opacity = "0.5";
+                await fetchDataFromSource(false);
+                icon.classList.remove("spin");
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            }
+
+            // === CSV PARSING =======================================================
+            function parseCSVLine(line, delimiter = ",") {
+                const values = [];
+                let current = "";
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    const nx = line[i + 1];
+                    if (ch === '"') {
+                        if (inQuotes && nx === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (ch === delimiter && !inQuotes) {
+                        values.push(current);
+                        current = "";
+                    } else {
+                        current += ch;
+                    }
+                }
+                values.push(current);
+                return values;
+            }
+
+            // Splits CSV into rows, respecting quoted fields that contain newlines.
+            function splitCsvRows(text) {
+                const rows = [];
+                let cur = "";
+                let inQuotes = false;
+                for (let i = 0; i < text.length; i++) {
+                    const ch = text[i];
+                    if (ch === '"') {
+                        inQuotes = !inQuotes;
+                        cur += ch;
+                    } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+                        if (ch === "\r" && text[i + 1] === "\n") i++;
+                        if (cur.trim() !== "") rows.push(cur);
+                        cur = "";
+                    } else {
+                        cur += ch;
+                    }
+                }
+                if (cur.trim() !== "") rows.push(cur);
+                return rows;
+            }
+
+            function normalizeHeader(h) {
+                return String(h).replace(/\s+/g, " ").trim();
+            }
+
+            function parseCSV(csvText) {
+                const rows = splitCsvRows(csvText);
+                if (rows.length < 2) {
+                    showError("Not enough data in sheet");
+                    return;
+                }
+
+                // The exported sheet's first row is the "Game Collection Tracker"
+                // title — detect and skip it (no comma-separated header columns).
+                let headerRowIdx = 0;
+                const firstCols = parseCSVLine(rows[0]);
+                const meaningfulFirst = firstCols.filter(
+                    (v) => v.trim() !== "",
+                ).length;
+                if (
+                    meaningfulFirst <= 2 ||
+                    firstCols[0]
+                        .toLowerCase()
+                        .includes("game collection tracker")
+                ) {
+                    headerRowIdx = 1;
+                }
+
+                const rawHeaders = parseCSVLine(rows[headerRowIdx]).map(
+                    normalizeHeader,
+                );
+                // Keep only first 11 columns (drop sheet's summary cells).
+                headers = rawHeaders
+                    .slice(0, 11)
+                    .filter((h) => h && !h.toLowerCase().startsWith("total "));
+
+                allData = [];
+                for (let i = headerRowIdx + 1; i < rows.length; i++) {
+                    const values = parseCSVLine(rows[i]);
+                    if (!values.some((v) => v.trim() !== "")) continue;
+                    const row = {};
+                    headers.forEach((h, idx) => {
+                        row[h] = (values[idx] ?? "").trim();
+                    });
+                    if (row["Game"] && row["Game"].trim()) allData.push(row);
+                }
+
+                if (allData.length === 0) {
+                    showError("No game rows found");
+                    return;
+                }
+
+                filteredData = [...allData];
+                displayStats();
+                createFilters();
+                sortCards();
+            }
+
+            // === RAWG COVERS =======================================================
+            async function fetchGameCover(title, consoleName) {
+                const key = `${title}__${consoleName}`;
+                if (coverCache[key] !== undefined) return coverCache[key];
+                if (!RAWG_API_KEY) {
+                    coverCache[key] = null;
+                    return null;
+                }
+                try {
+                    const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(title)}&page_size=1`;
+                    const resp = await fetch(url);
+                    if (!resp.ok) {
+                        coverCache[key] = null;
+                        return null;
+                    }
+                    const json = await resp.json();
+                    const result = json?.results?.[0];
+                    const img = result?.background_image || null;
+                    coverCache[key] = img;
+                    return img;
+                } catch (e) {
+                    coverCache[key] = null;
+                    return null;
+                }
+            }
+
+            // === STATS =============================================================
+            function displayStats() {
+                const el = document.getElementById("stats");
+                // Collection stats describe games actually owned; TBC rows are
+                // tracked separately as a "to buy" count.
+                const owned = allData.filter((r) => !isTBC(r));
+                const toBuy = allData.length - owned.length;
+                const total = owned.length;
+                const consoles = new Set(
+                    owned.map((r) => normalizeConsole(r["Console Version"])),
+                ).size;
+                const totalPaid = owned.reduce(
+                    (s, r) => s + parsePrice(r["Price Purchased"]),
+                    0,
+                );
+                const totalCurrent = owned.reduce(
+                    (s, r) => s + parsePrice(r["Current Price"]),
+                    0,
+                );
+                const playable = owned.filter(
+                    (r) => (r["Playable"] || "").toUpperCase() === "Y",
+                ).length;
+                const playablePct =
+                    total > 0
+                        ? Math.round((playable / total) * 100)
+                        : 0;
+
+                const tile = (label, value, valueClass = "text-white") => `
+                    <div class="stat-tile">
+                        <div class="text-[10px] uppercase tracking-[0.18em] text-zinc-500 font-semibold">${label}</div>
+                        <div class="text-2xl font-semibold mt-1 ${valueClass}">${value}</div>
+                    </div>`;
+
+                el.innerHTML =
+                    tile("Games", total) +
+                    tile("Consoles", consoles, "text-accent") +
+                    tile("Total paid", fmtMoney(totalPaid)) +
+                    tile("Current value", fmtMoney(totalCurrent), "text-emerald-400") +
+                    tile("Playable", `${playablePct}%`, "text-amber-300") +
+                    (toBuy > 0 ? tile("To buy", toBuy, "text-purple-300") : "");
+            }
+
+            // === FILTERS ===========================================================
+            function makeChip(label, value, group, isActive) {
+                const btn = document.createElement("button");
+                btn.className = "chip" + (isActive ? " active" : "");
+                btn.textContent = label;
+                btn.onclick = (e) => setFilter(group, value, e.currentTarget);
+                return btn;
+            }
+
+            function createFilters() {
+                // Status (owned vs. not-yet-purchased)
+                const sCont = document.getElementById("statusFilters");
+                sCont.innerHTML = "";
+                [
+                    ["All", "all"],
+                    ["Owned", "owned"],
+                    ["To buy", "tbc"],
+                ].forEach(([label, val], i) =>
+                    sCont.appendChild(
+                        makeChip(label, val, "status", i === 0),
+                    ),
+                );
+
+                // Console
+                const cCont = document.getElementById("consoleFilters");
+                cCont.innerHTML = "";
+                const consoles = new Set();
+                allData.forEach((r) =>
+                    consoles.add(normalizeConsole(r["Console Version"])),
+                );
+                cCont.appendChild(makeChip("All", "all", "console", true));
+                [...consoles]
+                    .sort((a, b) => a.localeCompare(b))
+                    .forEach((c) =>
+                        cCont.appendChild(makeChip(c, c.toLowerCase(), "console", false)),
+                    );
+
+                // Condition
+                const condCont = document.getElementById("conditionFilters");
+                condCont.innerHTML = "";
+                ["All", "Mint", "Good", "Damaged", "Missing"].forEach((v) => {
+                    condCont.appendChild(
+                        makeChip(
+                            v,
+                            v === "All" ? "all" : v.toLowerCase(),
+                            "condition",
+                            v === "All",
+                        ),
+                    );
+                });
+
+                // Playable
+                const pCont = document.getElementById("playableFilters");
+                pCont.innerHTML = "";
+                [
+                    ["All", "all"],
+                    ["Yes", "y"],
+                    ["No", "n"],
+                ].forEach(([label, val], i) =>
+                    pCont.appendChild(
+                        makeChip(label, val, "playable", i === 0),
+                    ),
+                );
+
+                // Price bands
+                const priceCont = document.getElementById("priceFilters");
+                priceCont.innerHTML = "";
+                [
+                    ["All", "all"],
+                    ["< £5", "lt5"],
+                    ["£5–10", "5to10"],
+                    ["£10–20", "10to20"],
+                    ["> £20", "gt20"],
+                ].forEach(([label, val], i) =>
+                    priceCont.appendChild(
+                        makeChip(label, val, "price", i === 0),
+                    ),
+                );
+
+                // CeX
+                const cexCont = document.getElementById("cexFilters");
+                cexCont.innerHTML = "";
+                [
+                    ["All", "all"],
+                    ["Has CeX URL", "yes"],
+                    ["No CeX URL", "no"],
+                ].forEach(([label, val], i) =>
+                    cexCont.appendChild(
+                        makeChip(label, val, "cex", i === 0),
+                    ),
+                );
+            }
+
+            function setFilter(group, value, button) {
+                activeFilters[group] = value;
+                const containerId = `${group}Filters`;
+                document
+                    .querySelectorAll(`#${containerId} .chip`)
+                    .forEach((b) => b.classList.remove("active"));
+                if (button) button.classList.add("active");
+                applyFilters();
+            }
+
+            function rowHasCondition(row, cond) {
+                const target = cond.toLowerCase();
+                return [
+                    row["Cover Art Condition"],
+                    row["Insert Condition"],
+                    row["Disc Condition"],
+                ].some((v) => (v || "").trim().toLowerCase() === target);
+            }
+
+            function applyFilters() {
+                filteredData = allData.filter((row) => {
+                    if (activeFilters.status !== "all") {
+                        const tbc = isTBC(row);
+                        if (activeFilters.status === "owned" && tbc)
+                            return false;
+                        if (activeFilters.status === "tbc" && !tbc)
+                            return false;
+                    }
+                    if (activeFilters.console !== "all") {
+                        const c = normalizeConsole(
+                            row["Console Version"],
+                        ).toLowerCase();
+                        if (c !== activeFilters.console) return false;
+                    }
+                    if (activeFilters.condition !== "all") {
+                        if (!rowHasCondition(row, activeFilters.condition))
+                            return false;
+                    }
+                    if (activeFilters.playable !== "all") {
+                        const p = (row["Playable"] || "").toLowerCase();
+                        if (activeFilters.playable === "y" && p !== "y")
+                            return false;
+                        if (activeFilters.playable === "n" && p !== "n")
+                            return false;
+                    }
+                    if (activeFilters.price !== "all") {
+                        const p = parsePrice(row["Price Purchased"]);
+                        if (activeFilters.price === "lt5" && !(p > 0 && p < 5))
+                            return false;
+                        if (activeFilters.price === "5to10" && !(p >= 5 && p < 10))
+                            return false;
+                        if (activeFilters.price === "10to20" && !(p >= 10 && p < 20))
+                            return false;
+                        if (activeFilters.price === "gt20" && !(p >= 20))
+                            return false;
+                    }
+                    if (activeFilters.cex !== "all") {
+                        const hasUrl = parseCexLinks(row["CEX Listing"]).length > 0;
+                        if (activeFilters.cex === "yes" && !hasUrl) return false;
+                        if (activeFilters.cex === "no" && hasUrl) return false;
+                    }
+                    return true;
+                });
+                sortCards();
+            }
+
+            function filterCards() {
+                const term = document
+                    .getElementById("searchBox")
+                    .value.toLowerCase()
+                    .trim();
+                if (!term) {
+                    displayCards(filteredData);
+                    return;
+                }
+                const filtered = filteredData.filter((row) =>
+                    Object.values(row).some((v) =>
+                        String(v).toLowerCase().includes(term),
+                    ),
+                );
+                displayCards(filtered);
+            }
+
+            // === SORT ==============================================================
+            function toggleSortDropdown() {
+                document
+                    .getElementById("sortDropdown")
+                    .classList.toggle("hidden");
+            }
+
+            function selectSort(sortBy, label, el) {
+                currentSort = sortBy;
+                document.getElementById("sortButtonText").textContent = label;
+                const dd = document.getElementById("sortDropdown");
+                dd.querySelectorAll("div").forEach((d) => {
+                    d.classList.remove("bg-accent/10", "text-accent");
+                    d.classList.add("text-zinc-200");
+                    d.removeAttribute("data-active");
+                });
+                el.classList.add("bg-accent/10", "text-accent");
+                el.classList.remove("text-zinc-200");
+                el.setAttribute("data-active", "true");
+                dd.classList.add("hidden");
+                sortCards();
+            }
+
+            function sortCards() {
+                filteredData.sort((a, b) => {
+                    switch (currentSort) {
+                        case "title":
+                            return (a["Game"] || "").localeCompare(
+                                b["Game"] || "",
+                            );
+                        case "console":
+                            const ca = normalizeConsole(a["Console Version"]);
+                            const cb = normalizeConsole(b["Console Version"]);
+                            return (
+                                ca.localeCompare(cb) ||
+                                (a["Game"] || "").localeCompare(b["Game"] || "")
+                            );
+                        case "current-desc":
+                            return (
+                                parsePrice(b["Current Price"]) -
+                                parsePrice(a["Current Price"])
+                            );
+                        case "paid-desc":
+                            return (
+                                parsePrice(b["Price Purchased"]) -
+                                parsePrice(a["Price Purchased"])
+                            );
+                        case "paid-asc":
+                            return (
+                                parsePrice(a["Price Purchased"]) -
+                                parsePrice(b["Price Purchased"])
+                            );
+                        case "date-newest":
+                            const da = parseUkDate(a["Date Purchased"]);
+                            const db = parseUkDate(b["Date Purchased"]);
+                            return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+                        default:
+                            return 0;
+                    }
+                });
+                filterCards();
+            }
+
+            // === CARDS =============================================================
+            function conditionDots(row) {
+                const fields = [
+                    ["Cover", row["Cover Art Condition"]],
+                    ["Insert", row["Insert Condition"]],
+                    ["Disc", row["Disc Condition"]],
+                ];
+                return fields
+                    .map(([label, val]) => {
+                        const dotClass = CONDITION_DOT[val] || "bg-zinc-700";
+                        // Dark text reads better on the bright (mint/good/damaged) fills.
+                        const textClass = ["Mint", "Good", "Damaged"].includes(val)
+                            ? "text-black/80"
+                            : "text-zinc-300";
+                        const abbr = CONDITION_ABBR[val] || "–";
+                        const titleAttr = val ? `${label}: ${val}` : `${label}: —`;
+                        return `<span class="cond ${dotClass} ${textClass}" title="${escapeHtml(titleAttr)}">${abbr}</span>`;
+                    })
+                    .join("");
+            }
+
+            function displayCards(data) {
+                const grid = document.getElementById("cardsGrid");
+                grid.innerHTML = "";
+                if (data.length === 0) {
+                    grid.innerHTML = `<p class="col-span-full text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
+                    return;
+                }
+
+                data.forEach((row, index) => {
+                    const tbc = isTBC(row);
+                    const card = document.createElement("div");
+                    card.className = "card animate-fadeInUp" + (tbc ? " tbc" : "");
+                    card.style.animationDelay = `${Math.min(index * 0.015, 0.4)}s`;
+                    card.onclick = () => openModal(row);
+
+                    const consoleName = normalizeConsole(row["Console Version"]);
+                    const playable = (row["Playable"] || "").toUpperCase();
+                    const price =
+                        parsePrice(row["Current Price"]) ||
+                        parsePrice(row["Price Purchased"]);
+                    const hasCex = parseCexLinks(row["CEX Listing"]).length > 0;
+
+                    const posterId = `poster-${index}-${Math.random().toString(36).slice(2, 7)}`;
+
+                    const cexCover = coverFromRow(row, "l");
+                    const badgesHtml = `
+                        ${hasCex ? `<span class="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/90 text-black border border-accent z-10">CeX</span>` : ""}
+                        ${tbc ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-600/90 text-white border border-purple-300/50 z-10">To buy</span>` : playable === "N" ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-500/90 text-white border border-red-400 z-10">Not playable</span>` : ""}
+                        ${tbc ? `<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10"><span class="tbc-stamp px-3 py-1 rounded-md bg-purple-600/85 text-white text-xs font-bold uppercase tracking-[0.15em] border border-purple-200/60">Not owned</span></div>` : ""}
+                    `;
+                    const initialPosterHtml = cexCover
+                        ? `<img src="${escapeHtml(cexCover)}" alt="${escapeHtml(row["Game"] || "")}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.dataset.failed='1'; this.remove();" />`
+                        : `<div class="absolute inset-0 flex items-center justify-center text-zinc-700 text-xs uppercase tracking-wider">${escapeHtml(consoleName)}</div>`;
+
+                    card.innerHTML = `
+                        <div class="relative aspect-[3/4] bg-black/40 ${cexCover ? "" : "skeleton"}" id="${posterId}">
+                            ${initialPosterHtml}
+                            ${badgesHtml}
+                        </div>
+                        <div class="p-3 flex flex-col gap-2 flex-1">
+                            <h3 class="text-[15px] font-semibold text-zinc-100 leading-snug line-clamp-2 h-[42px] overflow-hidden">${escapeHtml(row["Game"] || "Untitled")}</h3>
+                            <div class="text-xs text-zinc-500 truncate">${escapeHtml(consoleName)}</div>
+                            <div class="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+                                ${tbc ? `<div class="text-[10px] uppercase tracking-wider text-purple-300 font-semibold">Wishlist</div>` : `<div class="flex gap-1.5">${conditionDots(row)}</div>`}
+                                <div class="text-sm font-semibold ${tbc ? "text-purple-300" : "text-accent"}">${price > 0 ? fmtMoney(price) : ""}</div>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+
+                    // Only hit RAWG when there's no CeX cover to use.
+                    if (!cexCover) {
+                        fetchGameCover(row["Game"], consoleName).then((url) => {
+                            const el = document.getElementById(posterId);
+                            if (!el) return;
+                            el.classList.remove("skeleton");
+                            if (url) {
+                                const placeholder = el.querySelector("div");
+                                if (placeholder) placeholder.remove();
+                                const img = document.createElement("img");
+                                img.src = url;
+                                img.alt = row["Game"] || "";
+                                img.className =
+                                    "absolute inset-0 w-full h-full object-cover";
+                                img.loading = "lazy";
+                                el.insertBefore(img, el.firstChild);
+                            } else {
+                                el.classList.add("bg-gradient-to-br", "from-zinc-900", "to-black");
+                            }
+                        });
+                    }
+                });
+            }
+
+            // === MODAL =============================================================
+            async function openModal(row) {
+                const modal = document.getElementById("modal");
+                const body = document.getElementById("modalBody");
+                const poster = document.getElementById("modalPoster");
+
+                const consoleName = normalizeConsole(row["Console Version"]);
+                const playable = (row["Playable"] || "").toUpperCase();
+                const paid = parsePrice(row["Price Purchased"]);
+                const current = parsePrice(row["Current Price"]);
+                const cexLinks = parseCexLinks(row["CEX Listing"]);
+                const tbc = isTBC(row);
+
+                const conditionRow = (label, val) => {
+                    const dot = CONDITION_DOT[val] || "bg-zinc-700";
+                    const v = val || "—";
+                    return `
+                        <div class="flex items-center justify-between py-2 border-b border-white/5">
+                            <span class="text-zinc-500 text-xs uppercase tracking-wider">${escapeHtml(label)}</span>
+                            <span class="flex items-center gap-2 text-sm text-zinc-100"><span class="dot ${dot}"></span>${escapeHtml(v)}</span>
+                        </div>`;
+                };
+
+                const tbcBadge = tbc
+                    ? `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/40">To buy · not owned</span>`
+                    : "";
+
+                const playableBadge = tbc
+                    ? ""
+                    : playable === "Y"
+                      ? `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">Playable</span>`
+                      : playable === "N"
+                        ? `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-red-500/10 text-red-300 border border-red-500/30">Not playable</span>`
+                        : "";
+
+                const notes = (row["Notes"] || "").trim();
+                const date = (row["Date Purchased"] || "").trim();
+
+                let html = `
+                    <div class="flex items-center gap-2 mb-3 flex-wrap">
+                        <span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-white/5 text-zinc-300 border border-white/10">${escapeHtml(consoleName)}</span>
+                        ${tbcBadge}
+                        ${playableBadge}
+                    </div>
+                    <h2 class="text-3xl font-semibold text-white tracking-tight pr-12 mb-5">${escapeHtml(row["Game"] || "")}</h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-6">
+                        ${conditionRow("Cover art", row["Cover Art Condition"])}
+                        ${conditionRow("Insert", row["Insert Condition"])}
+                        ${conditionRow("Disc", row["Disc Condition"])}
+                        <div class="flex items-center justify-between py-2 border-b border-white/5">
+                            <span class="text-zinc-500 text-xs uppercase tracking-wider">Date purchased</span>
+                            <span class="text-sm text-zinc-100">${escapeHtml(date || "—")}</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="${tbc ? "bg-purple-500/5 border-purple-500/20" : "bg-white/5 border-white/8"} rounded-lg p-4 border">
+                            <div class="text-[10px] uppercase tracking-wider ${tbc ? "text-purple-300" : "text-zinc-500"} mb-1">Price paid</div>
+                            <div class="text-xl font-semibold ${tbc ? "text-purple-300" : "text-white"}">${tbc ? "Not purchased" : paid > 0 ? fmtMoney(paid) : "—"}</div>
+                        </div>
+                        <div class="bg-accent/5 rounded-lg p-4 border border-accent/20">
+                            <div class="text-[10px] uppercase tracking-wider text-accent mb-1">${tbc ? "Target price" : "Current price"}</div>
+                            <div class="text-xl font-semibold text-accent">${current > 0 ? fmtMoney(current) : "—"}</div>
+                        </div>
+                    </div>
+                `;
+
+                if (notes) {
+                    html += `
+                        <div class="mb-6">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Notes</div>
+                            <div class="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap bg-white/5 rounded-lg p-4 border border-white/8">${escapeHtml(notes)}</div>
+                        </div>`;
+                }
+
+                if (cexLinks.length > 0) {
+                    html += `
+                        <div class="mb-2">
+                            <div class="text-[10px] uppercase tracking-wider text-accent mb-2">CeX value</div>
+                            <div id="cexPricing" class="text-zinc-500 text-sm">Loading CeX pricing…</div>
+                        </div>`;
+                }
+
+                body.innerHTML = html;
+                modal.classList.remove("hidden");
+                modal.classList.add("flex");
+                document.body.style.overflow = "hidden";
+
+                // Cover art — CeX box art preferred (synchronous), RAWG as fallback
+                poster.classList.add("hidden");
+                poster.src = "";
+                poster.onerror = null;
+                const cexCover = coverFromRow(row, "l");
+                if (cexCover) {
+                    poster.onerror = () => {
+                        poster.onerror = null;
+                        poster.classList.add("hidden");
+                        fetchGameCover(row["Game"], consoleName).then((u) => {
+                            if (u) {
+                                poster.src = u;
+                                poster.classList.remove("hidden");
+                            }
+                        });
+                    };
+                    poster.src = cexCover;
+                    poster.classList.remove("hidden");
+                } else {
+                    fetchGameCover(row["Game"], consoleName).then((url) => {
+                        if (url) {
+                            poster.src = url;
+                            poster.classList.remove("hidden");
+                        }
+                    });
+                }
+
+                // CeX pricing
+                if (cexLinks.length > 0) {
+                    const pEl = document.getElementById("cexPricing");
+                    let out = "";
+                    let loaded = 0;
+                    for (const link of cexLinks) {
+                        const sku = extractCexSku(link);
+                        if (!sku) continue;
+                        const details = await fetchCexDetails(sku);
+                        if (!details) {
+                            out += `<div class="mb-2 text-red-300 text-xs">Could not load SKU ${escapeHtml(sku)}</div>`;
+                            continue;
+                        }
+                        loaded++;
+                        out += `
+                            <div class="${loaded > 1 ? "mt-3 pt-3 border-t border-white/8" : ""}">
+                                <div class="grid grid-cols-3 gap-2 mb-2">
+                                    <div class="bg-white/5 rounded-lg p-3 border border-white/8">
+                                        <div class="text-[10px] uppercase tracking-wider text-zinc-500">Sell</div>
+                                        <div class="text-base font-semibold text-white">${fmtMoney(Number(details.sellPrice) || 0)}</div>
+                                    </div>
+                                    <div class="bg-emerald-500/5 rounded-lg p-3 border border-emerald-500/20">
+                                        <div class="text-[10px] uppercase tracking-wider text-emerald-400">Cash</div>
+                                        <div class="text-base font-semibold text-emerald-400">${fmtMoney(Number(details.cashPrice) || 0)}</div>
+                                    </div>
+                                    <div class="bg-amber-500/5 rounded-lg p-3 border border-amber-500/20">
+                                        <div class="text-[10px] uppercase tracking-wider text-amber-400">Voucher</div>
+                                        <div class="text-base font-semibold text-amber-400">${fmtMoney(Number(details.exchangePrice) || 0)}</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-zinc-500 truncate">${escapeHtml(details.boxName || "")}</span>
+                                    <a href="${escapeHtml(link)}" target="_blank" rel="noopener" class="text-accent hover:text-cyan-300 underline ml-2" onclick="event.stopPropagation()">CeX page →</a>
+                                </div>
+                            </div>`;
+                    }
+                    pEl.innerHTML = out || `<span class="text-red-300">Could not fetch CeX data</span>`;
+                }
+            }
+
+            function closeModal() {
+                const modal = document.getElementById("modal");
+                modal.classList.add("hidden");
+                modal.classList.remove("flex");
+                document.body.style.overflow = "auto";
+            }
+
+            // === TOGGLES + EVENTS ==================================================
+            function toggleFilters() {
+                const fs = document.getElementById("filtersSection");
+                const ic = document.getElementById("filterToggleIcon");
+                fs.classList.toggle("collapsed");
+                ic.style.transform = fs.classList.contains("collapsed")
+                    ? "rotate(0deg)"
+                    : "rotate(180deg)";
+            }
+
+            document.addEventListener("click", (e) => {
+                const dd = document.getElementById("sortDropdown");
+                const btn = document.getElementById("sortButton");
+                if (
+                    dd &&
+                    btn &&
+                    !btn.contains(e.target) &&
+                    !dd.contains(e.target)
+                ) {
+                    dd.classList.add("hidden");
+                }
+            });
+
+            document.getElementById("modal").onclick = function (e) {
+                if (e.target === this) closeModal();
+            };
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") closeModal();
+            });
+
+            // === INIT ==============================================================
+            window.addEventListener("DOMContentLoaded", async () => {
+                await fetchDataFromSource(true);
+            });
+        </script>
+    </body>
+</html>
