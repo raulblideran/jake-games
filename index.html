@@ -346,6 +346,37 @@
                             —
                         </div>
                     </div>
+                    <div
+                        title="Sum of the sheet's Current Price column for items that have no CeX link"
+                    >
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            No CeX link
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-cyan-300"
+                            id="totalNoLink"
+                        >
+                            —
+                        </div>
+                    </div>
+                    <div
+                        class="border-l border-white/10 pl-6"
+                        title="CeX cash price where a CeX link exists, otherwise the sheet's Current Price column"
+                    >
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            Current value
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-emerald-300"
+                            id="totalCurrentValue"
+                        >
+                            —
+                        </div>
+                    </div>
                     <div class="border-l border-white/10 pl-6">
                         <div
                             class="text-[10px] uppercase tracking-wider text-zinc-500"
@@ -874,23 +905,31 @@
                 const totalsEl = document.getElementById("cexTotals");
                 const iconEl = document.getElementById("calcCexIcon");
 
+                // Owned items only — TBC ("to buy") rows aren't part of the value.
+                const owned = allData.filter((row) => !isTBC(row));
+
                 const uniqueSkus = new Set();
+                // Per-item record so the blended current value can mix live CeX
+                // cash prices (when a CeX link exists) with the sheet's column.
+                const items = []; // { skus: string[], current: number }
                 let totalPaidCex = 0;
                 let totalPaidOther = 0;
                 let itemCount = 0;
 
-                for (const row of allData) {
-                    if (isTBC(row)) continue; // not owned yet — skip from value
+                for (const row of owned) {
                     const links = parseCexLinks(row["CEX Listing"]);
+                    const skus = links
+                        .map(extractCexSku)
+                        .filter(Boolean);
                     const paid = parsePrice(row["Price Purchased"]);
-                    if (links.length === 0 && paid === 0) continue;
+                    const current = parsePrice(row["Current Price"]);
+                    if (skus.length === 0 && paid === 0 && current === 0)
+                        continue;
                     itemCount++;
-                    if (links.length > 0) totalPaidCex += paid;
+                    if (skus.length > 0) totalPaidCex += paid;
                     else totalPaidOther += paid;
-                    for (const link of links) {
-                        const sku = extractCexSku(link);
-                        if (sku) uniqueSkus.add(sku);
-                    }
+                    skus.forEach((s) => uniqueSkus.add(s));
+                    items.push({ skus, current });
                 }
 
                 if (itemCount === 0) {
@@ -909,6 +948,8 @@
                 document.getElementById("totalSell").textContent = "…";
                 document.getElementById("totalCash").textContent = "…";
                 document.getElementById("totalVoucher").textContent = "…";
+                document.getElementById("totalNoLink").textContent = "…";
+                document.getElementById("totalCurrentValue").textContent = "…";
                 const totalPaidAll = totalPaidCex + totalPaidOther;
                 document.getElementById("totalPaidCex").textContent =
                     totalPaidCex > 0 ? fmtMoney(totalPaidCex) : "—";
@@ -919,6 +960,19 @@
                 document.getElementById("totalCexItems").textContent =
                     skuList.length > 0 ? `0/${skuList.length}` : `${itemCount}`;
 
+                // Show a spinner beside the top "Current value" tile, keeping
+                // the no-link baseline visible, until all prices are in.
+                const topCurrentEl =
+                    document.getElementById("statCurrentValue");
+                if (topCurrentEl) {
+                    topCurrentEl.innerHTML = `<span class="inline-flex items-center gap-2">${escapeHtml(
+                        topCurrentEl.textContent,
+                    )}<span class="spin inline-block text-base leading-none text-emerald-400">↻</span></span>`;
+                }
+
+                // Fetch every unique CeX SKU once; keep the details so we can
+                // build both the CeX-only breakdown and the blended value.
+                const detailsBySku = {};
                 let totalSell = 0;
                 let totalCash = 0;
                 let totalVoucher = 0;
@@ -926,6 +980,7 @@
                 for (const sku of skuList) {
                     const details = await fetchCexDetails(sku);
                     if (details) {
+                        detailsBySku[sku] = details;
                         totalSell += details.sellPrice || 0;
                         totalCash += details.cashPrice || 0;
                         totalVoucher += details.exchangePrice || 0;
@@ -940,6 +995,33 @@
                     document.getElementById("totalVoucher").textContent =
                         fmtMoney(totalVoucher);
                 }
+
+                // Blended current value: live CeX cash price for items that have
+                // a CeX link (cash, not voucher), plus the sheet's Current Price
+                // column for items with NO link. Linked items are never valued
+                // from the column — that would re-introduce the sheet's raw
+                // column total.
+                let blendedCurrent = 0;
+                let noLinkCurrent = 0;
+                for (const item of items) {
+                    if (item.skus.length > 0) {
+                        for (const sku of item.skus) {
+                            const d = detailsBySku[sku];
+                            if (d) blendedCurrent += Number(d.cashPrice) || 0;
+                        }
+                    } else {
+                        blendedCurrent += item.current;
+                        noLinkCurrent += item.current;
+                    }
+                }
+                document.getElementById("totalNoLink").textContent =
+                    fmtMoney(noLinkCurrent);
+                document.getElementById("totalCurrentValue").textContent =
+                    fmtMoney(blendedCurrent);
+                const topCurrent =
+                    document.getElementById("statCurrentValue");
+                if (topCurrent)
+                    topCurrent.textContent = fmtMoney(blendedCurrent);
 
                 iconEl.classList.remove("spin");
                 btn.disabled = false;
@@ -1213,8 +1295,16 @@
                     (s, r) => s + parsePrice(r["Price Purchased"]),
                     0,
                 );
+                // Baseline "current value": only the sheet's Current Price for
+                // items that have NO CeX link. Linked items are valued live
+                // (CeX cash) once the user presses "Calculate CeX value", so we
+                // don't add their column price here — doing so would surface the
+                // sheet's raw column total (e.g. £250.50).
                 const totalCurrent = owned.reduce(
-                    (s, r) => s + parsePrice(r["Current Price"]),
+                    (s, r) =>
+                        parseCexLinks(r["CEX Listing"]).length > 0
+                            ? s
+                            : s + parsePrice(r["Current Price"]),
                     0,
                 );
                 const playable = owned.filter(
@@ -1225,17 +1315,17 @@
                         ? Math.round((playable / total) * 100)
                         : 0;
 
-                const tile = (label, value, valueClass = "text-white") => `
+                const tile = (label, value, valueClass = "text-white", id = "") => `
                     <div class="stat-tile">
                         <div class="text-[10px] uppercase tracking-[0.18em] text-zinc-500 font-semibold">${label}</div>
-                        <div class="text-2xl font-semibold mt-1 ${valueClass}">${value}</div>
+                        <div class="text-2xl font-semibold mt-1 ${valueClass}"${id ? ` id="${id}"` : ""}>${value}</div>
                     </div>`;
 
                 el.innerHTML =
                     tile("Games", total) +
                     tile("Consoles", consoles, "text-accent") +
                     tile("Total paid", fmtMoney(totalPaid)) +
-                    tile("Current value", fmtMoney(totalCurrent), "text-emerald-400") +
+                    tile("Current value", fmtMoney(totalCurrent), "text-emerald-400", "statCurrentValue") +
                     tile("Playable", `${playablePct}%`, "text-amber-300") +
                     (toBuy > 0 ? tile("To buy", toBuy, "text-purple-300") : "");
             }
@@ -1769,7 +1859,9 @@
 
             // === INIT ==============================================================
             window.addEventListener("DOMContentLoaded", async () => {
-                await fetchDataFromSource(true);
+                const ok = await fetchDataFromSource(true);
+                // Open the CeX value panel and value the collection straight away.
+                if (ok && allData.length > 0) calculateCollectionValue();
             });
         </script>
     </body>
