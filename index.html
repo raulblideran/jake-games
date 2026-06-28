@@ -206,6 +206,27 @@
                 transform: rotate(-8deg);
                 box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
             }
+            /* Sealed (Sealed = Y) — gold frame */
+            .card.sealed {
+                border-width: 2px;
+                border-color: #d4af37;
+                box-shadow:
+                    0 0 0 1px rgba(212, 175, 55, 0.35),
+                    0 0 18px rgba(212, 175, 55, 0.25);
+            }
+            .card.sealed:hover {
+                border-color: #f5d774;
+                box-shadow:
+                    0 0 0 1px rgba(245, 215, 116, 0.5),
+                    0 0 22px rgba(245, 215, 116, 0.4);
+            }
+            #modalBox.sealed {
+                border-width: 2px;
+                border-color: #d4af37;
+                box-shadow:
+                    0 0 0 1px rgba(212, 175, 55, 0.35),
+                    0 0 30px rgba(212, 175, 55, 0.25);
+            }
             .stat-tile {
                 background: #111111;
                 border: 1px solid rgba(255, 255, 255, 0.08);
@@ -591,6 +612,17 @@
                                 class="flex gap-2 flex-wrap"
                             ></div>
                         </div>
+                        <div>
+                            <h3
+                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
+                            >
+                                Sealed
+                            </h3>
+                            <div
+                                id="sealedFilters"
+                                class="flex gap-2 flex-wrap"
+                            ></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -646,24 +678,43 @@
             id="modal"
             class="hidden fixed inset-0 z-[400] bg-black/85 animate-fadeIn items-center justify-center p-5"
         >
-            <div
-                class="bg-surface border border-white/10 rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-hidden animate-slideUp flex flex-col md:flex-row md:items-stretch relative"
-            >
-                <button
-                    onclick="closeModal()"
-                    class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/70 border border-white/15 text-zinc-300 hover:text-white hover:border-accent flex items-center justify-center text-xl transition z-10"
-                >
-                    ×
-                </button>
-                <img
-                    id="modalPoster"
-                    class="hidden w-full md:w-[420px] md:min-w-[420px] aspect-[4/5] object-cover bg-black/40 md:self-start"
-                    alt=""
-                />
+            <div class="relative max-w-5xl w-full">
                 <div
-                    id="modalBody"
-                    class="p-8 flex-1 overflow-y-auto scroll-thin"
-                ></div>
+                    id="modalBox"
+                    class="bg-surface border border-white/10 rounded-2xl w-full max-h-[92vh] overflow-hidden animate-slideUp flex flex-col md:flex-row md:items-stretch relative"
+                >
+                    <button
+                        onclick="closeModal()"
+                        class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/70 border border-white/15 text-zinc-300 hover:text-white hover:border-accent flex items-center justify-center text-xl transition z-10"
+                    >
+                        ×
+                    </button>
+                    <img
+                        id="modalPoster"
+                        class="hidden w-full md:w-[420px] md:min-w-[420px] aspect-[4/5] object-cover bg-black/40 md:self-start"
+                        alt=""
+                    />
+                    <div
+                        id="modalBody"
+                        class="p-8 flex-1 overflow-y-auto scroll-thin"
+                    ></div>
+                </div>
+                <button
+                    id="modalPrev"
+                    onclick="navModal(-1)"
+                    title="Previous game"
+                    class="absolute left-1 sm:left-auto sm:right-full sm:mr-4 top-1/2 -translate-y-1/2 w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-black/70 border border-white/15 text-zinc-200 hover:text-white hover:border-accent flex items-center justify-center text-4xl sm:text-5xl leading-none pb-1 transition z-20"
+                >
+                    ‹
+                </button>
+                <button
+                    id="modalNext"
+                    onclick="navModal(1)"
+                    title="Next game"
+                    class="absolute right-1 sm:right-auto sm:left-full sm:ml-4 top-1/2 -translate-y-1/2 w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-black/70 border border-white/15 text-zinc-200 hover:text-white hover:border-accent flex items-center justify-center text-4xl sm:text-5xl leading-none pb-1 transition z-20"
+                >
+                    ›
+                </button>
             </div>
         </div>
 
@@ -729,6 +780,10 @@
             let allData = [];
             let filteredData = [];
             let headers = [];
+            // The exact list currently shown on the grid, plus the open game's
+            // position in it — used to step through games from the modal.
+            let modalList = [];
+            let modalIndex = -1;
             let activeFilters = {
                 status: "all",
                 console: "all",
@@ -736,6 +791,7 @@
                 playable: "all",
                 price: "all",
                 cex: "all",
+                sealed: "all",
             };
             let coverCache = {};
             let cexCache = {};
@@ -761,6 +817,10 @@
                 return (
                     (row["Date Purchased"] || "").trim().toUpperCase() === "TBC"
                 );
+            }
+
+            function isSealed(row) {
+                return (row["Sealed"] || "").trim().toUpperCase() === "Y";
             }
 
             function parseUkDate(str) {
@@ -1227,17 +1287,22 @@
                 const rawHeaders = parseCSVLine(rows[headerRowIdx]).map(
                     normalizeHeader,
                 );
-                // Keep only first 11 columns (drop sheet's summary cells).
-                headers = rawHeaders
-                    .slice(0, 11)
-                    .filter((h) => h && !h.toLowerCase().startsWith("total "));
+                // Keep named columns, dropping the sheet's blank spacers and
+                // "Total …" summary cells. Remember each kept column's ORIGINAL
+                // index so values stay aligned no matter where it sits.
+                const cols = rawHeaders
+                    .map((h, idx) => ({ h, idx }))
+                    .filter(
+                        ({ h }) => h && !h.toLowerCase().startsWith("total "),
+                    );
+                headers = cols.map((c) => c.h);
 
                 allData = [];
                 for (let i = headerRowIdx + 1; i < rows.length; i++) {
                     const values = parseCSVLine(rows[i]);
                     if (!values.some((v) => v.trim() !== "")) continue;
                     const row = {};
-                    headers.forEach((h, idx) => {
+                    cols.forEach(({ h, idx }) => {
                         row[h] = (values[idx] ?? "").trim();
                     });
                     if (row["Game"] && row["Game"].trim()) allData.push(row);
@@ -1421,6 +1486,19 @@
                         makeChip(label, val, "cex", i === 0),
                     ),
                 );
+
+                // Sealed
+                const sealedCont = document.getElementById("sealedFilters");
+                sealedCont.innerHTML = "";
+                [
+                    ["All", "all"],
+                    ["Sealed", "yes"],
+                    ["Not sealed", "no"],
+                ].forEach(([label, val], i) =>
+                    sealedCont.appendChild(
+                        makeChip(label, val, "sealed", i === 0),
+                    ),
+                );
             }
 
             function setFilter(group, value, button) {
@@ -1483,6 +1561,11 @@
                         const hasUrl = parseCexLinks(row["CEX Listing"]).length > 0;
                         if (activeFilters.cex === "yes" && !hasUrl) return false;
                         if (activeFilters.cex === "no" && hasUrl) return false;
+                    }
+                    if (activeFilters.sealed !== "all") {
+                        const s = isSealed(row);
+                        if (activeFilters.sealed === "yes" && !s) return false;
+                        if (activeFilters.sealed === "no" && s) return false;
                     }
                     return true;
                 });
@@ -1593,6 +1676,9 @@
             function displayCards(data) {
                 const grid = document.getElementById("cardsGrid");
                 grid.innerHTML = "";
+                // Remember the current on-screen order so the modal can page
+                // through games exactly as they appear here.
+                modalList = data;
                 if (data.length === 0) {
                     grid.innerHTML = `<p class="col-span-full text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
                     return;
@@ -1600,10 +1686,14 @@
 
                 data.forEach((row, index) => {
                     const tbc = isTBC(row);
+                    const sealed = isSealed(row);
                     const card = document.createElement("div");
-                    card.className = "card animate-fadeInUp" + (tbc ? " tbc" : "");
+                    card.className =
+                        "card animate-fadeInUp" +
+                        (tbc ? " tbc" : "") +
+                        (sealed ? " sealed" : "");
                     card.style.animationDelay = `${Math.min(index * 0.015, 0.4)}s`;
-                    card.onclick = () => openModal(row);
+                    card.onclick = () => openModal(row, index);
 
                     const consoleName = normalizeConsole(row["Console Version"]);
                     const playable = (row["Playable"] || "").toUpperCase();
@@ -1617,7 +1707,7 @@
                     const cexCover = coverFromRow(row, "l");
                     const badgesHtml = `
                         ${hasCex ? `<span class="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/90 text-black border border-accent z-10">CeX</span>` : ""}
-                        ${tbc ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-600/90 text-white border border-purple-300/50 z-10">To buy</span>` : playable === "N" ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-500/90 text-white border border-red-400 z-10">Not playable</span>` : ""}
+                        ${tbc ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-600/90 text-white border border-purple-300/50 z-10">To buy</span>` : sealed ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#d4af37] text-black border border-[#f5d774] z-10">Sealed</span>` : playable === "N" ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-500/90 text-white border border-red-400 z-10">Not playable</span>` : ""}
                         ${tbc ? `<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10"><span class="tbc-stamp px-3 py-1 rounded-md bg-purple-600/85 text-white text-xs font-bold uppercase tracking-[0.15em] border border-purple-200/60">Not owned</span></div>` : ""}
                     `;
                     const initialPosterHtml = cexCover
@@ -1665,10 +1755,15 @@
             }
 
             // === MODAL =============================================================
-            async function openModal(row) {
+            async function openModal(row, index) {
                 const modal = document.getElementById("modal");
                 const body = document.getElementById("modalBody");
                 const poster = document.getElementById("modalPoster");
+
+                // Track where we are in the current grid order for prev/next.
+                modalIndex =
+                    typeof index === "number" ? index : modalList.indexOf(row);
+                updateModalNav();
 
                 const consoleName = normalizeConsole(row["Console Version"]);
                 const playable = (row["Playable"] || "").toUpperCase();
@@ -1676,6 +1771,7 @@
                 const current = parsePrice(row["Current Price"]);
                 const cexLinks = parseCexLinks(row["CEX Listing"]);
                 const tbc = isTBC(row);
+                const sealed = isSealed(row);
 
                 const conditionRow = (label, val) => {
                     const dot = CONDITION_DOT[val] || "bg-zinc-700";
@@ -1689,6 +1785,10 @@
 
                 const tbcBadge = tbc
                     ? `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/40">To buy · not owned</span>`
+                    : "";
+
+                const sealedBadge = sealed
+                    ? `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-[#d4af37]/15 text-[#f5d774] border border-[#d4af37]/50">Sealed</span>`
                     : "";
 
                 const playableBadge = tbc
@@ -1706,6 +1806,7 @@
                     <div class="flex items-center gap-2 mb-3 flex-wrap">
                         <span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-white/5 text-zinc-300 border border-white/10">${escapeHtml(consoleName)}</span>
                         ${tbcBadge}
+                        ${sealedBadge}
                         ${playableBadge}
                     </div>
                     <h2 class="text-3xl font-semibold text-white tracking-tight pr-12 mb-5">${escapeHtml(row["Game"] || "")}</h2>
@@ -1749,6 +1850,9 @@
                 }
 
                 body.innerHTML = html;
+                document
+                    .getElementById("modalBox")
+                    .classList.toggle("sealed", sealed);
                 modal.classList.remove("hidden");
                 modal.classList.add("flex");
                 document.body.style.overflow = "hidden";
@@ -1825,6 +1929,28 @@
                 modal.classList.add("hidden");
                 modal.classList.remove("flex");
                 document.body.style.overflow = "auto";
+                modalIndex = -1;
+            }
+
+            // Step to the previous/next game in the current grid order, wrapping
+            // around at the ends.
+            function navModal(dir) {
+                if (!modalList.length || modalIndex < 0) return;
+                const next =
+                    (modalIndex + dir + modalList.length) % modalList.length;
+                const body = document.getElementById("modalBody");
+                if (body) body.scrollTop = 0;
+                openModal(modalList[next], next);
+            }
+
+            // Show the arrows only when there's more than one game to page through.
+            function updateModalNav() {
+                const prev = document.getElementById("modalPrev");
+                const next = document.getElementById("modalNext");
+                const show = modalList.length > 1;
+                [prev, next].forEach((b) => {
+                    if (b) b.classList.toggle("hidden", !show);
+                });
             }
 
             // === TOGGLES + EVENTS ==================================================
@@ -1854,7 +1980,12 @@
                 if (e.target === this) closeModal();
             };
             document.addEventListener("keydown", (e) => {
+                const modal = document.getElementById("modal");
+                const modalOpen = modal && !modal.classList.contains("hidden");
                 if (e.key === "Escape") closeModal();
+                if (!modalOpen) return;
+                if (e.key === "ArrowLeft") navModal(-1);
+                if (e.key === "ArrowRight") navModal(1);
             });
 
             // === INIT ==============================================================
