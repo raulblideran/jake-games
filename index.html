@@ -337,6 +337,194 @@
             .vbar:hover {
                 opacity: 0.75;
             }
+            /* ---- Cover wall ---------------------------------------------- */
+            #wallView {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+                gap: 2px;
+            }
+            .wall-tile {
+                position: relative;
+                aspect-ratio: 3 / 4;
+                background: #0f0f0f;
+                overflow: hidden;
+                cursor: pointer;
+            }
+            .wall-tile img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transition:
+                    transform 0.25s ease,
+                    filter 0.25s ease;
+            }
+            .wall-tile:hover {
+                z-index: 10;
+            }
+            .wall-tile:hover img {
+                transform: scale(1.12);
+                filter: brightness(1.12);
+            }
+            .wall-tile .wall-label {
+                position: absolute;
+                inset: auto 0 0 0;
+                padding: 16px 6px 5px;
+                font-size: 10px;
+                line-height: 1.2;
+                color: #fff;
+                background: linear-gradient(transparent, rgba(0, 0, 0, 0.92));
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+            .wall-tile:hover .wall-label {
+                opacity: 1;
+            }
+            .wall-tile.sealed::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border: 2px solid #d4af37;
+                pointer-events: none;
+            }
+
+            /* ---- Shelf view ------------------------------------------------ */
+            #shelfView {
+                display: flex;
+                flex-wrap: wrap;
+                align-content: flex-start;
+                padding: 8px 10px 0;
+                background:
+                    repeating-linear-gradient(
+                        to bottom,
+                        transparent 0,
+                        transparent 178px,
+                        #4a3728 178px,
+                        #6b5139 182px,
+                        #2a1f16 190px,
+                        transparent 190px,
+                        transparent 214px
+                    ),
+                    #141010;
+                border-radius: 12px;
+            }
+            .spine {
+                height: 170px;
+                margin: 0 2px 44px;
+                border-radius: 2px 2px 0 0;
+                cursor: pointer;
+                writing-mode: vertical-rl;
+                text-orientation: mixed;
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 0.02em;
+                padding: 8px 3px;
+                overflow: hidden;
+                white-space: nowrap;
+                color: rgba(255, 255, 255, 0.92);
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+                box-shadow:
+                    inset -2px 0 4px rgba(0, 0, 0, 0.45),
+                    inset 2px 0 2px rgba(255, 255, 255, 0.12);
+                transition:
+                    transform 0.15s ease,
+                    filter 0.15s ease;
+            }
+            .spine:hover {
+                transform: translateY(-10px);
+                filter: brightness(1.35);
+            }
+            .spine.sealed {
+                box-shadow:
+                    inset -2px 0 4px rgba(0, 0, 0, 0.45),
+                    0 0 0 1px #d4af37;
+            }
+
+            /* ---- Purchase heatmap ------------------------------------------ */
+            .hm-cell {
+                width: 10px;
+                height: 10px;
+                border-radius: 2px;
+                background: rgba(255, 255, 255, 0.05);
+            }
+            .hm-cell[data-n="1"] { background: #0e4f5c; }
+            .hm-cell[data-n="2"] { background: #12768a; }
+            .hm-cell[data-n="3"] { background: #19a4bd; }
+            .hm-cell[data-n="4"] { background: #22d3ee; }
+
+            /* ---- Trophies -------------------------------------------------- */
+            .trophy {
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+                padding: 14px;
+                background: #131313;
+            }
+            .trophy.unlocked {
+                border-color: rgba(212, 175, 55, 0.5);
+                background: linear-gradient(
+                    150deg,
+                    rgba(212, 175, 55, 0.12),
+                    rgba(212, 175, 55, 0) 60%
+                ), #131313;
+            }
+            .trophy.locked {
+                opacity: 0.55;
+                filter: grayscale(0.7);
+            }
+
+            /* ---- Wrapped --------------------------------------------------- */
+            .wrap-slide {
+                animation: fadeInUp 0.5s ease;
+            }
+
+            /* ---- Konami / CRT mode ----------------------------------------- */
+            body.crt::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                z-index: 9998;
+                pointer-events: none;
+                background: repeating-linear-gradient(
+                    to bottom,
+                    rgba(0, 0, 0, 0) 0,
+                    rgba(0, 0, 0, 0) 2px,
+                    rgba(0, 0, 0, 0.28) 3px,
+                    rgba(0, 0, 0, 0.28) 4px
+                );
+            }
+            body.crt::after {
+                content: "";
+                position: fixed;
+                inset: 0;
+                z-index: 9997;
+                pointer-events: none;
+                background: radial-gradient(
+                    ellipse at center,
+                    rgba(0, 0, 0, 0) 45%,
+                    rgba(0, 0, 0, 0.55) 100%
+                );
+                animation: flicker 5s infinite steps(1);
+            }
+            body.crt {
+                text-shadow: 0 0 3px rgba(34, 211, 238, 0.5);
+            }
+            body.crt img {
+                filter: saturate(1.35) contrast(1.12);
+            }
+            @keyframes flicker {
+                0%, 97%, 100% { opacity: 1; }
+                98% { opacity: 0.82; }
+                99% { opacity: 1; }
+            }
+            @keyframes bootIn {
+                0% { transform: scaleY(0.004) scaleX(1); opacity: 1; }
+                35% { transform: scaleY(0.004) scaleX(1); opacity: 1; }
+                60% { transform: scaleY(1) scaleX(1); opacity: 1; }
+                100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+            }
+            .booting {
+                animation: bootIn 0.6s ease-out;
+            }
+
             @keyframes spin {
                 from {
                     transform: rotate(0deg);
@@ -417,11 +605,11 @@
                     </div>
                 </div>
                 <div id="cexTotals" class="flex flex-wrap items-center gap-6">
-                    <div>
+                    <div title="What CeX charges for these games — the basis for Current value and Gain / loss">
                         <div
                             class="text-[10px] uppercase tracking-wider text-zinc-500"
                         >
-                            Sell (CeX price)
+                            CeX retail
                         </div>
                         <div
                             class="text-lg font-semibold text-white"
@@ -430,11 +618,11 @@
                             —
                         </div>
                     </div>
-                    <div>
+                    <div title="What CeX would pay YOU in cash to take the lot — trade-in value, always well below retail">
                         <div
                             class="text-[10px] uppercase tracking-wider text-zinc-500"
                         >
-                            Cash
+                            Trade-in cash
                         </div>
                         <div
                             class="text-lg font-semibold text-emerald-400"
@@ -443,11 +631,11 @@
                             —
                         </div>
                     </div>
-                    <div>
+                    <div title="What CeX would pay you in store vouchers — usually a little above the cash offer">
                         <div
                             class="text-[10px] uppercase tracking-wider text-zinc-500"
                         >
-                            Voucher
+                            Trade-in voucher
                         </div>
                         <div
                             class="text-lg font-semibold text-amber-400"
@@ -486,7 +674,7 @@
                         </div>
                     </div>
                     <div
-                        title="CeX cash price where available, otherwise the sheet's Current Price"
+                        title="What CeX sells it for, where known — otherwise the sheet's Current Price"
                     >
                         <div
                             class="text-[10px] uppercase tracking-wider text-zinc-500"
@@ -536,6 +724,12 @@
                         <button id="viewTableBtn" onclick="setView('table')">
                             Table
                         </button>
+                        <button id="viewWallBtn" onclick="setView('wall')">
+                            Wall
+                        </button>
+                        <button id="viewShelfBtn" onclick="setView('shelf')">
+                            Shelf
+                        </button>
                     </div>
                     <button
                         id="refreshButton"
@@ -581,6 +775,36 @@
                             >▾</span
                         >
                     </button>
+                    <div class="flex gap-2 items-center">
+                        <button
+                            class="ghost-btn"
+                            onclick="rollRandomGame()"
+                            title="Pick something to play"
+                        >
+                            🎲
+                        </button>
+                        <button
+                            class="ghost-btn"
+                            onclick="openTrophies()"
+                            title="Trophy cabinet"
+                        >
+                            🏆
+                        </button>
+                        <button
+                            class="ghost-btn"
+                            onclick="openWrapped()"
+                            title="Collection Wrapped"
+                        >
+                            🎁
+                        </button>
+                        <button
+                            class="ghost-btn"
+                            onclick="openGuess()"
+                            title="Guess the price"
+                        >
+                            💷
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Breakdown panel -->
@@ -617,6 +841,111 @@
                 id="tableWrap"
                 class="hidden bg-surface border border-white/8 rounded-xl overflow-x-auto scroll-thin"
             ></div>
+            <div id="wallView" class="hidden"></div>
+            <div id="shelfView" class="hidden"></div>
+        </div>
+
+        <!-- Random picker -->
+        <div
+            id="rollOverlay"
+            class="hidden fixed inset-0 z-[450] bg-black/90 items-center justify-center"
+        >
+            <div class="text-center">
+                <div
+                    class="text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-6"
+                >
+                    Tonight you play
+                </div>
+                <div
+                    id="rollCover"
+                    class="w-[220px] h-[293px] mx-auto rounded-xl overflow-hidden bg-black/60 border border-white/10"
+                ></div>
+                <div
+                    id="rollTitle"
+                    class="mt-5 text-2xl font-semibold text-white h-8"
+                ></div>
+                <div id="rollConsole" class="text-sm text-zinc-500 h-5"></div>
+            </div>
+        </div>
+
+        <!-- Trophy cabinet -->
+        <div
+            id="trophyOverlay"
+            class="hidden fixed inset-0 z-[450] bg-black/90 overflow-y-auto scroll-thin p-6 md:p-10"
+        >
+            <div class="max-w-6xl mx-auto">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white">
+                            Trophy cabinet
+                        </h2>
+                        <p id="trophyScore" class="text-zinc-500 text-sm mt-1"></p>
+                    </div>
+                    <button class="ghost-btn" onclick="closeOverlay('trophyOverlay')">
+                        Close
+                    </button>
+                </div>
+                <div
+                    id="trophyGrid"
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+                ></div>
+            </div>
+        </div>
+
+        <!-- Wrapped -->
+        <div
+            id="wrappedOverlay"
+            class="hidden fixed inset-0 z-[460] bg-black items-center justify-center p-6"
+        >
+            <button
+                class="absolute top-5 right-5 ghost-btn z-10"
+                onclick="closeOverlay('wrappedOverlay')"
+            >
+                Close
+            </button>
+            <div
+                id="wrappedDots"
+                class="absolute top-6 left-1/2 -translate-x-1/2 flex gap-1.5"
+            ></div>
+            <button
+                class="absolute left-4 top-1/2 -translate-y-1/2 text-4xl text-zinc-600 hover:text-white transition"
+                onclick="wrappedStep(-1)"
+            >
+                ‹
+            </button>
+            <button
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-4xl text-zinc-600 hover:text-white transition"
+                onclick="wrappedStep(1)"
+            >
+                ›
+            </button>
+            <div
+                id="wrappedSlide"
+                class="max-w-2xl w-full text-center"
+            ></div>
+        </div>
+
+        <!-- Guess the price -->
+        <div
+            id="guessOverlay"
+            class="hidden fixed inset-0 z-[450] bg-black/92 items-center justify-center p-6"
+        >
+            <div
+                class="bg-surface border border-white/10 rounded-2xl max-w-md w-full p-7 relative"
+            >
+                <button
+                    class="absolute top-4 right-4 text-zinc-500 hover:text-white text-xl"
+                    onclick="closeOverlay('guessOverlay')"
+                >
+                    ×
+                </button>
+                <div
+                    class="text-[10px] uppercase tracking-[0.25em] text-accent mb-4"
+                >
+                    Guess the CeX price
+                </div>
+                <div id="guessBody"></div>
+            </div>
         </div>
 
         <!-- Toasts -->
@@ -1380,7 +1709,11 @@
             }
 
             // === VALUATION =========================================================
-            function rowCexCash(row) {
+            // A game is valued at what CeX SELLS it for — i.e. what it would cost
+            // to replace today. CeX's cash/voucher offers are trade-in prices and
+            // run far below that, so they'd describe liquidation value, not what
+            // the shelf is worth. Both are still shown in the strip and the modal.
+            function rowCexValue(row) {
                 const skus = rowSkus(row);
                 if (!skus.length) return null;
                 let sum = 0;
@@ -1388,7 +1721,7 @@
                 for (const sku of skus) {
                     const rec = cexCache[sku];
                     if (rec) {
-                        sum += rec.cash || 0;
+                        sum += rec.sell || 0;
                         any = true;
                     }
                 }
@@ -1396,8 +1729,8 @@
             }
 
             function rowValue(row) {
-                const cash = rowCexCash(row);
-                return cash !== null ? cash : parsePrice(row["Current Price"]);
+                const cex = rowCexValue(row);
+                return cex !== null ? cex : parsePrice(row["Current Price"]);
             }
 
             function rowPaid(row) {
@@ -1419,7 +1752,7 @@
                 let priced = 0;
                 for (const row of owned) {
                     paid += rowPaid(row);
-                    const c = rowCexCash(row);
+                    const c = rowCexValue(row);
                     if (c !== null) {
                         value += c;
                         priced++;
@@ -1813,7 +2146,7 @@
                     .join("");
 
                 // --- movers -------------------------------------------------------
-                const priced = owned.filter((r) => rowCexCash(r) !== null);
+                const priced = owned.filter((r) => rowCexValue(r) !== null);
                 const sorted = [...priced].sort((a, b) => rowGain(b) - rowGain(a));
                 const moverRow = (row) => {
                     const g = rowGain(row);
@@ -1857,6 +2190,10 @@
                         <div>
                             <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">By edition</h3>
                             <div class="flex flex-col gap-2">${editionList}</div>
+                        </div>
+                        <div class="xl:col-span-2">
+                            <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Purchase heatmap</h3>
+                            ${renderHeatmap(owned)}
                         </div>
                         <div class="xl:col-span-2">
                             <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Movers</h3>
@@ -2204,7 +2541,7 @@
                     stored = localStorage.getItem(VIEW_KEY);
                 } catch (e) {}
                 const view = p.get("view") || stored;
-                if (view === "table" || view === "grid") currentView = view;
+                if (view && VIEWS[view]) currentView = view;
                 for (const group of Object.keys(activeFilters)) {
                     const raw = p.get(group);
                     if (raw)
@@ -2241,22 +2578,33 @@
                 updateFilterSummary();
                 writeUrlState();
                 if (currentView === "table") renderTable(visibleData);
+                else if (currentView === "wall") renderWall(visibleData);
+                else if (currentView === "shelf") renderShelf(visibleData);
                 else displayCards(visibleData);
             }
 
+            const VIEWS = {
+                grid: ["cardsGrid", "viewGridBtn"],
+                table: ["tableWrap", "viewTableBtn"],
+                wall: ["wallView", "viewWallBtn"],
+                shelf: ["shelfView", "viewShelfBtn"],
+            };
+
             function applyView() {
-                document
-                    .getElementById("cardsGrid")
-                    .classList.toggle("hidden", currentView !== "grid");
-                document
-                    .getElementById("tableWrap")
-                    .classList.toggle("hidden", currentView !== "table");
-                document
-                    .getElementById("viewGridBtn")
-                    .classList.toggle("active", currentView === "grid");
-                document
-                    .getElementById("viewTableBtn")
-                    .classList.toggle("active", currentView === "table");
+                for (const [name, [paneId, btnId]] of Object.entries(VIEWS)) {
+                    const on = currentView === name;
+                    document
+                        .getElementById(paneId)
+                        .classList.toggle("hidden", !on);
+                    document
+                        .getElementById(btnId)
+                        .classList.toggle("active", on);
+                }
+                // #wallView is display:grid, so "hidden" needs help winning.
+                const wall = document.getElementById("wallView");
+                wall.style.display = currentView === "wall" ? "grid" : "none";
+                const shelf = document.getElementById("shelfView");
+                shelf.style.display = currentView === "shelf" ? "flex" : "none";
             }
 
             function setView(view) {
@@ -2405,7 +2753,7 @@
                 ["Done", null],
                 ["Purchased", "date-newest"],
                 ["Paid", "paid-desc"],
-                ["CeX cash", "value-desc"],
+                ["CeX sell", "value-desc"],
                 ["Δ", "gain-desc"],
                 ["Link", null],
             ];
@@ -2437,7 +2785,7 @@
                         const paid = rowPaid(row);
                         const value = rowValue(row);
                         const gain = value - paid;
-                        const priced = rowCexCash(row) !== null;
+                        const priced = rowCexValue(row) !== null;
                         const cover = coverFromRow(row, "s");
                         const links = parseCexLinks(row["CEX Listing"]);
                         const other = parseOtherLinks(row["CEX Listing"]);
@@ -2497,7 +2845,7 @@
                 const paid = rowPaid(row);
                 const value = rowValue(row);
                 const gain = value - paid;
-                const priced = rowCexCash(row) !== null;
+                const priced = rowCexValue(row) !== null;
                 const cexLinks = parseCexLinks(row["CEX Listing"]);
                 const otherLinks = parseOtherLinks(row["CEX Listing"]);
                 const tbc = isTBC(row);
@@ -2551,7 +2899,7 @@
                         <div class="bg-accent/5 rounded-lg p-4 border border-accent/20">
                             <div class="text-[10px] uppercase tracking-wider text-accent mb-1">${tbc ? "Target price" : "Current value"}</div>
                             <div class="text-xl font-semibold text-accent">${value > 0 ? fmtMoney(value) : "—"}</div>
-                            <div class="text-[10px] text-zinc-500 mt-0.5">${priced ? "CeX cash" : cexLinks.length > 0 ? "CeX price pending…" : "sheet column"}</div>
+                            <div class="text-[10px] text-zinc-500 mt-0.5">${priced ? "CeX sell price" : cexLinks.length > 0 ? "CeX price pending…" : "sheet column"}</div>
                         </div>
                         <div class="rounded-lg p-4 border ${gain >= 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20"}">
                             <div class="text-[10px] uppercase tracking-wider ${gain >= 0 ? "text-emerald-400" : "text-red-400"} mb-1">Gain / loss</div>
@@ -2698,6 +3046,693 @@
                 });
             }
 
+            // === COVER WALL / SHELF ================================================
+            // Stable per-console colour for the shelf spines.
+            const CONSOLE_HUE = {
+                "Xbox 360": 122,
+                "Xbox One": 142,
+                "Xbox Series": 158,
+                Xbox: 104,
+                "PlayStation 1": 232,
+                "PlayStation 2": 222,
+                "PlayStation 3": 212,
+                "PlayStation 4": 204,
+                PSP: 192,
+                Wii: 184,
+                "Nintendo DS": 348,
+                "Gameboy Advance": 280,
+                PC: 28,
+            };
+
+            function consoleHue(name) {
+                if (CONSOLE_HUE[name] !== undefined) return CONSOLE_HUE[name];
+                let h = 0;
+                for (let i = 0; i < name.length; i++)
+                    h = (h * 31 + name.charCodeAt(i)) % 360;
+                return h;
+            }
+
+            function renderWall(data) {
+                const wall = document.getElementById("wallView");
+                if (!data.length) {
+                    wall.innerHTML = `<p class="col-span-full text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
+                    return;
+                }
+                wall.innerHTML = data
+                    .map((row, index) => {
+                        const cover = coverFromRow(row, "m");
+                        const name = normalizeConsole(row["Console Version"]);
+                        return `
+                        <div class="wall-tile ${isSealed(row) ? "sealed" : ""}" data-idx="${index}" title="${escapeHtml(
+                            `${row["Game"]} · ${name}`,
+                        )}">
+                            ${
+                                cover
+                                    ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'" />`
+                                    : `<div class="w-full h-full flex items-center justify-center text-[9px] text-zinc-700 uppercase tracking-wider text-center px-1">${escapeHtml(name)}</div>`
+                            }
+                            <div class="wall-label">${escapeHtml(row["Game"])}</div>
+                        </div>`;
+                    })
+                    .join("");
+                wall.querySelectorAll(".wall-tile").forEach((t) => {
+                    t.onclick = () => openModalByIndex(Number(t.dataset.idx));
+                });
+            }
+
+            function renderShelf(data) {
+                const shelf = document.getElementById("shelfView");
+                if (!data.length) {
+                    shelf.innerHTML = `<p class="w-full text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
+                    return;
+                }
+                shelf.innerHTML = data
+                    .map((row, index) => {
+                        const name = normalizeConsole(row["Console Version"]);
+                        const hue = consoleHue(name);
+                        const paid = rowPaid(row);
+                        // Fatter spine for a pricier game — roughly how a chunky
+                        // special edition sits on a real shelf.
+                        const width = Math.round(
+                            Math.max(19, Math.min(44, 19 + paid * 1.1)),
+                        );
+                        const light = 26 + ((index * 7) % 10);
+                        return `
+                        <div class="spine ${isSealed(row) ? "sealed" : ""}" data-idx="${index}"
+                             style="width:${width}px;background:linear-gradient(90deg,hsl(${hue} 42% ${light + 8}%),hsl(${hue} 46% ${light}%))"
+                             title="${escapeHtml(`${row["Game"]} · ${name} · ${fmtMoney(paid)}`)}">${escapeHtml(
+                                 row["Game"],
+                             )}</div>`;
+                    })
+                    .join("");
+                shelf.querySelectorAll(".spine").forEach((t) => {
+                    t.onclick = () => openModalByIndex(Number(t.dataset.idx));
+                });
+            }
+
+            // === PURCHASE HEATMAP ==================================================
+            function renderHeatmap(owned) {
+                const byDay = new Map();
+                for (const row of owned) {
+                    const d = parseUkDate(row["Date Purchased"]);
+                    if (!d || isNaN(d)) continue;
+                    const key = d.toISOString().slice(0, 10);
+                    if (!byDay.has(key))
+                        byDay.set(key, { n: 0, spend: 0, titles: [] });
+                    const e = byDay.get(key);
+                    e.n++;
+                    e.spend += rowPaid(row);
+                    e.titles.push(row["Game"]);
+                }
+                if (!byDay.size)
+                    return `<p class="text-xs text-zinc-500">No dated purchases.</p>`;
+
+                const years = new Map();
+                for (const [key, e] of byDay) {
+                    const year = key.slice(0, 4);
+                    const d = new Date(`${key}T00:00:00Z`);
+                    const dayOfYear = Math.floor(
+                        (d - Date.UTC(d.getUTCFullYear(), 0, 1)) / 86400000,
+                    );
+                    const week = Math.min(52, Math.floor(dayOfYear / 7));
+                    if (!years.has(year)) years.set(year, new Map());
+                    const weeks = years.get(year);
+                    if (!weeks.has(week))
+                        weeks.set(week, { n: 0, spend: 0, notes: [] });
+                    const w = weeks.get(week);
+                    w.n += e.n;
+                    w.spend += e.spend;
+                    w.notes.push(
+                        `${key}: ${e.titles.slice(0, 4).join(", ")}${
+                            e.titles.length > 4 ? ` +${e.titles.length - 4} more` : ""
+                        }`,
+                    );
+                }
+
+                const level = (n) => (n >= 8 ? 4 : n >= 4 ? 3 : n >= 2 ? 2 : 1);
+                const rows = [...years.entries()]
+                    .sort((a, b) => a[0].localeCompare(b[0]))
+                    .map(([year, weeks]) => {
+                        let total = 0;
+                        let spend = 0;
+                        weeks.forEach((w) => {
+                            total += w.n;
+                            spend += w.spend;
+                        });
+                        const cells = Array.from({ length: 53 }, (_, i) => {
+                            const w = weeks.get(i);
+                            if (!w) return `<div class="hm-cell"></div>`;
+                            return `<div class="hm-cell" data-n="${level(w.n)}" title="${escapeHtml(
+                                `${w.n} game${w.n === 1 ? "" : "s"} · ${fmtMoney(w.spend)}\n${w.notes.join("\n")}`,
+                            )}"></div>`;
+                        }).join("");
+                        return `
+                        <div class="flex items-center gap-2">
+                            <span class="w-9 text-[10px] text-zinc-500 tabular-nums">${year}</span>
+                            <div class="flex gap-[2px]">${cells}</div>
+                            <span class="text-[10px] text-zinc-500 ml-2 whitespace-nowrap">${total} · ${fmtMoney(spend)}</span>
+                        </div>`;
+                    })
+                    .join("");
+
+                return `
+                    <div class="overflow-x-auto scroll-thin">
+                        <div class="flex flex-col gap-1.5 min-w-max">${rows}</div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-3 text-[10px] text-zinc-500">
+                        <span>Quieter</span>
+                        <div class="hm-cell"></div>
+                        <div class="hm-cell" data-n="1"></div>
+                        <div class="hm-cell" data-n="2"></div>
+                        <div class="hm-cell" data-n="3"></div>
+                        <div class="hm-cell" data-n="4"></div>
+                        <span>Busier</span>
+                        <span class="ml-2">· one square = one week</span>
+                    </div>`;
+            }
+
+            // === OVERLAY HELPERS ===================================================
+            function openOverlay(id) {
+                const el = document.getElementById(id);
+                el.classList.remove("hidden");
+                el.classList.add(
+                    id === "trophyOverlay" ? "block" : "flex",
+                );
+                document.body.style.overflow = "hidden";
+            }
+            function closeOverlay(id) {
+                const el = document.getElementById(id);
+                el.classList.add("hidden");
+                el.classList.remove("flex", "block");
+                if (
+                    document
+                        .getElementById("modal")
+                        .classList.contains("hidden")
+                )
+                    document.body.style.overflow = "auto";
+            }
+            function anyOverlayOpen() {
+                return [
+                    "rollOverlay",
+                    "trophyOverlay",
+                    "wrappedOverlay",
+                    "guessOverlay",
+                ].find(
+                    (id) =>
+                        !document.getElementById(id).classList.contains("hidden"),
+                );
+            }
+
+            // === COLLECTION FACTS (shared by trophies + wrapped) ===================
+            function collectionFacts() {
+                const owned = allData.filter((r) => !isTBC(r));
+                const consoles = {};
+                const days = {};
+                const months = {};
+                const editions = {};
+                const titles = {};
+                let spend = 0;
+                let free = 0;
+                let cheap = 0;
+                let dearest = null;
+                let bargain = null;
+                let oldest = null;
+                for (const row of owned) {
+                    const name = normalizeConsole(row["Console Version"]);
+                    consoles[name] = (consoles[name] || 0) + 1;
+                    editions[editionOf(row)] =
+                        (editions[editionOf(row)] || 0) + 1;
+                    const key = `${row["Game"]}|${name}`.toLowerCase();
+                    titles[key] = (titles[key] || 0) + 1;
+
+                    const paid = rowPaid(row);
+                    spend += paid;
+                    if (paid === 0) free++;
+                    else if (paid < 3) cheap++;
+                    if (!dearest || paid > rowPaid(dearest)) dearest = row;
+                    if (paid > 0 && (!bargain || paid < rowPaid(bargain)))
+                        bargain = row;
+
+                    const raw = (row["Date Purchased"] || "").trim();
+                    if (raw) days[raw] = (days[raw] || 0) + 1;
+                    const d = parseUkDate(raw);
+                    if (d && !isNaN(d)) {
+                        if (!oldest || d < parseUkDate(oldest["Date Purchased"]))
+                            oldest = row;
+                        const mk = monthKey(d);
+                        if (!months[mk]) months[mk] = { n: 0, spend: 0 };
+                        months[mk].n++;
+                        months[mk].spend += paid;
+                    }
+                }
+                const consoleRank = Object.entries(consoles).sort(
+                    (a, b) => b[1] - a[1],
+                );
+                const busiestDay = Object.entries(days).sort(
+                    (a, b) => b[1] - a[1],
+                )[0] || ["—", 0];
+                const busiestMonth = Object.entries(months).sort(
+                    (a, b) => b[1].n - a[1].n,
+                )[0];
+                const dupes = Object.values(titles).filter((v) => v > 1).length;
+                const totals = collectionTotals(allData);
+                const priced = owned.filter((r) => rowCexValue(r) !== null);
+                const bestFind = [...priced].sort(
+                    (a, b) => rowGain(b) - rowGain(a),
+                )[0];
+                return {
+                    owned,
+                    n: owned.length,
+                    consoles,
+                    consoleRank,
+                    editions,
+                    spend,
+                    free,
+                    cheap,
+                    dearest,
+                    bargain,
+                    oldest,
+                    busiestDay,
+                    busiestMonth,
+                    dupes,
+                    totals,
+                    bestFind,
+                    completed: owned.filter(isCompleted).length,
+                    sealed: owned.filter(isSealed).length,
+                    complete: owned.filter(isComplete).length,
+                };
+            }
+
+            // === TROPHY CABINET ====================================================
+            function buildAchievements() {
+                const f = collectionFacts();
+                const topConsole = f.consoleRank[0] ? f.consoleRank[0][1] : 0;
+                const families = new Set();
+                for (const name of Object.keys(f.consoles)) {
+                    if (/xbox/i.test(name)) families.add("ms");
+                    else if (/playstation|psp/i.test(name)) families.add("sony");
+                    else if (/wii|nintendo|gameboy|ds/i.test(name))
+                        families.add("nintendo");
+                }
+                const oldestYears = f.oldest
+                    ? (Date.now() -
+                          parseUkDate(f.oldest["Date Purchased"]).getTime()) /
+                      (365.25 * 86400000)
+                    : 0;
+                const pctComplete = f.n ? (f.complete / f.n) * 100 : 0;
+
+                return [
+                    { icon: "📚", name: "Collector", desc: "Own 250 games", value: f.n, target: 250 },
+                    { icon: "🏛️", name: "Centurion", desc: "100 games on a single console", value: topConsole, target: 100 },
+                    { icon: "🌍", name: "Platform Nomad", desc: "Collect across 10 consoles", value: Object.keys(f.consoles).length, target: 10 },
+                    { icon: "🎮", name: "Console War Veteran", desc: "Own Nintendo, Sony and Microsoft games", value: families.size, target: 3 },
+                    { icon: "🏆", name: "Completionist", desc: "Finish 25 games", value: f.completed, target: 25 },
+                    { icon: "🧊", name: "Sealed Vault", desc: "Keep 5 games sealed", value: f.sealed, target: 5 },
+                    { icon: "💎", name: "Shelf Perfect", desc: "90% of games complete in the box", value: Math.round(pctComplete), target: 90, unit: "%" },
+                    { icon: "💰", name: "Big Spender", desc: "Spend £1,000 in total", value: Math.round(f.spend), target: 1000, unit: "£" },
+                    { icon: "💸", name: "High Roller", desc: "Pay £40 for a single game", value: Math.round(f.dearest ? rowPaid(f.dearest) : 0), target: 40, unit: "£" },
+                    { icon: "🪙", name: "Bargain Hunter", desc: "50 games bought under £3", value: f.cheap, target: 50 },
+                    { icon: "🎁", name: "Freebie Fiend", desc: "25 games that cost nothing", value: f.free, target: 25 },
+                    { icon: "🛒", name: "Supermarket Sweep", desc: "20 games in a single day", value: f.busiestDay[1], target: 20 },
+                    { icon: "⏳", name: "Time Capsule", desc: "Still own something bought 15 years ago", value: Math.floor(oldestYears), target: 15, unit: "y" },
+                    { icon: "👯", name: "Double Dipper", desc: "Own the same game twice", value: f.dupes, target: 1 },
+                    { icon: "🗡️", name: "Steel Reserve", desc: "Own a Steelcase edition", value: f.editions["Steelcase"] || 0, target: 1 },
+                    { icon: "🥇", name: "GOTY Hunter", desc: "Own 4 Game of the Year editions", value: f.editions["GOTY"] || 0, target: 4 },
+                    { icon: "🃏", name: "Loose Cannon", desc: "15 loose, boxless games", value: f.editions["Loose"] || 0, target: 15 },
+                    { icon: "📈", name: "In the Black", desc: "Collection worth more than you paid", value: Math.round(f.totals.value), target: Math.max(1, Math.round(f.totals.paid)), unit: "£" },
+                ];
+            }
+
+            function openTrophies() {
+                const list = buildAchievements();
+                const unlocked = list.filter((a) => a.value >= a.target).length;
+                document.getElementById("trophyScore").textContent =
+                    `${unlocked} of ${list.length} unlocked`;
+                document.getElementById("trophyGrid").innerHTML = list
+                    .map((a) => {
+                        const got = a.value >= a.target;
+                        const pct = Math.min(
+                            100,
+                            Math.round((a.value / a.target) * 100),
+                        );
+                        const u = a.unit === "£" ? "£" : "";
+                        const suffix = a.unit && a.unit !== "£" ? a.unit : "";
+                        return `
+                        <div class="trophy ${got ? "unlocked" : "locked"}">
+                            <div class="flex items-start gap-3">
+                                <div class="text-2xl leading-none">${a.icon}</div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-semibold ${got ? "text-[#f5d774]" : "text-zinc-300"}">${escapeHtml(a.name)}</div>
+                                    <div class="text-[11px] text-zinc-500 leading-snug mt-0.5">${escapeHtml(a.desc)}</div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="bar-track"><div class="bar-fill" style="width:${pct}%;${got ? "background:linear-gradient(90deg,#b8912c,#f5d774)" : ""}"></div></div>
+                                <div class="flex justify-between text-[10px] mt-1 ${got ? "text-[#e9c85a]" : "text-zinc-500"}">
+                                    <span>${got ? "Unlocked" : "Locked"}</span>
+                                    <span class="tabular-nums">${u}${a.value.toLocaleString("en-GB")}${suffix} / ${u}${a.target.toLocaleString("en-GB")}${suffix}</span>
+                                </div>
+                            </div>
+                        </div>`;
+                    })
+                    .join("");
+                openOverlay("trophyOverlay");
+            }
+
+            // === COLLECTION WRAPPED ================================================
+            let wrappedSlides = [];
+            let wrappedIndex = 0;
+
+            function buildWrapped() {
+                const f = collectionFacts();
+                const big = (t) =>
+                    `<div class="text-6xl md:text-7xl font-bold text-white tracking-tight">${t}</div>`;
+                const lead = (t) =>
+                    `<div class="text-sm uppercase tracking-[0.3em] text-accent mb-5">${escapeHtml(t)}</div>`;
+                const sub = (t) =>
+                    `<div class="text-zinc-400 mt-5 text-lg">${t}</div>`;
+                const slides = [];
+
+                slides.push(
+                    lead("Your collection") +
+                        big(f.n.toLocaleString("en-GB")) +
+                        sub(
+                            `physical games, across <span class="text-white font-semibold">${Object.keys(f.consoles).length}</span> consoles`,
+                        ),
+                );
+
+                const top3 = f.consoleRank.slice(0, 3);
+                slides.push(
+                    lead("Your top platforms") +
+                        `<div class="flex flex-col gap-4 mt-2">${top3
+                            .map(
+                                ([name, n], i) => `
+                            <div class="flex items-center gap-4">
+                                <span class="text-3xl font-bold text-zinc-600 w-8">${i + 1}</span>
+                                <span class="text-3xl font-semibold text-white flex-1 text-left">${escapeHtml(name)}</span>
+                                <span class="text-3xl font-bold text-accent tabular-nums">${n}</span>
+                            </div>`,
+                            )
+                            .join("")}</div>`,
+                );
+
+                slides.push(
+                    lead("You spent") +
+                        big(fmtMoney(f.spend)) +
+                        sub(
+                            `that's <span class="text-white font-semibold">${fmtMoney(f.spend / Math.max(1, f.n))}</span> a game on average`,
+                        ),
+                );
+
+                if (f.busiestMonth) {
+                    const [mk, m] = f.busiestMonth;
+                    slides.push(
+                        lead("Your biggest month") +
+                            big(escapeHtml(monthLabel(mk))) +
+                            sub(
+                                `<span class="text-white font-semibold">${m.n}</span> games in one month, for ${fmtMoney(m.spend)}`,
+                            ),
+                    );
+                }
+
+                if (f.busiestDay[1] > 1) {
+                    slides.push(
+                        lead("Your biggest single day") +
+                            big(escapeHtml(f.busiestDay[0])) +
+                            sub(
+                                `you walked out with <span class="text-white font-semibold">${f.busiestDay[1]}</span> games`,
+                            ),
+                    );
+                }
+
+                if (f.dearest) {
+                    slides.push(
+                        lead("Your biggest splurge") +
+                            `<div class="text-4xl md:text-5xl font-bold text-white">${escapeHtml(f.dearest["Game"])}</div>` +
+                            sub(
+                                `${fmtMoney(rowPaid(f.dearest))} · ${escapeHtml(normalizeConsole(f.dearest["Console Version"]))}`,
+                            ),
+                    );
+                }
+
+                if (f.bargain) {
+                    slides.push(
+                        lead("Your cheapest win") +
+                            `<div class="text-4xl md:text-5xl font-bold text-white">${escapeHtml(f.bargain["Game"])}</div>` +
+                            sub(
+                                `just ${fmtMoney(rowPaid(f.bargain))}${f.free > 0 ? ` — and ${f.free} more came free` : ""}`,
+                            ),
+                    );
+                }
+
+                if (f.oldest) {
+                    slides.push(
+                        lead("The one that started it") +
+                            `<div class="text-4xl md:text-5xl font-bold text-white">${escapeHtml(f.oldest["Game"])}</div>` +
+                            sub(
+                                `bought ${escapeHtml(f.oldest["Date Purchased"])} — still on the shelf`,
+                            ),
+                    );
+                }
+
+                slides.push(
+                    lead("Still to play") +
+                        big(`${f.n - f.completed}`) +
+                        sub(
+                            `you've finished <span class="text-white font-semibold">${f.completed}</span>. No pressure.`,
+                        ),
+                );
+
+                const stat = (label, value, cls = "text-white") => `
+                    <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                        <div class="text-[10px] uppercase tracking-wider text-zinc-500">${escapeHtml(label)}</div>
+                        <div class="text-2xl font-bold mt-1 ${cls}">${value}</div>
+                    </div>`;
+                slides.push(
+                    lead("That's your collection") +
+                        `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+                            ${stat("Games", f.n)}
+                            ${stat("Consoles", Object.keys(f.consoles).length, "text-accent")}
+                            ${stat("Spent", fmtMoney(f.spend))}
+                            ${stat("Completed", f.completed, "text-amber-300")}
+                            ${stat("Sealed", f.sealed, "text-[#e9c85a]")}
+                            ${stat("In the box", `${Math.round((f.complete / Math.max(1, f.n)) * 100)}%`, "text-emerald-400")}
+                        </div>`,
+                );
+                return slides;
+            }
+
+            function renderWrapped() {
+                document.getElementById("wrappedSlide").innerHTML =
+                    `<div class="wrap-slide" key="${wrappedIndex}">${wrappedSlides[wrappedIndex]}</div>`;
+                document.getElementById("wrappedDots").innerHTML = wrappedSlides
+                    .map(
+                        (_, i) =>
+                            `<div class="h-1 rounded-full transition-all ${
+                                i === wrappedIndex
+                                    ? "w-6 bg-accent"
+                                    : "w-2 bg-white/20"
+                            }"></div>`,
+                    )
+                    .join("");
+            }
+
+            function wrappedStep(dir) {
+                if (!wrappedSlides.length) return;
+                wrappedIndex =
+                    (wrappedIndex + dir + wrappedSlides.length) %
+                    wrappedSlides.length;
+                renderWrapped();
+            }
+
+            function openWrapped() {
+                if (!allData.length) return;
+                wrappedSlides = buildWrapped();
+                wrappedIndex = 0;
+                renderWrapped();
+                openOverlay("wrappedOverlay");
+            }
+
+            // === RANDOM PICKER =====================================================
+            function rollRandomGame() {
+                const base = visibleData.length ? visibleData : allData;
+                const unplayed = base.filter((r) => !isCompleted(r) && !isTBC(r));
+                const pool = unplayed.length ? unplayed : base;
+                if (!pool.length) return;
+
+                openOverlay("rollOverlay");
+                const coverEl = document.getElementById("rollCover");
+                const titleEl = document.getElementById("rollTitle");
+                const consoleEl = document.getElementById("rollConsole");
+
+                let delay = 55;
+                let elapsed = 0;
+                const tick = () => {
+                    const row = pool[Math.floor(Math.random() * pool.length)];
+                    const cover = coverFromRow(row, "m");
+                    const name = normalizeConsole(row["Console Version"]);
+                    coverEl.innerHTML = cover
+                        ? `<img src="${escapeHtml(cover)}" class="w-full h-full object-cover" alt="" />`
+                        : `<div class="w-full h-full flex items-center justify-center text-zinc-600 text-xs uppercase tracking-wider">${escapeHtml(name)}</div>`;
+                    titleEl.textContent = row["Game"];
+                    consoleEl.textContent = name;
+
+                    elapsed += delay;
+                    delay *= 1.15;
+                    if (elapsed < 1800) {
+                        setTimeout(tick, delay);
+                    } else {
+                        // Settle on the last one shown, then hand over to the modal.
+                        setTimeout(() => {
+                            closeOverlay("rollOverlay");
+                            openModal(row, modalList.indexOf(row));
+                        }, 750);
+                    }
+                };
+                tick();
+            }
+
+            // === GUESS THE PRICE ===================================================
+            let guessState = { round: 0, score: 0, streak: 0, best: 0, row: null };
+
+            function guessPool() {
+                return allData.filter(
+                    (r) => !isTBC(r) && rowCexValue(r) !== null,
+                );
+            }
+
+            function openGuess() {
+                guessState = { round: 0, score: 0, streak: 0, best: guessState.best || 0, row: null };
+                // Overlay first — focus() is a no-op on a hidden input.
+                openOverlay("guessOverlay");
+                nextGuess();
+            }
+
+            function nextGuess() {
+                const pool = guessPool();
+                const body = document.getElementById("guessBody");
+                if (!pool.length) {
+                    body.innerHTML = `<p class="text-sm text-zinc-400">No CeX prices loaded yet — let the valuation finish (or press <span class="text-accent">Refresh CeX prices</span>) and come back.</p>`;
+                    return;
+                }
+                guessState.row = pool[Math.floor(Math.random() * pool.length)];
+                guessState.round++;
+                const row = guessState.row;
+                const cover = coverFromRow(row, "m");
+                body.innerHTML = `
+                    <div class="flex gap-4 mb-5">
+                        <div class="w-[96px] h-[128px] rounded-lg overflow-hidden bg-black/50 border border-white/10 shrink-0">
+                            ${
+                                cover
+                                    ? `<img src="${escapeHtml(cover)}" class="w-full h-full object-cover" alt="" />`
+                                    : ""
+                            }
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-lg font-semibold text-white leading-snug">${escapeHtml(row["Game"])}</div>
+                            <div class="text-xs text-zinc-500 mt-1">${escapeHtml(normalizeConsole(row["Console Version"]))} · ${escapeHtml(editionOf(row))}</div>
+                            <div class="text-[11px] text-zinc-600 mt-2">Round ${guessState.round} · score ${guessState.score} · streak ${guessState.streak}</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">£</span>
+                            <input id="guessInput" type="number" step="0.01" min="0" autocomplete="off"
+                                class="w-full pl-7 pr-3 py-2.5 bg-black/40 border border-white/10 rounded-lg text-sm text-zinc-100 focus:outline-none focus:border-accent/50" />
+                        </div>
+                        <button class="accent-btn" onclick="submitGuess()">Lock it in</button>
+                    </div>
+                    <div id="guessResult" class="mt-4"></div>`;
+                const input = document.getElementById("guessInput");
+                input.focus();
+                input.onkeydown = (e) => {
+                    if (e.key === "Enter") submitGuess();
+                    e.stopPropagation();
+                };
+            }
+
+            function submitGuess() {
+                const row = guessState.row;
+                if (!row) return;
+                const input = document.getElementById("guessInput");
+                if (!input || input.disabled) return;
+                const guess = parseFloat(input.value);
+                if (isNaN(guess)) return;
+                input.disabled = true;
+
+                const actual = rowCexValue(row) || 0;
+                const off = Math.abs(guess - actual);
+                // Score on relative error, with a floor so penny items aren't
+                // impossible to score on.
+                const pts = Math.max(
+                    0,
+                    Math.round(100 - (off / Math.max(actual, 2)) * 100),
+                );
+                guessState.score += pts;
+                guessState.streak = pts >= 70 ? guessState.streak + 1 : 0;
+                guessState.best = Math.max(guessState.best, guessState.streak);
+
+                const verdict =
+                    pts === 100
+                        ? ["Spot on", "text-emerald-400"]
+                        : pts >= 70
+                          ? ["Close", "text-emerald-400"]
+                          : pts >= 35
+                            ? ["Not bad", "text-amber-400"]
+                            : ["Way off", "text-red-400"];
+
+                document.getElementById("guessResult").innerHTML = `
+                    <div class="rounded-lg border border-white/10 bg-white/5 p-4">
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-sm ${verdict[1]} font-semibold">${verdict[0]}</span>
+                            <span class="text-xs text-zinc-500">+${pts} pts</span>
+                        </div>
+                        <div class="mt-2 text-sm text-zinc-300">
+                            CeX sells it for <span class="text-emerald-400 font-semibold">${fmtMoney(actual)}</span> —
+                            you said ${fmtMoney(guess)} <span class="text-zinc-500">(${fmtMoney(off)} out)</span>
+                        </div>
+                        <div class="text-[11px] text-zinc-500 mt-1">You paid ${fmtMoney(rowPaid(row))} for it.</div>
+                    </div>
+                    <button class="ghost-btn w-full mt-3 justify-center" onclick="nextGuess()">Next game →</button>`;
+            }
+
+            // === KONAMI / CRT MODE =================================================
+            const KONAMI = [
+                "arrowup", "arrowup", "arrowdown", "arrowdown",
+                "arrowleft", "arrowright", "arrowleft", "arrowright",
+                "b", "a",
+            ];
+            let konamiBuffer = [];
+
+            function pushKonami(key) {
+                konamiBuffer.push(String(key).toLowerCase());
+                if (konamiBuffer.length > KONAMI.length) konamiBuffer.shift();
+                if (
+                    konamiBuffer.length === KONAMI.length &&
+                    konamiBuffer.every((k, i) => k === KONAMI[i])
+                ) {
+                    konamiBuffer = [];
+                    toggleCrt();
+                }
+            }
+
+            function toggleCrt() {
+                const on = document.body.classList.toggle("crt");
+                try {
+                    localStorage.setItem("crtMode", on ? "1" : "0");
+                } catch (e) {}
+                if (on) {
+                    document.body.classList.add("booting");
+                    setTimeout(
+                        () => document.body.classList.remove("booting"),
+                        700,
+                    );
+                    showSuccess("CRT mode engaged ▚▚▚");
+                } else {
+                    showSuccess("Back to flat panel");
+                }
+            }
+
             // === TOGGLES + EVENTS ==================================================
             function togglePanel(sectionId, iconId, otherId) {
                 const fs = document.getElementById(sectionId);
@@ -2745,7 +3780,13 @@
                 const modal = document.getElementById("modal");
                 const modalOpen = !modal.classList.contains("hidden");
                 const search = document.getElementById("searchBox");
+                const overlay = anyOverlayOpen();
+
+                // Always fed, so the code works from anywhere on the page.
+                if (document.activeElement !== search) pushKonami(e.key);
+
                 if (e.key === "Escape") {
+                    if (overlay) return closeOverlay(overlay);
                     if (modalOpen) return closeModal();
                     if (document.activeElement === search) {
                         search.value = "";
@@ -2754,6 +3795,12 @@
                     }
                     return;
                 }
+                if (overlay === "wrappedOverlay") {
+                    if (e.key === "ArrowLeft") wrappedStep(-1);
+                    if (e.key === "ArrowRight" || e.key === " ") wrappedStep(1);
+                    return;
+                }
+                if (overlay) return;
                 if (modalOpen) {
                     if (e.key === "ArrowLeft") navModal(-1);
                     if (e.key === "ArrowRight") navModal(1);
@@ -2763,11 +3810,24 @@
                     e.preventDefault();
                     search.focus();
                 }
+                if (e.key === "r" && document.activeElement !== search)
+                    rollRandomGame();
+            });
+
+            // Click the backdrop of a full-screen overlay to dismiss it.
+            ["rollOverlay", "wrappedOverlay", "guessOverlay"].forEach((id) => {
+                document.getElementById(id).addEventListener("click", (e) => {
+                    if (e.target.id === id) closeOverlay(id);
+                });
             });
 
             // === INIT ==============================================================
             window.addEventListener("DOMContentLoaded", async () => {
                 cexCache = loadCexCache();
+                try {
+                    if (localStorage.getItem("crtMode") === "1")
+                        document.body.classList.add("crt");
+                } catch (e) {}
                 readUrlState();
                 applyView();
                 buildSortDropdown();
