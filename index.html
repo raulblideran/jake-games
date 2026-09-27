@@ -61,15 +61,8 @@
                 },
             };
         </script>
-        <link
-            rel="preconnect"
-            href="https://fonts.googleapis.com"
-        />
-        <link
-            rel="preconnect"
-            href="https://fonts.gstatic.com"
-            crossorigin
-        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
             href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
             rel="stylesheet"
@@ -82,14 +75,18 @@
                 font-feature-settings: "ss01", "cv11";
                 letter-spacing: -0.005em;
             }
-            #filtersSection.collapsed {
+            #filtersSection.collapsed,
+            #breakdownSection.collapsed {
                 max-height: 0 !important;
                 margin-top: 0 !important;
                 padding-top: 0 !important;
                 border-top-width: 0 !important;
             }
             #filtersSection:not(.collapsed) {
-                max-height: 1200px;
+                max-height: 1400px;
+            }
+            #breakdownSection:not(.collapsed) {
+                max-height: 3000px;
             }
             #filtersSection::-webkit-scrollbar,
             .scroll-thin::-webkit-scrollbar {
@@ -164,6 +161,29 @@
                 background: rgba(34, 211, 238, 0.15);
                 color: #fff;
             }
+            /* Grid / Table segmented control */
+            .seg {
+                display: inline-flex;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 10px;
+                overflow: hidden;
+            }
+            .seg button {
+                padding: 9px 14px;
+                font-size: 13px;
+                font-weight: 500;
+                color: #a1a1aa;
+                background: rgba(255, 255, 255, 0.02);
+                cursor: pointer;
+                transition: all 0.15s ease;
+            }
+            .seg button:hover {
+                color: #fff;
+            }
+            .seg button.active {
+                background: rgba(34, 211, 238, 0.14);
+                color: #67e8f9;
+            }
             .card {
                 background: #111111;
                 border: 1px solid rgba(255, 255, 255, 0.08);
@@ -206,7 +226,7 @@
                 transform: rotate(-8deg);
                 box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
             }
-            /* Sealed (Sealed = Y) — gold frame */
+            /* Sealed (Sealed = TRUE) — gold frame */
             .card.sealed {
                 border-width: 2px;
                 border-color: #d4af37;
@@ -240,7 +260,7 @@
                 height: 8px;
                 border-radius: 50%;
             }
-            /* Condition circle with the grade initial inside (card view) */
+            /* Completeness pill: C = cover art, I = insert */
             .cond {
                 display: inline-flex;
                 align-items: center;
@@ -252,6 +272,71 @@
                 font-weight: 700;
                 line-height: 1;
             }
+            /* Dense table view */
+            .gtable {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+            }
+            .gtable th {
+                text-align: left;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.12em;
+                color: #71717a;
+                font-weight: 600;
+                padding: 10px 12px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                white-space: nowrap;
+                position: sticky;
+                top: 0;
+                background: #111111;
+                z-index: 5;
+            }
+            .gtable th.sortable {
+                cursor: pointer;
+                user-select: none;
+            }
+            .gtable th.sortable:hover {
+                color: #22d3ee;
+            }
+            .gtable td {
+                padding: 8px 12px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                color: #d4d4d8;
+                white-space: nowrap;
+            }
+            .gtable tbody tr {
+                cursor: pointer;
+                transition: background 0.12s ease;
+            }
+            .gtable tbody tr:hover {
+                background: rgba(34, 211, 238, 0.06);
+            }
+            .gtable tbody tr.sealed td:first-child {
+                box-shadow: inset 3px 0 0 #d4af37;
+            }
+            /* Breakdown bar chart */
+            .bar-track {
+                background: rgba(255, 255, 255, 0.06);
+                border-radius: 4px;
+                overflow: hidden;
+                height: 8px;
+            }
+            .bar-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #0891b2, #22d3ee);
+                border-radius: 4px;
+            }
+            .vbar {
+                background: linear-gradient(180deg, #22d3ee, #0891b2);
+                border-radius: 3px 3px 0 0;
+                min-height: 2px;
+                transition: opacity 0.15s ease;
+            }
+            .vbar:hover {
+                opacity: 0.75;
+            }
             @keyframes spin {
                 from {
                     transform: rotate(0deg);
@@ -262,6 +347,7 @@
             }
             .spin {
                 animation: spin 0.9s linear infinite;
+                display: inline-block;
             }
             .skeleton {
                 background: linear-gradient(
@@ -286,7 +372,7 @@
     <body class="min-h-screen bg-ink text-zinc-100 font-sans antialiased">
         <div class="w-full px-6 md:px-10 py-10">
             <!-- Header -->
-            <header class="mb-10 animate-fadeInUp">
+            <header class="mb-8 animate-fadeInUp">
                 <div class="flex items-center gap-3 mb-2">
                     <div
                         class="w-2 h-2 rounded-full bg-accent shadow-[0_0_12px_rgba(34,211,238,0.6)]"
@@ -302,7 +388,7 @@
                     Game Collection
                 </h1>
                 <p class="text-zinc-500 mt-2 text-sm">
-                    Physical games, conditions, and live CeX pricing.
+                    Physical games, completeness, and live CeX valuation.
                 </p>
             </header>
 
@@ -312,27 +398,30 @@
                 class="flex gap-3 flex-wrap mb-6 animate-fadeInUp"
             ></div>
 
-            <!-- CeX value bar -->
+            <!-- CeX value strip -->
             <div
-                class="bg-surface border border-white/8 rounded-xl px-5 py-4 mb-6 flex items-center gap-5 flex-wrap animate-fadeInUp"
+                class="bg-surface border border-white/8 rounded-xl px-5 py-4 mb-6 animate-fadeInUp"
             >
-                <button
-                    id="calcCexBtn"
-                    onclick="calculateCollectionValue()"
-                    class="accent-btn"
-                >
-                    <span id="calcCexIcon">£</span>
-                    <span>Calculate CeX value</span>
-                </button>
-                <div
-                    id="cexTotals"
-                    class="hidden flex flex-wrap items-center gap-6"
-                >
+                <div class="flex items-center gap-4 flex-wrap mb-3">
+                    <button
+                        id="calcCexBtn"
+                        onclick="loadCexPrices(true)"
+                        class="accent-btn"
+                        title="Re-fetch every CeX price, ignoring the local cache"
+                    >
+                        <span id="calcCexIcon">£</span>
+                        <span>Refresh CeX prices</span>
+                    </button>
+                    <div id="cexStatus" class="text-xs text-zinc-500">
+                        Waiting for collection data…
+                    </div>
+                </div>
+                <div id="cexTotals" class="flex flex-wrap items-center gap-6">
                     <div>
                         <div
                             class="text-[10px] uppercase tracking-wider text-zinc-500"
                         >
-                            Sell
+                            Sell (CeX price)
                         </div>
                         <div
                             class="text-lg font-semibold text-white"
@@ -368,12 +457,13 @@
                         </div>
                     </div>
                     <div
-                        title="Sum of the sheet's Current Price column for items that have no CeX link"
+                        class="border-l border-white/10 pl-6"
+                        title="Games with no usable CeX SKU, valued from the sheet's Current Price column"
                     >
                         <div
                             class="text-[10px] uppercase tracking-wider text-zinc-500"
                         >
-                            No CeX link
+                            No CeX price
                         </div>
                         <div
                             class="text-lg font-semibold text-cyan-300"
@@ -382,9 +472,21 @@
                             —
                         </div>
                     </div>
+                    <div class="border-l border-white/10 pl-6">
+                        <div
+                            class="text-[10px] uppercase tracking-wider text-zinc-500"
+                        >
+                            Total paid
+                        </div>
+                        <div
+                            class="text-lg font-semibold text-amber-300"
+                            id="totalPaidAll"
+                        >
+                            —
+                        </div>
+                    </div>
                     <div
-                        class="border-l border-white/10 pl-6"
-                        title="CeX cash price where a CeX link exists, otherwise the sheet's Current Price column"
+                        title="CeX cash price where available, otherwise the sheet's Current Price"
                     >
                         <div
                             class="text-[10px] uppercase tracking-wider text-zinc-500"
@@ -398,57 +500,13 @@
                             —
                         </div>
                     </div>
-                    <div class="border-l border-white/10 pl-6">
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            Paid (CeX)
-                        </div>
-                        <div
-                            class="text-lg font-semibold text-accent"
-                            id="totalPaidCex"
-                        >
-                            —
-                        </div>
-                    </div>
                     <div>
                         <div
                             class="text-[10px] uppercase tracking-wider text-zinc-500"
                         >
-                            Paid (Other)
+                            Gain / loss
                         </div>
-                        <div
-                            class="text-lg font-semibold text-cyan-300"
-                            id="totalPaidOther"
-                        >
-                            —
-                        </div>
-                    </div>
-                    <div>
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            Total paid
-                        </div>
-                        <div
-                            class="text-lg font-semibold text-amber-300"
-                            id="totalPaidAll"
-                        >
-                            —
-                        </div>
-                    </div>
-                    <div class="border-l border-white/10 pl-6">
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            Items
-                        </div>
-                        <div
-                            class="text-lg font-semibold text-white"
-                            id="totalCexItems"
-                        >
-                            —
-                        </div>
+                        <div class="text-lg font-semibold" id="totalGain">—</div>
                     </div>
                 </div>
             </div>
@@ -458,14 +516,26 @@
                 class="bg-surface border border-white/8 rounded-xl p-4 mb-8 animate-fadeInUp"
             >
                 <div class="flex gap-3 items-center flex-wrap">
-                    <div class="flex-1 min-w-[260px] relative">
+                    <div class="flex-1 min-w-[240px] relative">
                         <input
                             type="text"
                             id="searchBox"
-                            placeholder="Search by title, console, notes…"
-                            onkeyup="filterCards()"
+                            placeholder="Search title, console, edition, notes…   ( / )"
+                            oninput="onSearchInput()"
                             class="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition"
                         />
+                    </div>
+                    <div class="seg">
+                        <button
+                            id="viewGridBtn"
+                            class="active"
+                            onclick="setView('grid')"
+                        >
+                            Grid
+                        </button>
+                        <button id="viewTableBtn" onclick="setView('table')">
+                            Table
+                        </button>
                     </div>
                     <button
                         id="refreshButton"
@@ -487,49 +557,24 @@
                         </button>
                         <div
                             id="sortDropdown"
-                            class="hidden absolute right-0 mt-2 w-[240px] bg-[#161616] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50"
-                        >
-                            <div
-                                class="px-4 py-2.5 text-sm text-accent bg-accent/10 cursor-pointer"
-                                data-active="true"
-                                onclick="selectSort('title','Title (A–Z)', this)"
-                            >
-                                Title (A–Z)
-                            </div>
-                            <div
-                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
-                                onclick="selectSort('console','Console', this)"
-                            >
-                                Console
-                            </div>
-                            <div
-                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
-                                onclick="selectSort('current-desc','Current price (high → low)', this)"
-                            >
-                                Current price (high → low)
-                            </div>
-                            <div
-                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
-                                onclick="selectSort('paid-desc','Price paid (high → low)', this)"
-                            >
-                                Price paid (high → low)
-                            </div>
-                            <div
-                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
-                                onclick="selectSort('paid-asc','Price paid (low → high)', this)"
-                            >
-                                Price paid (low → high)
-                            </div>
-                            <div
-                                class="px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 cursor-pointer"
-                                onclick="selectSort('date-newest','Date purchased (newest)', this)"
-                            >
-                                Date purchased (newest)
-                            </div>
-                        </div>
+                            class="hidden absolute right-0 mt-2 w-[260px] bg-[#161616] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50"
+                        ></div>
                     </div>
+                    <button class="ghost-btn" onclick="toggleBreakdown()">
+                        <span>Breakdown</span>
+                        <span
+                            id="breakdownToggleIcon"
+                            class="text-xs text-zinc-500 transition-transform"
+                            >▾</span
+                        >
+                    </button>
                     <button class="ghost-btn" onclick="toggleFilters()">
                         <span>Filters</span>
+                        <span
+                            id="filterCount"
+                            class="hidden text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-accent text-black"
+                            >0</span
+                        >
                         <span
                             id="filterToggleIcon"
                             class="text-xs text-zinc-500 transition-transform"
@@ -538,99 +583,39 @@
                     </button>
                 </div>
 
+                <!-- Breakdown panel -->
+                <div
+                    id="breakdownSection"
+                    class="transition-all duration-300 overflow-hidden collapsed mt-4 pt-4 border-t border-white/8"
+                ></div>
+
                 <!-- Filters panel -->
                 <div
                     id="filtersSection"
                     class="transition-all duration-300 overflow-hidden collapsed mt-4 pt-4 border-t border-white/8"
                 >
                     <div
+                        id="filterGroups"
                         class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-5"
-                    >
-                        <div>
-                            <h3
-                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
-                            >
-                                Status
-                            </h3>
-                            <div
-                                id="statusFilters"
-                                class="flex gap-2 flex-wrap"
-                            ></div>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
-                            >
-                                Console
-                            </h3>
-                            <div
-                                id="consoleFilters"
-                                class="flex gap-2 flex-wrap"
-                            ></div>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
-                            >
-                                Condition (any of cover / insert / disc)
-                            </h3>
-                            <div
-                                id="conditionFilters"
-                                class="flex gap-2 flex-wrap"
-                            ></div>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
-                            >
-                                Playable
-                            </h3>
-                            <div
-                                id="playableFilters"
-                                class="flex gap-2 flex-wrap"
-                            ></div>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
-                            >
-                                Price paid
-                            </h3>
-                            <div
-                                id="priceFilters"
-                                class="flex gap-2 flex-wrap"
-                            ></div>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
-                            >
-                                CeX listing
-                            </h3>
-                            <div
-                                id="cexFilters"
-                                class="flex gap-2 flex-wrap"
-                            ></div>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5"
-                            >
-                                Sealed
-                            </h3>
-                            <div
-                                id="sealedFilters"
-                                class="flex gap-2 flex-wrap"
-                            ></div>
-                        </div>
+                    ></div>
+                    <div class="mt-4 flex items-center gap-3">
+                        <button class="ghost-btn" onclick="clearAllFilters()">
+                            Clear all filters
+                        </button>
+                        <span id="filterSummary" class="text-xs text-zinc-500"
+                        ></span>
                     </div>
                 </div>
             </div>
 
-            <!-- Cards grid -->
+            <!-- Results -->
             <div
                 id="cardsGrid"
                 class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4"
+            ></div>
+            <div
+                id="tableWrap"
+                class="hidden bg-surface border border-white/8 rounded-xl overflow-x-auto scroll-thin"
             ></div>
         </div>
 
@@ -669,7 +654,7 @@
                         style="animation-delay: 0.3s"
                     ></div>
                 </div>
-                <p class="text-zinc-500 text-xs">Loading from Google Sheets…</p>
+                <p class="text-zinc-500 text-xs">Loading MASTER sheet…</p>
             </div>
         </div>
 
@@ -720,8 +705,10 @@
 
         <script>
             // === CONFIG ============================================================
+            // The workbook's default export tab is now "Console Breakdown", so we ask
+            // gviz for the MASTER sheet by name instead of using /export?format=csv.
             const GOOGLE_SHEETS_URL =
-                "https://docs.google.com/spreadsheets/d/18dLC8f0FOE-7UC0NqM6hj1flKxu-4rfd/export?format=csv";
+                "https://docs.google.com/spreadsheets/d/18dLC8f0FOE-7UC0NqM6hj1flKxu-4rfd/gviz/tq?tqx=out:csv&sheet=MASTER";
             const RAWG_API_KEY = "d6b5463dab6046898cccf5575f84f9d1";
 
             const PRIMARY_PROXY =
@@ -733,7 +720,7 @@
                           {
                               url: (url) =>
                                   `${PRIMARY_PROXY}/?url=${encodeURIComponent(url)}`,
-                              timeout: 10000,
+                              timeout: 12000,
                           },
                       ]
                     : []),
@@ -759,44 +746,99 @@
             const CACHE_TIMESTAMP_KEY = "gamesCSVCacheTimestamp";
             const CACHE_DURATION = 5 * 60 * 1000;
 
-            const CONDITION_DOT = {
-                Mint: "bg-emerald-400",
-                Good: "bg-cyan-400",
-                Damaged: "bg-amber-400",
-                Missing: "bg-zinc-500",
-                "N/A": "bg-zinc-700",
-            };
+            // Persisted CeX prices. The endpoint rate-limits bursts, so re-fetching
+            // ~260 SKUs on every page view is neither fast nor polite.
+            const CEX_CACHE_KEY = "cexDetailCache_v1";
+            const CEX_CACHE_TTL = 24 * 60 * 60 * 1000;
+            // Tuned against the live endpoint: 2 in flight with a 1s/3s retry
+            // backoff priced 45/45 sample SKUs with no failures and was faster
+            // than 3 in flight, which the rate limiter drops ~13% of.
+            const CEX_CONCURRENCY = 2;
+            const CEX_RETRIES = 2;
+            // CeX rate-limits by IP, and every visitor shares the proxy's egress.
+            // If it starts refusing, stop rather than pushing ~750 requests at a
+            // wall and deepening the block.
+            const CEX_FAILURE_LIMIT = 8;
 
-            // Single-character grade shown inside the condition circle on cards.
-            const CONDITION_ABBR = {
-                Mint: "M",
-                Good: "G",
-                Damaged: "D",
-                Missing: "✕",
-                "N/A": "–",
+            const VIEW_KEY = "collectionView";
+
+            // Verified against the CeX API for every categoryName slug present in
+            // the sheet: the image directory is NOT a mechanical transform of the
+            // slug (PC-GAMES -> "PC Games", GAMEBOY-ADVANCE-SOFTWARE -> "GBA
+            // Software"), so the known ones are mapped explicitly.
+            const CEX_IMAGE_DIRS = {
+                "XBOX-ONE-GAMES": "Xbox One Software",
+                "XBOX-ONE-SOFTWARE": "Xbox One Software",
+                "XBOX-360-GAMES": "Xbox 360 Software",
+                "XBOX-360-SOFTWARE": "Xbox 360 Software",
+                "XBOX-360-RARITIES": "Xbox 360 Rarities",
+                "XBOX-SOFTWARE": "Xbox Software",
+                "XBOX-GAMES": "Xbox Software",
+                "XBOX-SERIES-GAMES": "Xbox Series Software",
+                "XBOX-SERIES-SOFTWARE": "Xbox Series Software",
+                "XBOX-SMART-DELIVERY-GAMES": "Xbox Smart Delivery Games",
+                "PLAYSTATION2-GAMES": "Playstation2 Software",
+                "PLAYSTATION2-SOFTWARE": "Playstation2 Software",
+                "PLAYSTATION2-RARITIES": "Playstation2 Rarities",
+                "PLAYSTATION3-GAMES": "Playstation3 Software",
+                "PLAYSTATION3-SOFTWARE": "Playstation3 Software",
+                "PLAYSTATION4-GAMES": "Playstation4 Software",
+                "PLAYSTATION4-SOFTWARE": "Playstation4 Software",
+                "PLAYSTATION5-GAMES": "Playstation5 Software",
+                "WII-GAMES": "Wii Software",
+                "WII-SOFTWARE": "Wii Software",
+                "NINTENDO-DS-GAMES": "DS Software",
+                "DS-SOFTWARE": "DS Software",
+                "PSP-GAMES": "PSP Software",
+                "PSP-SOFTWARE": "PSP Software",
+                "PC-GAMES": "PC Games",
+                "PC-SOFTWARE": "PC Games",
+                "GAMEBOY-ADVANCE-SOFTWARE": "GBA Software",
+                "GAMEBOY-ADVANCE-GAMES": "GBA Software",
             };
 
             // === STATE =============================================================
             let allData = [];
             let filteredData = [];
+            let visibleData = [];
             let headers = [];
-            // The exact list currently shown on the grid, plus the open game's
-            // position in it — used to step through games from the modal.
             let modalList = [];
             let modalIndex = -1;
+            // Every filter group holds a Set; empty Set means "All".
             let activeFilters = {
-                status: "all",
-                console: "all",
-                condition: "all",
-                playable: "all",
-                price: "all",
-                cex: "all",
-                sealed: "all",
+                status: new Set(),
+                console: new Set(),
+                completeness: new Set(),
+                edition: new Set(),
+                completed: new Set(),
+                sealed: new Set(),
+                price: new Set(),
             };
             let coverCache = {};
             let cexCache = {};
+            let cexPricedAt = 0;
+            let cexFailures = 0;
+            let cexLoading = false;
             let workingProxyIndex = 0;
             let currentSort = "title";
+            let currentView = "grid";
+            let breakdownMode = "month";
+            let searchTerm = "";
+            let searchTimer = null;
+            let restoringState = false;
+
+            const SORT_OPTIONS = [
+                ["title", "Title (A–Z)"],
+                ["console", "Console"],
+                ["value-desc", "CeX value (high → low)"],
+                ["gain-desc", "Biggest gain"],
+                ["gain-asc", "Biggest loss"],
+                ["paid-desc", "Price paid (high → low)"],
+                ["paid-asc", "Price paid (low → high)"],
+                ["date-newest", "Date purchased (newest)"],
+                ["date-oldest", "Date purchased (oldest)"],
+                ["edition", "Edition"],
+            ];
 
             // === UTILS =============================================================
             function normalizeConsole(c) {
@@ -812,20 +854,45 @@
                 return parseFloat(cleaned) || 0;
             }
 
-            // A row is "to buy" (not yet purchased) when its Date Purchased is TBC.
+            // The sheet's checkbox columns export as TRUE/FALSE; "N/A" comes through
+            // as an empty cell via gviz, which we read as "doesn't apply".
+            function triState(v) {
+                const s = String(v ?? "").trim().toUpperCase();
+                if (s === "TRUE" || s === "Y" || s === "YES") return true;
+                if (s === "FALSE" || s === "N" || s === "NO") return false;
+                return null;
+            }
+
             function isTBC(row) {
                 return (
                     (row["Date Purchased"] || "").trim().toUpperCase() === "TBC"
                 );
             }
-
             function isSealed(row) {
-                return (row["Sealed"] || "").trim().toUpperCase() === "Y";
+                return triState(row["Sealed"]) === true;
+            }
+            function isCompleted(row) {
+                return triState(row["Completed"]) === true;
+            }
+            function editionOf(row) {
+                return (row["Edition"] || "").trim() || "Standard";
+            }
+            function hasCover(row) {
+                return triState(row["Cover Art"]);
+            }
+            function hasInsert(row) {
+                return triState(row["Insert"]);
+            }
+            // "Complete" = nothing that applies to this release is missing.
+            function isComplete(row) {
+                return hasCover(row) !== false && hasInsert(row) !== false;
             }
 
             function parseUkDate(str) {
                 if (!str) return null;
-                const m = String(str).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                const m = String(str)
+                    .trim()
+                    .match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
                 if (!m) return null;
                 return new Date(
                     `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`,
@@ -833,7 +900,16 @@
             }
 
             function fmtMoney(n) {
-                return `£${n.toFixed(2)}`;
+                const v = Number(n) || 0;
+                return `£${v.toLocaleString("en-GB", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                })}`;
+            }
+
+            function fmtSigned(n) {
+                const v = Number(n) || 0;
+                return `${v >= 0 ? "+" : "−"}${fmtMoney(Math.abs(v))}`;
             }
 
             function escapeHtml(s) {
@@ -845,13 +921,12 @@
                     .replace(/'/g, "&#039;");
             }
 
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
             // === FETCH WITH PROXY FALLBACK =========================================
             function fetchWithTimeout(url, timeoutMs) {
                 const controller = new AbortController();
-                const timer = setTimeout(
-                    () => controller.abort(),
-                    timeoutMs,
-                );
+                const timer = setTimeout(() => controller.abort(), timeoutMs);
                 return fetch(url, {
                     signal: controller.signal,
                     cache: "no-store",
@@ -859,15 +934,13 @@
             }
 
             async function fetchWithProxy(url) {
-                for (
-                    let i = workingProxyIndex;
-                    i < CORS_PROXIES.length;
-                    i++
-                ) {
+                for (let i = workingProxyIndex; i < CORS_PROXIES.length; i++) {
                     const { url: proxyFn, timeout } = CORS_PROXIES[i];
                     try {
-                        const proxyUrl = proxyFn(url);
-                        const resp = await fetchWithTimeout(proxyUrl, timeout);
+                        const resp = await fetchWithTimeout(
+                            proxyFn(url),
+                            timeout,
+                        );
                         if (resp.ok) {
                             workingProxyIndex = i;
                             return resp;
@@ -879,247 +952,23 @@
                 return null;
             }
 
-            // === CeX ===============================================================
-            function extractCexSku(url) {
-                if (!url) return null;
-                const match = url.match(/[?&]id=([^&]+)/);
-                return match ? match[1] : null;
-            }
-
-            async function fetchCexDetails(sku) {
-                if (!sku) return null;
-                if (cexCache[sku]) return cexCache[sku];
-                try {
-                    const resp = await fetchWithProxy(
-                        `https://wss2.cex.uk.webuy.io/v3/boxes/${sku}/detail`,
-                    );
-                    if (!resp) return null;
-                    const json = await resp.json();
-                    const details =
-                        json?.response?.data?.boxDetails?.[0] ?? null;
-                    if (details) cexCache[sku] = details;
-                    return details;
-                } catch (e) {
-                    console.error("CeX fetch error", sku, e);
-                    return null;
-                }
-            }
-
-            function isCexUrl(url) {
-                try {
-                    const host = new URL(url).hostname.toLowerCase();
-                    return host.includes("webuy.") || host.includes("cex.");
-                } catch {
-                    return false;
-                }
-            }
-
-            function extractCexParam(url, name) {
-                const m = url.match(new RegExp(`[?&]${name}=([^&]*)`));
-                return m ? decodeURIComponent(m[1]) : null;
-            }
-
-            // Build the CeX product-image URL deterministically from a CeX product URL.
-            // Pattern: https://uk.static.webuy.com/product_images/Gaming/{Category}/{SKU}_{l|m|s}.jpg
-            // CeX stores all box art under the "* Software" directory even when the
-            // product listing's categoryName ends with "-GAMES" — empirically verified
-            // across all 33 rows in the source sheet, so we normalize the trailing
-            // segment to "Software".
-            function cexImageFromUrl(cexUrl, size = "l") {
-                const sku = extractCexSku(cexUrl);
-                if (!sku) return null;
-                const catSlug = extractCexParam(cexUrl, "categoryName");
-                if (!catSlug) return null;
-                const category = catSlug
-                    .split("-")
-                    .map((s) =>
-                        s.toUpperCase() === "GAMES"
-                            ? "Software"
-                            : s.charAt(0).toUpperCase() +
-                              s.slice(1).toLowerCase(),
-                    )
-                    .join(" ");
-                return `https://uk.static.webuy.com/product_images/Gaming/${encodeURIComponent(category)}/${sku}_${size}.jpg`;
-            }
-
-            // First-choice cover URL for a row: CeX box art when a CeX URL is present
-            // (synchronous), otherwise null and we fall back to RAWG.
-            function coverFromRow(row, size = "l") {
-                const links = parseCexLinks(row["CEX Listing"]);
-                if (links.length === 0) return null;
-                return cexImageFromUrl(links[0], size);
-            }
-
-            function parseCexLinks(linkStr) {
-                if (!linkStr) return [];
-                const links = [];
-                for (const part of linkStr.split(",")) {
-                    const t = part.trim();
-                    if (t.startsWith("http") && isCexUrl(t)) links.push(t);
-                }
-                return links;
-            }
-
-            async function calculateCollectionValue() {
-                const btn = document.getElementById("calcCexBtn");
-                const totalsEl = document.getElementById("cexTotals");
-                const iconEl = document.getElementById("calcCexIcon");
-
-                // Owned items only — TBC ("to buy") rows aren't part of the value.
-                const owned = allData.filter((row) => !isTBC(row));
-
-                const uniqueSkus = new Set();
-                // Per-item record so the blended current value can mix live CeX
-                // cash prices (when a CeX link exists) with the sheet's column.
-                const items = []; // { skus: string[], current: number }
-                let totalPaidCex = 0;
-                let totalPaidOther = 0;
-                let itemCount = 0;
-
-                for (const row of owned) {
-                    const links = parseCexLinks(row["CEX Listing"]);
-                    const skus = links
-                        .map(extractCexSku)
-                        .filter(Boolean);
-                    const paid = parsePrice(row["Price Purchased"]);
-                    const current = parsePrice(row["Current Price"]);
-                    if (skus.length === 0 && paid === 0 && current === 0)
-                        continue;
-                    itemCount++;
-                    if (skus.length > 0) totalPaidCex += paid;
-                    else totalPaidOther += paid;
-                    skus.forEach((s) => uniqueSkus.add(s));
-                    items.push({ skus, current });
-                }
-
-                if (itemCount === 0) {
-                    showError("No CeX links or prices found");
-                    return;
-                }
-
-                const skuList = [...uniqueSkus];
-                btn.disabled = true;
-                btn.style.opacity = "0.5";
-                iconEl.classList.add("spin");
-                iconEl.style.display = "inline-block";
-
-                totalsEl.classList.remove("hidden");
-                totalsEl.classList.add("flex");
-                document.getElementById("totalSell").textContent = "…";
-                document.getElementById("totalCash").textContent = "…";
-                document.getElementById("totalVoucher").textContent = "…";
-                document.getElementById("totalNoLink").textContent = "…";
-                document.getElementById("totalCurrentValue").textContent = "…";
-                const totalPaidAll = totalPaidCex + totalPaidOther;
-                document.getElementById("totalPaidCex").textContent =
-                    totalPaidCex > 0 ? fmtMoney(totalPaidCex) : "—";
-                document.getElementById("totalPaidOther").textContent =
-                    totalPaidOther > 0 ? fmtMoney(totalPaidOther) : "—";
-                document.getElementById("totalPaidAll").textContent =
-                    totalPaidAll > 0 ? fmtMoney(totalPaidAll) : "—";
-                document.getElementById("totalCexItems").textContent =
-                    skuList.length > 0 ? `0/${skuList.length}` : `${itemCount}`;
-
-                // Show a spinner beside the top "Current value" tile, keeping
-                // the no-link baseline visible, until all prices are in.
-                const topCurrentEl =
-                    document.getElementById("statCurrentValue");
-                if (topCurrentEl) {
-                    topCurrentEl.innerHTML = `<span class="inline-flex items-center gap-2">${escapeHtml(
-                        topCurrentEl.textContent,
-                    )}<span class="spin inline-block text-base leading-none text-emerald-400">↻</span></span>`;
-                }
-
-                // Fetch every unique CeX SKU once; keep the details so we can
-                // build both the CeX-only breakdown and the blended value.
-                const detailsBySku = {};
-                let totalSell = 0;
-                let totalCash = 0;
-                let totalVoucher = 0;
-                let fetched = 0;
-                for (const sku of skuList) {
-                    const details = await fetchCexDetails(sku);
-                    if (details) {
-                        detailsBySku[sku] = details;
-                        totalSell += details.sellPrice || 0;
-                        totalCash += details.cashPrice || 0;
-                        totalVoucher += details.exchangePrice || 0;
-                    }
-                    fetched++;
-                    document.getElementById("totalCexItems").textContent =
-                        `${fetched}/${skuList.length}`;
-                    document.getElementById("totalSell").textContent =
-                        fmtMoney(totalSell);
-                    document.getElementById("totalCash").textContent =
-                        fmtMoney(totalCash);
-                    document.getElementById("totalVoucher").textContent =
-                        fmtMoney(totalVoucher);
-                }
-
-                // Blended current value: live CeX cash price for items that have
-                // a CeX link (cash, not voucher), plus the sheet's Current Price
-                // column for items with NO link. Linked items are never valued
-                // from the column — that would re-introduce the sheet's raw
-                // column total.
-                let blendedCurrent = 0;
-                let noLinkCurrent = 0;
-                for (const item of items) {
-                    if (item.skus.length > 0) {
-                        for (const sku of item.skus) {
-                            const d = detailsBySku[sku];
-                            if (d) blendedCurrent += Number(d.cashPrice) || 0;
-                        }
-                    } else {
-                        blendedCurrent += item.current;
-                        noLinkCurrent += item.current;
-                    }
-                }
-                document.getElementById("totalNoLink").textContent =
-                    fmtMoney(noLinkCurrent);
-                document.getElementById("totalCurrentValue").textContent =
-                    fmtMoney(blendedCurrent);
-                const topCurrent =
-                    document.getElementById("statCurrentValue");
-                if (topCurrent)
-                    topCurrent.textContent = fmtMoney(blendedCurrent);
-
-                iconEl.classList.remove("spin");
-                btn.disabled = false;
-                btn.style.opacity = "1";
-                document.getElementById("totalCexItems").textContent =
-                    `${itemCount}`;
-            }
-
             // === TOASTS / OVERLAY ==================================================
             function showError(message) {
                 const el = document.getElementById("error");
                 el.textContent = message;
                 el.classList.remove("hidden");
-                el.classList.add("block");
-                setTimeout(() => {
-                    el.classList.add("hidden");
-                    el.classList.remove("block");
-                }, 8000);
+                setTimeout(() => el.classList.add("hidden"), 8000);
             }
             function showSuccess(message) {
                 const el = document.getElementById("success");
                 el.textContent = message;
                 el.classList.remove("hidden");
-                el.classList.add("block");
-                setTimeout(() => {
-                    el.classList.add("hidden");
-                    el.classList.remove("block");
-                }, 3000);
+                setTimeout(() => el.classList.add("hidden"), 3000);
             }
             function showLoading(show) {
                 const o = document.getElementById("loadingOverlay");
-                if (show) {
-                    o.classList.remove("hidden");
-                    o.classList.add("flex");
-                } else {
-                    o.classList.add("hidden");
-                    o.classList.remove("flex");
-                }
+                o.classList.toggle("hidden", !show);
+                o.classList.toggle("flex", show);
             }
 
             // === CACHE =============================================================
@@ -1144,29 +993,65 @@
                 } catch (e) {}
             }
 
+            function loadCexCache() {
+                try {
+                    const raw = localStorage.getItem(CEX_CACHE_KEY);
+                    if (!raw) return {};
+                    const parsed = JSON.parse(raw);
+                    const out = {};
+                    let newest = 0;
+                    for (const [sku, rec] of Object.entries(parsed)) {
+                        if (rec && Date.now() - rec.ts < CEX_CACHE_TTL) {
+                            out[sku] = rec;
+                            newest = Math.max(newest, rec.ts);
+                        }
+                    }
+                    cexPricedAt = newest;
+                    return out;
+                } catch (e) {
+                    return {};
+                }
+            }
+
+            let saveCexTimer = null;
+            function saveCexCache() {
+                clearTimeout(saveCexTimer);
+                saveCexTimer = setTimeout(() => {
+                    try {
+                        localStorage.setItem(
+                            CEX_CACHE_KEY,
+                            JSON.stringify(cexCache),
+                        );
+                    } catch (e) {}
+                }, 500);
+            }
+
             // === DATA LOAD =========================================================
+            function bustUrl(url) {
+                return `${url}${url.includes("?") ? "&" : "?"}_=${Date.now()}`;
+            }
+
             async function fetchDataFromSource(useCache = true) {
                 if (useCache) {
                     const cached = getCachedData();
-                    if (cached) {
-                        parseCSV(cached);
+                    if (cached && parseCSV(cached)) {
                         showSuccess(
                             `Loaded ${allData.length} games from cache`,
                         );
-                        // Stale-while-revalidate: silently pick up sheet edits.
                         revalidateInBackground();
                         return true;
                     }
                 }
                 showLoading(true);
                 try {
-                    const bust = `${GOOGLE_SHEETS_URL}${GOOGLE_SHEETS_URL.includes("?") ? "&" : "?"}_=${Date.now()}`;
-                    const response = await fetchWithProxy(bust);
-                    if (!response)
-                        throw new Error("All proxies failed");
+                    const response = await fetchWithProxy(
+                        bustUrl(GOOGLE_SHEETS_URL),
+                    );
+                    if (!response) throw new Error("All proxies failed");
                     const csvText = await response.text();
+                    if (!parseCSV(csvText))
+                        throw new Error("Sheet returned no game rows");
                     setCachedData(csvText);
-                    parseCSV(csvText);
                     showSuccess(`Loaded ${allData.length} games from sheet`);
                     return true;
                 } catch (err) {
@@ -1179,18 +1064,19 @@
 
             async function revalidateInBackground() {
                 try {
-                    const bust = `${GOOGLE_SHEETS_URL}${GOOGLE_SHEETS_URL.includes("?") ? "&" : "?"}_=${Date.now()}`;
-                    const response = await fetchWithProxy(bust);
+                    const response = await fetchWithProxy(
+                        bustUrl(GOOGLE_SHEETS_URL),
+                    );
                     if (!response) return;
                     const csvText = await response.text();
-                    const previous = localStorage.getItem(CACHE_KEY);
-                    if (previous === csvText) return;
-                    // Skip the re-render if a modal is open — user is mid-interaction.
+                    if (localStorage.getItem(CACHE_KEY) === csvText) return;
                     const modal = document.getElementById("modal");
                     setCachedData(csvText);
                     if (modal && !modal.classList.contains("hidden")) return;
-                    parseCSV(csvText);
-                    showSuccess(`Sheet updated — ${allData.length} games`);
+                    if (parseCSV(csvText)) {
+                        showSuccess(`Sheet updated — ${allData.length} games`);
+                        loadCexPrices(false);
+                    }
                 } catch (e) {
                     // silent
                 }
@@ -1200,13 +1086,13 @@
                 const icon = document.getElementById("refreshIcon");
                 const btn = document.getElementById("refreshButton");
                 icon.classList.add("spin");
-                icon.style.display = "inline-block";
                 btn.disabled = true;
                 btn.style.opacity = "0.5";
-                await fetchDataFromSource(false);
+                const ok = await fetchDataFromSource(false);
                 icon.classList.remove("spin");
                 btn.disabled = false;
                 btn.style.opacity = "1";
+                if (ok) loadCexPrices(false);
             }
 
             // === CSV PARSING =======================================================
@@ -1257,47 +1143,71 @@
                 return rows;
             }
 
-            function normalizeHeader(h) {
-                return String(h).replace(/\s+/g, " ").trim();
+            // The sheet's headers arrive in two shapes: the raw export keeps the
+            // "Game Collection Tracker" title on its own row, while gviz folds that
+            // title into the first header cell. Matching on meaning rather than exact
+            // text keeps both working (and survives the next rename).
+            const HEADER_ALIASES = [
+                [/console/i, "Console Version"],
+                [/cover\s*art/i, "Cover Art"],
+                [/^insert/i, "Insert"],
+                [/^sealed/i, "Sealed"],
+                [/complete/i, "Completed"],
+                [/^edition/i, "Edition"],
+                [/^notes?$/i, "Notes"],
+                [/date\s*purchas/i, "Date Purchased"],
+                [/^month/i, "Month"],
+                [/(purchase|paid)\s*price|price\s*purchased/i, "Purchase Price"],
+                [/current\s*price/i, "Current Price"],
+                [/cex|listing/i, "CEX Listing"],
+                [/^game$/i, "Game"],
+            ];
+
+            function canonHeader(h) {
+                const n = String(h ?? "").replace(/\s+/g, " ").trim();
+                if (!n) return "";
+                for (const [re, name] of HEADER_ALIASES) {
+                    if (re.test(n)) return name;
+                }
+                return n;
             }
 
             function parseCSV(csvText) {
                 const rows = splitCsvRows(csvText);
                 if (rows.length < 2) {
                     showError("Not enough data in sheet");
-                    return;
+                    return false;
                 }
 
-                // The exported sheet's first row is the "Game Collection Tracker"
-                // title — detect and skip it (no comma-separated header columns).
-                let headerRowIdx = 0;
-                const firstCols = parseCSVLine(rows[0]);
-                const meaningfulFirst = firstCols.filter(
-                    (v) => v.trim() !== "",
-                ).length;
-                if (
-                    meaningfulFirst <= 2 ||
-                    firstCols[0]
-                        .toLowerCase()
-                        .includes("game collection tracker")
-                ) {
-                    headerRowIdx = 1;
+                // Find the real header row: the first one that names both a game
+                // and a console column.
+                let headerRowIdx = -1;
+                let cols = null;
+                for (let i = 0; i < Math.min(rows.length, 6); i++) {
+                    const canon = parseCSVLine(rows[i]).map(canonHeader);
+                    if (
+                        canon.includes("Game") &&
+                        canon.includes("Console Version")
+                    ) {
+                        headerRowIdx = i;
+                        cols = canon
+                            .map((h, idx) => ({ h, idx }))
+                            .filter(
+                                ({ h }) =>
+                                    h && !h.toLowerCase().startsWith("total "),
+                            );
+                        break;
+                    }
                 }
-
-                const rawHeaders = parseCSVLine(rows[headerRowIdx]).map(
-                    normalizeHeader,
-                );
-                // Keep named columns, dropping the sheet's blank spacers and
-                // "Total …" summary cells. Remember each kept column's ORIGINAL
-                // index so values stay aligned no matter where it sits.
-                const cols = rawHeaders
-                    .map((h, idx) => ({ h, idx }))
-                    .filter(
-                        ({ h }) => h && !h.toLowerCase().startsWith("total "),
+                if (headerRowIdx === -1) {
+                    showError(
+                        "Could not find the MASTER header row — is the sheet still published?",
                     );
-                headers = cols.map((c) => c.h);
+                    return false;
+                }
 
-                allData = [];
+                headers = cols.map((c) => c.h);
+                const parsed = [];
                 for (let i = headerRowIdx + 1; i < rows.length; i++) {
                     const values = parseCSVLine(rows[i]);
                     if (!values.some((v) => v.trim() !== "")) continue;
@@ -1305,21 +1215,360 @@
                     cols.forEach(({ h, idx }) => {
                         row[h] = (values[idx] ?? "").trim();
                     });
-                    if (row["Game"] && row["Game"].trim()) allData.push(row);
+                    if (row["Game"]) parsed.push(row);
                 }
 
-                if (allData.length === 0) {
+                if (parsed.length === 0) {
                     showError("No game rows found");
+                    return false;
+                }
+
+                allData = parsed;
+                filteredData = [...allData];
+                createFilters();
+                buildSortDropdown();
+                displayStats();
+                renderBreakdown();
+                applyFilters();
+                return true;
+            }
+
+            // === CeX ===============================================================
+            function extractCexSku(url) {
+                if (!url) return null;
+                const match = url.match(/[?&]id=([^&]+)/);
+                return match ? match[1] : null;
+            }
+
+            function isCexUrl(url) {
+                try {
+                    const host = new URL(url).hostname.toLowerCase();
+                    return host.includes("webuy.") || host.includes("cex.");
+                } catch {
+                    return false;
+                }
+            }
+
+            function extractCexParam(url, name) {
+                const m = url.match(new RegExp(`[?&]${name}=([^&]*)`));
+                return m ? decodeURIComponent(m[1]) : null;
+            }
+
+            function parseCexLinks(linkStr) {
+                if (!linkStr) return [];
+                return String(linkStr)
+                    .split(/[,\s]+/)
+                    .map((s) => s.trim())
+                    .filter((t) => t.startsWith("http") && isCexUrl(t));
+            }
+
+            // Some rows point at eBay instead of CeX — still worth linking, just not
+            // priceable.
+            function parseOtherLinks(linkStr) {
+                if (!linkStr) return [];
+                return String(linkStr)
+                    .split(/[,\s]+/)
+                    .map((s) => s.trim())
+                    .filter((t) => t.startsWith("http") && !isCexUrl(t));
+            }
+
+            function rowSkus(row) {
+                return parseCexLinks(row["CEX Listing"])
+                    .map(extractCexSku)
+                    .filter(Boolean);
+            }
+
+            function cexImageDir(slug) {
+                const known = CEX_IMAGE_DIRS[slug.toUpperCase()];
+                if (known) return known;
+                // Unknown slug: best-effort title case, mapping "-GAMES" to the
+                // "Software" directory CeX uses for most platforms.
+                return slug
+                    .split("-")
+                    .map((s) =>
+                        s.toUpperCase() === "GAMES"
+                            ? "Software"
+                            : s.charAt(0).toUpperCase() +
+                              s.slice(1).toLowerCase(),
+                    )
+                    .join(" ");
+            }
+
+            // Guessed box-art URL, used for the first paint before prices land.
+            function cexImageFromUrl(cexUrl, size = "m") {
+                const sku = extractCexSku(cexUrl);
+                if (!sku) return null;
+                const slug = extractCexParam(cexUrl, "categoryName");
+                if (!slug) return null;
+                return `https://uk.static.webuy.com/product_images/Gaming/${encodeURIComponent(
+                    cexImageDir(slug),
+                )}/${sku}_${size}.jpg`;
+            }
+
+            // Once a SKU has been priced we know its exact image path from the API,
+            // which is the only reliable source for DS / PSP / PC / GBA titles.
+            function coverFromRow(row, size = "m") {
+                const links = parseCexLinks(row["CEX Listing"]);
+                if (links.length === 0) return null;
+                const sku = extractCexSku(links[0]);
+                const rec = sku ? cexCache[sku] : null;
+                if (rec && rec.image) {
+                    return encodeURI(
+                        rec.image.replace(/_l\.jpg$/i, `_${size}.jpg`),
+                    );
+                }
+                return cexImageFromUrl(links[0], size);
+            }
+
+            async function fetchCexDetails(sku, force = false) {
+                if (!sku) return null;
+                const hit = cexCache[sku];
+                if (
+                    !force &&
+                    hit &&
+                    Date.now() - hit.ts < CEX_CACHE_TTL
+                )
+                    return hit;
+
+                for (let attempt = 0; attempt <= CEX_RETRIES; attempt++) {
+                    try {
+                        const resp = await fetchWithProxy(
+                            `https://wss2.cex.uk.webuy.io/v3/boxes/${sku}/detail`,
+                        );
+                        if (resp) {
+                            const json = await resp.json();
+                            const d =
+                                json?.response?.data?.boxDetails?.[0] ?? null;
+                            if (d) {
+                                const rec = {
+                                    sell: Number(d.sellPrice) || 0,
+                                    cash: Number(d.cashPrice) || 0,
+                                    voucher: Number(d.exchangePrice) || 0,
+                                    boxName: d.boxName || "",
+                                    image: d.imageUrls?.large || null,
+                                    ts: Date.now(),
+                                };
+                                cexCache[sku] = rec;
+                                saveCexCache();
+                                return rec;
+                            }
+                        }
+                    } catch (e) {
+                        // Rate-limited responses come back as HTML and blow up on
+                        // .json() — treated the same as a network failure.
+                    }
+                    if (attempt < CEX_RETRIES)
+                        await sleep(1000 * Math.pow(3, attempt));
+                }
+                return hit || null;
+            }
+
+            // Bounded-concurrency queue: the CeX endpoint drops a noticeable share of
+            // requests when hit in parallel bursts.
+            async function runPool(items, limit, worker) {
+                let cursor = 0;
+                const runners = Array.from(
+                    { length: Math.min(limit, items.length) },
+                    async () => {
+                        while (cursor < items.length) {
+                            const item = items[cursor++];
+                            await worker(item);
+                        }
+                    },
+                );
+                await Promise.all(runners);
+            }
+
+            // === VALUATION =========================================================
+            function rowCexCash(row) {
+                const skus = rowSkus(row);
+                if (!skus.length) return null;
+                let sum = 0;
+                let any = false;
+                for (const sku of skus) {
+                    const rec = cexCache[sku];
+                    if (rec) {
+                        sum += rec.cash || 0;
+                        any = true;
+                    }
+                }
+                return any ? sum : null;
+            }
+
+            function rowValue(row) {
+                const cash = rowCexCash(row);
+                return cash !== null ? cash : parsePrice(row["Current Price"]);
+            }
+
+            function rowPaid(row) {
+                return parsePrice(row["Purchase Price"]);
+            }
+
+            function rowGain(row) {
+                return rowValue(row) - rowPaid(row);
+            }
+
+            function collectionTotals(rows) {
+                const owned = rows.filter((r) => !isTBC(r));
+                let paid = 0;
+                let value = 0;
+                let sell = 0;
+                let cash = 0;
+                let voucher = 0;
+                let noPrice = 0;
+                let priced = 0;
+                for (const row of owned) {
+                    paid += rowPaid(row);
+                    const c = rowCexCash(row);
+                    if (c !== null) {
+                        value += c;
+                        priced++;
+                    } else {
+                        const manual = parsePrice(row["Current Price"]);
+                        value += manual;
+                        noPrice += manual;
+                    }
+                    // Counted per copy, not per SKU: six games are owned twice, and
+                    // two copies really are worth two trade-ins. (The fetch list is
+                    // still deduped — that's about requests, not value.)
+                    for (const sku of rowSkus(row)) {
+                        const rec = cexCache[sku];
+                        if (!rec) continue;
+                        sell += rec.sell || 0;
+                        cash += rec.cash || 0;
+                        voucher += rec.voucher || 0;
+                    }
+                }
+                return {
+                    count: owned.length,
+                    paid,
+                    value,
+                    gain: value - paid,
+                    sell,
+                    cash,
+                    voucher,
+                    noPrice,
+                    priced,
+                };
+            }
+
+            function setCexStatus(text) {
+                document.getElementById("cexStatus").innerHTML = text;
+            }
+
+            function updateValueStrip() {
+                const t = collectionTotals(allData);
+                const set = (id, v) =>
+                    (document.getElementById(id).textContent = v);
+                set("totalSell", fmtMoney(t.sell));
+                set("totalCash", fmtMoney(t.cash));
+                set("totalVoucher", fmtMoney(t.voucher));
+                set("totalNoLink", fmtMoney(t.noPrice));
+                set("totalPaidAll", fmtMoney(t.paid));
+                set("totalCurrentValue", fmtMoney(t.value));
+                const gainEl = document.getElementById("totalGain");
+                const pct = t.paid > 0 ? (t.gain / t.paid) * 100 : 0;
+                gainEl.textContent = `${fmtSigned(t.gain)}${
+                    t.paid > 0 ? ` (${pct >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(0)}%)` : ""
+                }`;
+                gainEl.className = `text-lg font-semibold ${
+                    t.gain >= 0 ? "text-emerald-400" : "text-red-400"
+                }`;
+            }
+
+            async function loadCexPrices(force = false) {
+                if (cexLoading || allData.length === 0) return;
+                const skus = [
+                    ...new Set(
+                        allData.filter((r) => !isTBC(r)).flatMap(rowSkus),
+                    ),
+                ];
+                if (skus.length === 0) {
+                    setCexStatus("No CeX listings in this sheet.");
+                    return;
+                }
+                const pending = force
+                    ? skus
+                    : skus.filter(
+                          (s) =>
+                              !cexCache[s] ||
+                              Date.now() - cexCache[s].ts >= CEX_CACHE_TTL,
+                      );
+
+                updateValueStrip();
+                if (pending.length === 0) {
+                    setCexStatus(
+                        `${skus.length} CeX prices cached · priced ${timeAgo(cexPricedAt)}`,
+                    );
                     return;
                 }
 
-                filteredData = [...allData];
+                cexLoading = true;
+                cexFailures = 0;
+                const btn = document.getElementById("calcCexBtn");
+                const icon = document.getElementById("calcCexIcon");
+                btn.disabled = true;
+                btn.style.opacity = "0.5";
+                icon.classList.add("spin");
+
+                let done = 0;
+                let streak = 0;
+                let tripped = false;
+                await runPool(pending, CEX_CONCURRENCY, async (sku) => {
+                    if (tripped) return;
+                    const rec = await fetchCexDetails(sku, force);
+                    if (rec) {
+                        streak = 0;
+                    } else {
+                        cexFailures++;
+                        streak++;
+                        if (streak >= CEX_FAILURE_LIMIT) tripped = true;
+                    }
+                    done++;
+                    if (done % 5 === 0 || done === pending.length) {
+                        setCexStatus(
+                            `Pricing ${done}/${pending.length} CeX listings…`,
+                        );
+                        updateValueStrip();
+                        displayStats();
+                    }
+                });
+
+                cexPricedAt = Date.now();
+                cexLoading = false;
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                icon.classList.remove("spin");
+
+                updateValueStrip();
                 displayStats();
-                createFilters();
-                sortCards();
+                renderBreakdown();
+                const modal = document.getElementById("modal");
+                if (modal.classList.contains("hidden")) render();
+                if (tripped) {
+                    setCexStatus(
+                        `<span class="text-amber-400">CeX is refusing requests right now</span> — stopped after ${CEX_FAILURE_LIMIT} failures in a row. Cached prices are kept; press Refresh CeX prices to try again later.`,
+                    );
+                } else {
+                    setCexStatus(
+                        `${skus.length - cexFailures}/${skus.length} CeX prices · updated just now` +
+                            (cexFailures > 0
+                                ? ` · <span class="text-amber-400">${cexFailures} unavailable</span>`
+                                : ""),
+                    );
+                }
             }
 
-            // === RAWG COVERS =======================================================
+            function timeAgo(ts) {
+                if (!ts) return "recently";
+                const mins = Math.round((Date.now() - ts) / 60000);
+                if (mins < 1) return "just now";
+                if (mins < 60) return `${mins} min ago`;
+                const hrs = Math.round(mins / 60);
+                return hrs === 1 ? "1 hour ago" : `${hrs} hours ago`;
+            }
+
+            // === RAWG COVERS (fallback for rows with no CeX SKU) ====================
             async function fetchGameCover(title, consoleName) {
                 const key = `${title}__${consoleName}`;
                 if (coverCache[key] !== undefined) return coverCache[key];
@@ -1328,15 +1577,16 @@
                     return null;
                 }
                 try {
-                    const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(title)}&page_size=1`;
+                    const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(
+                        title,
+                    )}&page_size=1`;
                     const resp = await fetch(url);
                     if (!resp.ok) {
                         coverCache[key] = null;
                         return null;
                     }
                     const json = await resp.json();
-                    const result = json?.results?.[0];
-                    const img = result?.background_image || null;
+                    const img = json?.results?.[0]?.background_image || null;
                     coverCache[key] = img;
                     return img;
                 } catch (e) {
@@ -1348,327 +1598,698 @@
             // === STATS =============================================================
             function displayStats() {
                 const el = document.getElementById("stats");
-                // Collection stats describe games actually owned; TBC rows are
-                // tracked separately as a "to buy" count.
                 const owned = allData.filter((r) => !isTBC(r));
                 const toBuy = allData.length - owned.length;
-                const total = owned.length;
+                const t = collectionTotals(allData);
                 const consoles = new Set(
                     owned.map((r) => normalizeConsole(r["Console Version"])),
                 ).size;
-                const totalPaid = owned.reduce(
-                    (s, r) => s + parsePrice(r["Price Purchased"]),
-                    0,
-                );
-                // Baseline "current value": only the sheet's Current Price for
-                // items that have NO CeX link. Linked items are valued live
-                // (CeX cash) once the user presses "Calculate CeX value", so we
-                // don't add their column price here — doing so would surface the
-                // sheet's raw column total (e.g. £250.50).
-                const totalCurrent = owned.reduce(
-                    (s, r) =>
-                        parseCexLinks(r["CEX Listing"]).length > 0
-                            ? s
-                            : s + parsePrice(r["Current Price"]),
-                    0,
-                );
-                const playable = owned.filter(
-                    (r) => (r["Playable"] || "").toUpperCase() === "Y",
-                ).length;
-                const playablePct =
-                    total > 0
-                        ? Math.round((playable / total) * 100)
-                        : 0;
+                const completed = owned.filter(isCompleted).length;
+                const sealed = owned.filter(isSealed).length;
+                const completedPct = owned.length
+                    ? Math.round((completed / owned.length) * 100)
+                    : 0;
 
-                const tile = (label, value, valueClass = "text-white", id = "") => `
+                const tile = (label, value, valueClass = "text-white", sub = "") => `
                     <div class="stat-tile">
                         <div class="text-[10px] uppercase tracking-[0.18em] text-zinc-500 font-semibold">${label}</div>
-                        <div class="text-2xl font-semibold mt-1 ${valueClass}"${id ? ` id="${id}"` : ""}>${value}</div>
+                        <div class="text-2xl font-semibold mt-1 ${valueClass}">${value}</div>
+                        ${sub ? `<div class="text-[11px] text-zinc-500 mt-0.5">${sub}</div>` : ""}
                     </div>`;
 
+                const gainClass =
+                    t.gain >= 0 ? "text-emerald-400" : "text-red-400";
+                const gainPct =
+                    t.paid > 0 ? Math.round((t.gain / t.paid) * 100) : 0;
+
                 el.innerHTML =
-                    tile("Games", total) +
+                    tile("Games", owned.length) +
                     tile("Consoles", consoles, "text-accent") +
-                    tile("Total paid", fmtMoney(totalPaid)) +
-                    tile("Current value", fmtMoney(totalCurrent), "text-emerald-400", "statCurrentValue") +
-                    tile("Playable", `${playablePct}%`, "text-amber-300") +
+                    tile("Total paid", fmtMoney(t.paid)) +
+                    tile(
+                        "CeX value",
+                        fmtMoney(t.value),
+                        "text-emerald-400",
+                        `${t.priced} of ${owned.length} priced`,
+                    ) +
+                    tile(
+                        "Gain / loss",
+                        fmtSigned(t.gain),
+                        gainClass,
+                        t.paid > 0
+                            ? `${gainPct >= 0 ? "+" : "−"}${Math.abs(gainPct)}% on spend`
+                            : "",
+                    ) +
+                    tile(
+                        "Completed",
+                        `${completed}`,
+                        "text-amber-300",
+                        `${completedPct}% of collection`,
+                    ) +
+                    tile("Sealed", sealed, "text-[#e9c85a]") +
                     (toBuy > 0 ? tile("To buy", toBuy, "text-purple-300") : "");
             }
 
+            // === BREAKDOWN =========================================================
+            function monthKey(d) {
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+            }
+            function monthLabel(key) {
+                const [y, m] = key.split("-");
+                const names = [
+                    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+                ];
+                return `${names[parseInt(m, 10) - 1]} ${y.slice(2)}`;
+            }
+
+            function setBreakdownMode(mode) {
+                breakdownMode = mode;
+                renderBreakdown();
+            }
+
+            function renderBreakdown() {
+                const el = document.getElementById("breakdownSection");
+                if (!allData.length) {
+                    el.innerHTML = "";
+                    return;
+                }
+                const owned = allData.filter((r) => !isTBC(r));
+
+                // --- per console -------------------------------------------------
+                const byConsole = new Map();
+                for (const row of owned) {
+                    const name = normalizeConsole(row["Console Version"]);
+                    if (!byConsole.has(name))
+                        byConsole.set(name, {
+                            name,
+                            games: 0,
+                            spend: 0,
+                            lowest: Infinity,
+                            highest: 0,
+                            value: 0,
+                        });
+                    const c = byConsole.get(name);
+                    const paid = rowPaid(row);
+                    c.games++;
+                    c.spend += paid;
+                    c.lowest = Math.min(c.lowest, paid);
+                    c.highest = Math.max(c.highest, paid);
+                    c.value += rowValue(row);
+                }
+                const consoleRows = [...byConsole.values()].sort(
+                    (a, b) => b.spend - a.spend || b.games - a.games,
+                );
+                const maxSpend = Math.max(
+                    1,
+                    ...consoleRows.map((c) => c.spend),
+                );
+                const totals = collectionTotals(allData);
+
+                const consoleTable = `
+                    <table class="gtable">
+                        <thead>
+                            <tr>
+                                <th>Console</th><th>Games</th><th>Spend</th>
+                                <th>Average</th><th>Lowest</th><th>Highest</th>
+                                <th>CeX value</th><th>Gain / loss</th><th class="w-[160px]">Share of spend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${consoleRows
+                                .map((c) => {
+                                    const gain = c.value - c.spend;
+                                    return `
+                                <tr data-console="${escapeHtml(c.name)}">
+                                    <td class="text-zinc-100 font-medium">${escapeHtml(c.name)}</td>
+                                    <td>${c.games}</td>
+                                    <td>${fmtMoney(c.spend)}</td>
+                                    <td>${fmtMoney(c.spend / c.games)}</td>
+                                    <td>${fmtMoney(c.lowest === Infinity ? 0 : c.lowest)}</td>
+                                    <td>${fmtMoney(c.highest)}</td>
+                                    <td class="text-emerald-400">${fmtMoney(c.value)}</td>
+                                    <td class="${gain >= 0 ? "text-emerald-400" : "text-red-400"}">${fmtSigned(gain)}</td>
+                                    <td><div class="bar-track"><div class="bar-fill" style="width:${(c.spend / maxSpend) * 100}%"></div></div></td>
+                                </tr>`;
+                                })
+                                .join("")}
+                            <tr class="font-semibold">
+                                <td class="text-white">Total</td>
+                                <td>${totals.count}</td>
+                                <td>${fmtMoney(totals.paid)}</td>
+                                <td>${fmtMoney(totals.count ? totals.paid / totals.count : 0)}</td>
+                                <td>—</td><td>—</td>
+                                <td class="text-emerald-400">${fmtMoney(totals.value)}</td>
+                                <td class="${totals.gain >= 0 ? "text-emerald-400" : "text-red-400"}">${fmtSigned(totals.gain)}</td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>`;
+
+                // --- spend over time ---------------------------------------------
+                const buckets = new Map();
+                for (const row of owned) {
+                    const d = parseUkDate(row["Date Purchased"]);
+                    if (!d || isNaN(d)) continue;
+                    const key =
+                        breakdownMode === "year"
+                            ? String(d.getFullYear())
+                            : monthKey(d);
+                    if (!buckets.has(key))
+                        buckets.set(key, { key, spend: 0, games: 0 });
+                    const b = buckets.get(key);
+                    b.spend += rowPaid(row);
+                    b.games++;
+                }
+                let series = [...buckets.values()].sort((a, b) =>
+                    a.key.localeCompare(b.key),
+                );
+                // Purchases span nearly two decades with long gaps, so the monthly
+                // view only covers the recent, dense stretch.
+                if (breakdownMode === "month") series = series.slice(-24);
+                const maxBucket = Math.max(1, ...series.map((b) => b.spend));
+
+                const chart = `
+                    <div class="flex items-end gap-1.5 h-[150px] min-w-full overflow-x-auto scroll-thin pb-1">
+                        ${series
+                            .map(
+                                (b) => `
+                            <div class="flex flex-col items-center h-full flex-1 min-w-[26px]" title="${escapeHtml(
+                                breakdownMode === "year" ? b.key : monthLabel(b.key),
+                            )} · ${b.games} games · ${fmtMoney(b.spend)}">
+                                <div class="text-[9px] text-zinc-500 mb-1">${b.spend > 0 ? Math.round(b.spend) : ""}</div>
+                                <div class="flex-1 min-h-0 w-full flex items-end">
+                                    <div class="vbar w-full" style="height:${Math.max(2, (b.spend / maxBucket) * 100)}%"></div>
+                                </div>
+                                <div class="text-[9px] text-zinc-500 mt-1.5 whitespace-nowrap">${escapeHtml(
+                                    breakdownMode === "year"
+                                        ? b.key.slice(2)
+                                        : monthLabel(b.key).split(" ")[0],
+                                )}</div>
+                            </div>`,
+                            )
+                            .join("")}
+                    </div>`;
+
+                // --- editions -----------------------------------------------------
+                const byEdition = new Map();
+                for (const row of owned) {
+                    const e = editionOf(row);
+                    byEdition.set(e, (byEdition.get(e) || 0) + 1);
+                }
+                const editionRows = [...byEdition.entries()].sort(
+                    (a, b) => b[1] - a[1],
+                );
+                const maxEdition = Math.max(1, ...editionRows.map((e) => e[1]));
+                const editionList = editionRows
+                    .map(
+                        ([name, n]) => `
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="w-[130px] text-zinc-400 truncate">${escapeHtml(name)}</span>
+                            <div class="flex-1 bar-track"><div class="bar-fill" style="width:${(n / maxEdition) * 100}%"></div></div>
+                            <span class="w-8 text-right text-zinc-300">${n}</span>
+                        </div>`,
+                    )
+                    .join("");
+
+                // --- movers -------------------------------------------------------
+                const priced = owned.filter((r) => rowCexCash(r) !== null);
+                const sorted = [...priced].sort((a, b) => rowGain(b) - rowGain(a));
+                const moverRow = (row) => {
+                    const g = rowGain(row);
+                    return `
+                        <div class="flex items-center justify-between gap-3 text-xs py-1 border-b border-white/5 cursor-pointer hover:text-white" data-gamekey="${escapeHtml(rowKey(row))}">
+                            <span class="truncate text-zinc-300">${escapeHtml(row["Game"])}</span>
+                            <span class="whitespace-nowrap text-zinc-500">${fmtMoney(rowPaid(row))} → ${fmtMoney(rowValue(row))}</span>
+                            <span class="whitespace-nowrap font-semibold ${g >= 0 ? "text-emerald-400" : "text-red-400"}">${fmtSigned(g)}</span>
+                        </div>`;
+                };
+                const movers = priced.length
+                    ? `
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-[11px] uppercase tracking-[0.15em] text-emerald-400 font-semibold mb-2">Top gainers</h4>
+                            ${sorted.slice(0, 6).map(moverRow).join("")}
+                        </div>
+                        <div>
+                            <h4 class="text-[11px] uppercase tracking-[0.15em] text-red-400 font-semibold mb-2">Biggest losses</h4>
+                            ${sorted.slice(-6).reverse().map(moverRow).join("")}
+                        </div>
+                    </div>`
+                    : `<p class="text-xs text-zinc-500">CeX prices still loading…</p>`;
+
+                el.innerHTML = `
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                        <div class="xl:col-span-2">
+                            <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">By console</h3>
+                            <div class="overflow-x-auto scroll-thin">${consoleTable}</div>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold">Spend over time</h3>
+                                <div class="seg">
+                                    <button class="${breakdownMode === "month" ? "active" : ""}" onclick="setBreakdownMode('month')">Monthly</button>
+                                    <button class="${breakdownMode === "year" ? "active" : ""}" onclick="setBreakdownMode('year')">Yearly</button>
+                                </div>
+                            </div>
+                            ${chart}
+                        </div>
+                        <div>
+                            <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">By edition</h3>
+                            <div class="flex flex-col gap-2">${editionList}</div>
+                        </div>
+                        <div class="xl:col-span-2">
+                            <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Movers</h3>
+                            ${movers}
+                        </div>
+                    </div>`;
+
+                // Data-attribute wiring rather than inline handlers: game titles
+                // contain apostrophes, which an HTML-escaped onclick would break on.
+                el.querySelectorAll("[data-console]").forEach((tr) => {
+                    tr.onclick = () => filterToConsole(tr.dataset.console);
+                });
+                el.querySelectorAll("[data-gamekey]").forEach((d) => {
+                    d.onclick = () => openModalByKey(d.dataset.gamekey);
+                });
+            }
+
+            function filterToConsole(name) {
+                activeFilters.console = new Set([name.toLowerCase()]);
+                refreshChipStates();
+                applyFilters();
+                document
+                    .getElementById("cardsGrid")
+                    .scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
             // === FILTERS ===========================================================
-            function makeChip(label, value, group, isActive) {
+            const PRICE_BANDS = {
+                lt5: (p) => p > 0 && p < 5,
+                "5to10": (p) => p >= 5 && p < 10,
+                "10to20": (p) => p >= 10 && p < 20,
+                gt20: (p) => p >= 20,
+                free: (p) => p === 0,
+            };
+
+            const FILTER_MATCHERS = {
+                status: {
+                    owned: (r) => !isTBC(r),
+                    tbc: (r) => isTBC(r),
+                },
+                completeness: {
+                    complete: (r) => isComplete(r),
+                    "no-cover": (r) => hasCover(r) === false,
+                    "no-insert": (r) => hasInsert(r) === false,
+                    loose: (r) => editionOf(r).toLowerCase() === "loose",
+                },
+                completed: {
+                    yes: (r) => isCompleted(r),
+                    no: (r) => !isCompleted(r),
+                },
+                sealed: {
+                    yes: (r) => isSealed(r),
+                    no: (r) => !isSealed(r),
+                },
+            };
+
+            function rowMatchesFilter(row, group, value) {
+                if (group === "console")
+                    return (
+                        normalizeConsole(row["Console Version"]).toLowerCase() ===
+                        value
+                    );
+                if (group === "edition")
+                    return editionOf(row).toLowerCase() === value;
+                if (group === "price")
+                    return (PRICE_BANDS[value] || (() => true))(rowPaid(row));
+                const fn = FILTER_MATCHERS[group]?.[value];
+                return fn ? fn(row) : true;
+            }
+
+            function makeChip(label, value, group) {
                 const btn = document.createElement("button");
-                btn.className = "chip" + (isActive ? " active" : "");
+                btn.className = "chip";
                 btn.textContent = label;
-                btn.onclick = (e) => setFilter(group, value, e.currentTarget);
+                btn.dataset.group = group;
+                btn.dataset.value = value;
+                btn.onclick = () => setFilter(group, value);
                 return btn;
             }
 
+            function addFilterGroup(container, title, group, options) {
+                if (!options.length) return;
+                const wrap = document.createElement("div");
+                const h = document.createElement("h3");
+                h.className =
+                    "text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5";
+                h.textContent = title;
+                const chips = document.createElement("div");
+                chips.className = "flex gap-2 flex-wrap";
+                chips.appendChild(makeChip("All", "all", group));
+                options.forEach(([label, value]) =>
+                    chips.appendChild(makeChip(label, value, group)),
+                );
+                wrap.appendChild(h);
+                wrap.appendChild(chips);
+                container.appendChild(wrap);
+            }
+
             function createFilters() {
-                // Status (owned vs. not-yet-purchased)
-                const sCont = document.getElementById("statusFilters");
-                sCont.innerHTML = "";
-                [
-                    ["All", "all"],
-                    ["Owned", "owned"],
-                    ["To buy", "tbc"],
-                ].forEach(([label, val], i) =>
-                    sCont.appendChild(
-                        makeChip(label, val, "status", i === 0),
-                    ),
-                );
+                const cont = document.getElementById("filterGroups");
+                cont.innerHTML = "";
 
-                // Console
-                const cCont = document.getElementById("consoleFilters");
-                cCont.innerHTML = "";
-                const consoles = new Set();
-                allData.forEach((r) =>
-                    consoles.add(normalizeConsole(r["Console Version"])),
-                );
-                cCont.appendChild(makeChip("All", "all", "console", true));
-                [...consoles]
-                    .sort((a, b) => a.localeCompare(b))
-                    .forEach((c) =>
-                        cCont.appendChild(makeChip(c, c.toLowerCase(), "console", false)),
-                    );
+                // Only offered while the sheet actually has unpurchased rows.
+                if (allData.some(isTBC))
+                    addFilterGroup(cont, "Status", "status", [
+                        ["Owned", "owned"],
+                        ["To buy", "tbc"],
+                    ]);
 
-                // Condition
-                const condCont = document.getElementById("conditionFilters");
-                condCont.innerHTML = "";
-                ["All", "Mint", "Good", "Damaged", "Missing"].forEach((v) => {
-                    condCont.appendChild(
-                        makeChip(
-                            v,
-                            v === "All" ? "all" : v.toLowerCase(),
-                            "condition",
-                            v === "All",
+                const consoles = [
+                    ...new Set(
+                        allData.map((r) =>
+                            normalizeConsole(r["Console Version"]),
                         ),
-                    );
-                });
-
-                // Playable
-                const pCont = document.getElementById("playableFilters");
-                pCont.innerHTML = "";
-                [
-                    ["All", "all"],
-                    ["Yes", "y"],
-                    ["No", "n"],
-                ].forEach(([label, val], i) =>
-                    pCont.appendChild(
-                        makeChip(label, val, "playable", i === 0),
                     ),
+                ].sort((a, b) => a.localeCompare(b));
+                addFilterGroup(
+                    cont,
+                    "Console",
+                    "console",
+                    consoles.map((c) => [c, c.toLowerCase()]),
                 );
 
-                // Price bands
-                const priceCont = document.getElementById("priceFilters");
-                priceCont.innerHTML = "";
-                [
-                    ["All", "all"],
+                addFilterGroup(cont, "Completeness", "completeness", [
+                    ["Complete", "complete"],
+                    ["No cover art", "no-cover"],
+                    ["No insert", "no-insert"],
+                    ["Loose", "loose"],
+                ]);
+
+                const editions = [
+                    ...new Set(allData.map(editionOf)),
+                ].sort((a, b) => a.localeCompare(b));
+                addFilterGroup(
+                    cont,
+                    "Edition",
+                    "edition",
+                    editions.map((e) => [e, e.toLowerCase()]),
+                );
+
+                addFilterGroup(cont, "Completed", "completed", [
+                    ["Completed", "yes"],
+                    ["Not completed", "no"],
+                ]);
+
+                addFilterGroup(cont, "Sealed", "sealed", [
+                    ["Sealed", "yes"],
+                    ["Not sealed", "no"],
+                ]);
+
+                addFilterGroup(cont, "Price paid", "price", [
+                    ["Free / £0", "free"],
                     ["< £5", "lt5"],
                     ["£5–10", "5to10"],
                     ["£10–20", "10to20"],
                     ["> £20", "gt20"],
-                ].forEach(([label, val], i) =>
-                    priceCont.appendChild(
-                        makeChip(label, val, "price", i === 0),
-                    ),
-                );
+                ]);
 
-                // CeX
-                const cexCont = document.getElementById("cexFilters");
-                cexCont.innerHTML = "";
-                [
-                    ["All", "all"],
-                    ["Has CeX URL", "yes"],
-                    ["No CeX URL", "no"],
-                ].forEach(([label, val], i) =>
-                    cexCont.appendChild(
-                        makeChip(label, val, "cex", i === 0),
-                    ),
-                );
-
-                // Sealed
-                const sealedCont = document.getElementById("sealedFilters");
-                sealedCont.innerHTML = "";
-                [
-                    ["All", "all"],
-                    ["Sealed", "yes"],
-                    ["Not sealed", "no"],
-                ].forEach(([label, val], i) =>
-                    sealedCont.appendChild(
-                        makeChip(label, val, "sealed", i === 0),
-                    ),
-                );
+                refreshChipStates();
             }
 
-            function setFilter(group, value, button) {
-                activeFilters[group] = value;
-                const containerId = `${group}Filters`;
+            function refreshChipStates() {
                 document
-                    .querySelectorAll(`#${containerId} .chip`)
-                    .forEach((b) => b.classList.remove("active"));
-                if (button) button.classList.add("active");
+                    .querySelectorAll("#filterGroups .chip")
+                    .forEach((chip) => {
+                        const set = activeFilters[chip.dataset.group];
+                        const on =
+                            chip.dataset.value === "all"
+                                ? !set || set.size === 0
+                                : set && set.has(chip.dataset.value);
+                        chip.classList.toggle("active", !!on);
+                    });
+                const active = Object.values(activeFilters).reduce(
+                    (n, s) => n + s.size,
+                    0,
+                );
+                const badge = document.getElementById("filterCount");
+                badge.textContent = active;
+                badge.classList.toggle("hidden", active === 0);
+            }
+
+            function setFilter(group, value) {
+                const set = activeFilters[group];
+                if (value === "all") set.clear();
+                else if (set.has(value)) set.delete(value);
+                else set.add(value);
+                refreshChipStates();
                 applyFilters();
             }
 
-            function rowHasCondition(row, cond) {
-                const target = cond.toLowerCase();
-                return [
-                    row["Cover Art Condition"],
-                    row["Insert Condition"],
-                    row["Disc Condition"],
-                ].some((v) => (v || "").trim().toLowerCase() === target);
+            function clearAllFilters() {
+                Object.values(activeFilters).forEach((s) => s.clear());
+                document.getElementById("searchBox").value = "";
+                searchTerm = "";
+                refreshChipStates();
+                applyFilters();
             }
 
             function applyFilters() {
-                filteredData = allData.filter((row) => {
-                    if (activeFilters.status !== "all") {
-                        const tbc = isTBC(row);
-                        if (activeFilters.status === "owned" && tbc)
-                            return false;
-                        if (activeFilters.status === "tbc" && !tbc)
-                            return false;
-                    }
-                    if (activeFilters.console !== "all") {
-                        const c = normalizeConsole(
-                            row["Console Version"],
-                        ).toLowerCase();
-                        if (c !== activeFilters.console) return false;
-                    }
-                    if (activeFilters.condition !== "all") {
-                        if (!rowHasCondition(row, activeFilters.condition))
-                            return false;
-                    }
-                    if (activeFilters.playable !== "all") {
-                        const p = (row["Playable"] || "").toLowerCase();
-                        if (activeFilters.playable === "y" && p !== "y")
-                            return false;
-                        if (activeFilters.playable === "n" && p !== "n")
-                            return false;
-                    }
-                    if (activeFilters.price !== "all") {
-                        const p = parsePrice(row["Price Purchased"]);
-                        if (activeFilters.price === "lt5" && !(p > 0 && p < 5))
-                            return false;
-                        if (activeFilters.price === "5to10" && !(p >= 5 && p < 10))
-                            return false;
-                        if (activeFilters.price === "10to20" && !(p >= 10 && p < 20))
-                            return false;
-                        if (activeFilters.price === "gt20" && !(p >= 20))
-                            return false;
-                    }
-                    if (activeFilters.cex !== "all") {
-                        const hasUrl = parseCexLinks(row["CEX Listing"]).length > 0;
-                        if (activeFilters.cex === "yes" && !hasUrl) return false;
-                        if (activeFilters.cex === "no" && hasUrl) return false;
-                    }
-                    if (activeFilters.sealed !== "all") {
-                        const s = isSealed(row);
-                        if (activeFilters.sealed === "yes" && !s) return false;
-                        if (activeFilters.sealed === "no" && s) return false;
-                    }
-                    return true;
-                });
+                filteredData = allData.filter((row) =>
+                    Object.entries(activeFilters).every(([group, set]) => {
+                        if (set.size === 0) return true;
+                        return [...set].some((v) =>
+                            rowMatchesFilter(row, group, v),
+                        );
+                    }),
+                );
                 sortCards();
             }
 
-            function filterCards() {
-                const term = document
-                    .getElementById("searchBox")
-                    .value.toLowerCase()
-                    .trim();
-                if (!term) {
-                    displayCards(filteredData);
-                    return;
-                }
-                const filtered = filteredData.filter((row) =>
-                    Object.values(row).some((v) =>
-                        String(v).toLowerCase().includes(term),
-                    ),
-                );
-                displayCards(filtered);
+            // Search only the fields a person would type — the CeX URL used to match
+            // everything ("games", "software", "uk").
+            function searchableText(row) {
+                return [
+                    row["Game"],
+                    normalizeConsole(row["Console Version"]),
+                    row["Notes"],
+                    editionOf(row),
+                ]
+                    .join(" ")
+                    .toLowerCase();
+            }
+
+            function onSearchInput() {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    searchTerm = document
+                        .getElementById("searchBox")
+                        .value.toLowerCase()
+                        .trim();
+                    render();
+                }, 150);
             }
 
             // === SORT ==============================================================
+            function buildSortDropdown() {
+                const dd = document.getElementById("sortDropdown");
+                dd.innerHTML = SORT_OPTIONS.map(
+                    ([value, label]) => `
+                    <div class="px-4 py-2.5 text-sm cursor-pointer ${
+                        value === currentSort
+                            ? "text-accent bg-accent/10"
+                            : "text-zinc-200 hover:bg-white/5"
+                    }" data-sort="${value}" onclick="selectSort('${value}')">${label}</div>`,
+                ).join("");
+                const label = SORT_OPTIONS.find(
+                    ([v]) => v === currentSort,
+                )?.[1];
+                if (label)
+                    document.getElementById("sortButtonText").textContent =
+                        label;
+            }
+
             function toggleSortDropdown() {
                 document
                     .getElementById("sortDropdown")
                     .classList.toggle("hidden");
             }
 
-            function selectSort(sortBy, label, el) {
+            function selectSort(sortBy) {
                 currentSort = sortBy;
-                document.getElementById("sortButtonText").textContent = label;
-                const dd = document.getElementById("sortDropdown");
-                dd.querySelectorAll("div").forEach((d) => {
-                    d.classList.remove("bg-accent/10", "text-accent");
-                    d.classList.add("text-zinc-200");
-                    d.removeAttribute("data-active");
-                });
-                el.classList.add("bg-accent/10", "text-accent");
-                el.classList.remove("text-zinc-200");
-                el.setAttribute("data-active", "true");
-                dd.classList.add("hidden");
+                buildSortDropdown();
+                document.getElementById("sortDropdown").classList.add("hidden");
                 sortCards();
             }
 
             function sortCards() {
+                const byTitle = (a, b) =>
+                    (a["Game"] || "").localeCompare(b["Game"] || "");
                 filteredData.sort((a, b) => {
                     switch (currentSort) {
-                        case "title":
-                            return (a["Game"] || "").localeCompare(
-                                b["Game"] || "",
-                            );
                         case "console":
-                            const ca = normalizeConsole(a["Console Version"]);
-                            const cb = normalizeConsole(b["Console Version"]);
                             return (
-                                ca.localeCompare(cb) ||
-                                (a["Game"] || "").localeCompare(b["Game"] || "")
+                                normalizeConsole(a["Console Version"]).localeCompare(
+                                    normalizeConsole(b["Console Version"]),
+                                ) || byTitle(a, b)
                             );
-                        case "current-desc":
-                            return (
-                                parsePrice(b["Current Price"]) -
-                                parsePrice(a["Current Price"])
-                            );
+                        case "value-desc":
+                            return rowValue(b) - rowValue(a) || byTitle(a, b);
+                        case "gain-desc":
+                            return rowGain(b) - rowGain(a) || byTitle(a, b);
+                        case "gain-asc":
+                            return rowGain(a) - rowGain(b) || byTitle(a, b);
                         case "paid-desc":
-                            return (
-                                parsePrice(b["Price Purchased"]) -
-                                parsePrice(a["Price Purchased"])
-                            );
+                            return rowPaid(b) - rowPaid(a) || byTitle(a, b);
                         case "paid-asc":
-                            return (
-                                parsePrice(a["Price Purchased"]) -
-                                parsePrice(b["Price Purchased"])
-                            );
+                            return rowPaid(a) - rowPaid(b) || byTitle(a, b);
                         case "date-newest":
+                        case "date-oldest": {
                             const da = parseUkDate(a["Date Purchased"]);
                             const db = parseUkDate(b["Date Purchased"]);
-                            return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+                            const ta = da ? da.getTime() : 0;
+                            const tb = db ? db.getTime() : 0;
+                            return currentSort === "date-newest"
+                                ? tb - ta || byTitle(a, b)
+                                : ta - tb || byTitle(a, b);
+                        }
+                        case "edition":
+                            return (
+                                editionOf(a).localeCompare(editionOf(b)) ||
+                                byTitle(a, b)
+                            );
                         default:
-                            return 0;
+                            return byTitle(a, b);
                     }
                 });
-                filterCards();
+                render();
             }
 
-            // === CARDS =============================================================
-            function conditionDots(row) {
-                const fields = [
-                    ["Cover", row["Cover Art Condition"]],
-                    ["Insert", row["Insert Condition"]],
-                    ["Disc", row["Disc Condition"]],
-                ];
-                return fields
-                    .map(([label, val]) => {
-                        const dotClass = CONDITION_DOT[val] || "bg-zinc-700";
-                        // Dark text reads better on the bright (mint/good/damaged) fills.
-                        const textClass = ["Mint", "Good", "Damaged"].includes(val)
-                            ? "text-black/80"
-                            : "text-zinc-300";
-                        const abbr = CONDITION_ABBR[val] || "–";
-                        const titleAttr = val ? `${label}: ${val}` : `${label}: —`;
-                        return `<span class="cond ${dotClass} ${textClass}" title="${escapeHtml(titleAttr)}">${abbr}</span>`;
+            // === URL STATE =========================================================
+            function writeUrlState() {
+                if (restoringState) return;
+                const p = new URLSearchParams();
+                if (searchTerm) p.set("q", searchTerm);
+                if (currentSort !== "title") p.set("sort", currentSort);
+                if (currentView !== "grid") p.set("view", currentView);
+                for (const [group, set] of Object.entries(activeFilters)) {
+                    if (set.size) p.set(group, [...set].join("|"));
+                }
+                const qs = p.toString();
+                try {
+                    history.replaceState(
+                        null,
+                        "",
+                        qs ? `${location.pathname}?${qs}` : location.pathname,
+                    );
+                } catch (e) {
+                    // file:// origins reject replaceState; filters still work.
+                }
+            }
+
+            function readUrlState() {
+                const p = new URLSearchParams(location.search);
+                restoringState = true;
+                const q = p.get("q");
+                if (q) {
+                    searchTerm = q.toLowerCase();
+                    document.getElementById("searchBox").value = q;
+                }
+                const sort = p.get("sort");
+                if (sort && SORT_OPTIONS.some(([v]) => v === sort))
+                    currentSort = sort;
+                let stored = null;
+                try {
+                    stored = localStorage.getItem(VIEW_KEY);
+                } catch (e) {}
+                const view = p.get("view") || stored;
+                if (view === "table" || view === "grid") currentView = view;
+                for (const group of Object.keys(activeFilters)) {
+                    const raw = p.get(group);
+                    if (raw)
+                        activeFilters[group] = new Set(
+                            raw.split("|").filter(Boolean),
+                        );
+                }
+                restoringState = false;
+            }
+
+            // === RENDER ============================================================
+            function rowKey(row) {
+                return [
+                    row["Game"],
+                    row["Console Version"],
+                    editionOf(row),
+                    row["Date Purchased"],
+                ].join("§");
+            }
+
+            function updateFilterSummary() {
+                const el = document.getElementById("filterSummary");
+                if (el)
+                    el.textContent = `Showing ${visibleData.length} of ${allData.length} games`;
+            }
+
+            function render() {
+                visibleData = searchTerm
+                    ? filteredData.filter((r) =>
+                          searchableText(r).includes(searchTerm),
+                      )
+                    : filteredData;
+                modalList = visibleData;
+                updateFilterSummary();
+                writeUrlState();
+                if (currentView === "table") renderTable(visibleData);
+                else displayCards(visibleData);
+            }
+
+            function applyView() {
+                document
+                    .getElementById("cardsGrid")
+                    .classList.toggle("hidden", currentView !== "grid");
+                document
+                    .getElementById("tableWrap")
+                    .classList.toggle("hidden", currentView !== "table");
+                document
+                    .getElementById("viewGridBtn")
+                    .classList.toggle("active", currentView === "grid");
+                document
+                    .getElementById("viewTableBtn")
+                    .classList.toggle("active", currentView === "table");
+            }
+
+            function setView(view) {
+                currentView = view;
+                try {
+                    localStorage.setItem(VIEW_KEY, view);
+                } catch (e) {}
+                applyView();
+                render();
+            }
+
+            // Cover art / insert presence, shown as two initials.
+            function completenessPills(row) {
+                return [
+                    ["C", "Cover art", hasCover(row)],
+                    ["I", "Insert", hasInsert(row)],
+                ]
+                    .map(([abbr, label, state]) => {
+                        const cls =
+                            state === true
+                                ? "bg-emerald-400 text-black/80"
+                                : state === false
+                                  ? "bg-red-500/80 text-white"
+                                  : "bg-zinc-700 text-zinc-400";
+                        const word =
+                            state === true
+                                ? "present"
+                                : state === false
+                                  ? "missing"
+                                  : "not applicable";
+                        return `<span class="cond ${cls}" title="${escapeHtml(
+                            `${label}: ${word}`,
+                        )}">${state === false ? "✕" : abbr}</span>`;
                     })
                     .join("");
             }
@@ -1676,159 +2297,266 @@
             function displayCards(data) {
                 const grid = document.getElementById("cardsGrid");
                 grid.innerHTML = "";
-                // Remember the current on-screen order so the modal can page
-                // through games exactly as they appear here.
-                modalList = data;
                 if (data.length === 0) {
                     grid.innerHTML = `<p class="col-span-full text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
                     return;
                 }
 
+                const frag = document.createDocumentFragment();
                 data.forEach((row, index) => {
                     const tbc = isTBC(row);
                     const sealed = isSealed(row);
+                    const completed = isCompleted(row);
+                    const edition = editionOf(row);
                     const card = document.createElement("div");
                     card.className =
                         "card animate-fadeInUp" +
                         (tbc ? " tbc" : "") +
                         (sealed ? " sealed" : "");
-                    card.style.animationDelay = `${Math.min(index * 0.015, 0.4)}s`;
+                    card.style.animationDelay = `${Math.min(index * 0.012, 0.3)}s`;
                     card.onclick = () => openModal(row, index);
 
                     const consoleName = normalizeConsole(row["Console Version"]);
-                    const playable = (row["Playable"] || "").toUpperCase();
-                    const price =
-                        parsePrice(row["Current Price"]) ||
-                        parsePrice(row["Price Purchased"]);
-                    const hasCex = parseCexLinks(row["CEX Listing"]).length > 0;
+                    const paid = rowPaid(row);
+                    const value = rowValue(row);
+                    const hasCex = rowSkus(row).length > 0;
+                    const posterId = `poster-${index}`;
+                    const cover = coverFromRow(row, "m");
 
-                    const posterId = `poster-${index}-${Math.random().toString(36).slice(2, 7)}`;
-
-                    const cexCover = coverFromRow(row, "l");
-                    const badgesHtml = `
+                    const badges = `
                         ${hasCex ? `<span class="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/90 text-black border border-accent z-10">CeX</span>` : ""}
-                        ${tbc ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-600/90 text-white border border-purple-300/50 z-10">To buy</span>` : sealed ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#d4af37] text-black border border-[#f5d774] z-10">Sealed</span>` : playable === "N" ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-500/90 text-white border border-red-400 z-10">Not playable</span>` : ""}
+                        ${
+                            tbc
+                                ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-600/90 text-white border border-purple-300/50 z-10">To buy</span>`
+                                : sealed
+                                  ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#d4af37] text-black border border-[#f5d774] z-10">Sealed</span>`
+                                  : completed
+                                    ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/90 text-black border border-emerald-300 z-10">✓ Done</span>`
+                                    : ""
+                        }
+                        ${edition !== "Standard" ? `<span class="absolute bottom-2 left-2 right-2 text-[10px] font-medium px-2 py-0.5 rounded bg-black/75 text-zinc-200 border border-white/15 z-10 truncate text-center">${escapeHtml(edition)}</span>` : ""}
                         ${tbc ? `<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10"><span class="tbc-stamp px-3 py-1 rounded-md bg-purple-600/85 text-white text-xs font-bold uppercase tracking-[0.15em] border border-purple-200/60">Not owned</span></div>` : ""}
                     `;
-                    const initialPosterHtml = cexCover
-                        ? `<img src="${escapeHtml(cexCover)}" alt="${escapeHtml(row["Game"] || "")}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.dataset.failed='1'; this.remove();" />`
-                        : `<div class="absolute inset-0 flex items-center justify-center text-zinc-700 text-xs uppercase tracking-wider">${escapeHtml(consoleName)}</div>`;
+
+                    const poster = cover
+                        ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(row["Game"] || "")}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" onerror="this.remove()" />`
+                        : `<div class="absolute inset-0 flex items-center justify-center text-zinc-700 text-xs uppercase tracking-wider text-center px-2">${escapeHtml(consoleName)}</div>`;
 
                     card.innerHTML = `
-                        <div class="relative aspect-[3/4] bg-black/40 ${cexCover ? "" : "skeleton"}" id="${posterId}">
-                            ${initialPosterHtml}
-                            ${badgesHtml}
+                        <div class="relative aspect-[3/4] bg-black/40 ${cover ? "" : "skeleton"}" id="${posterId}">
+                            ${poster}
+                            ${badges}
                         </div>
                         <div class="p-3 flex flex-col gap-2 flex-1">
                             <h3 class="text-[15px] font-semibold text-zinc-100 leading-snug line-clamp-2 h-[42px] overflow-hidden">${escapeHtml(row["Game"] || "Untitled")}</h3>
                             <div class="text-xs text-zinc-500 truncate">${escapeHtml(consoleName)}</div>
-                            <div class="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
-                                ${tbc ? `<div class="text-[10px] uppercase tracking-wider text-purple-300 font-semibold">Wishlist</div>` : `<div class="flex gap-1.5">${conditionDots(row)}</div>`}
-                                <div class="text-sm font-semibold ${tbc ? "text-purple-300" : "text-accent"}">${price > 0 ? fmtMoney(price) : ""}</div>
+                            <div class="flex items-end justify-between mt-auto pt-2 border-t border-white/5">
+                                ${tbc ? `<div class="text-[10px] uppercase tracking-wider text-purple-300 font-semibold">Wishlist</div>` : `<div class="flex gap-1.5">${completenessPills(row)}</div>`}
+                                <div class="text-right leading-tight">
+                                    <div class="text-sm font-semibold ${tbc ? "text-purple-300" : "text-accent"}">${value > 0 ? fmtMoney(value) : "—"}</div>
+                                    ${!tbc && paid > 0 ? `<div class="text-[10px] text-zinc-500">paid ${fmtMoney(paid)}</div>` : ""}
+                                </div>
                             </div>
                         </div>
                     `;
-                    grid.appendChild(card);
+                    frag.appendChild(card);
 
-                    // Only hit RAWG when there's no CeX cover to use.
-                    if (!cexCover) {
+                    // RAWG is only needed for the handful of rows with no CeX SKU
+                    // (eBay links, mostly). Hold the element itself rather than
+                    // looking it up later — a re-render would rebind the id to a
+                    // different game.
+                    if (!cover) {
+                        const posterEl = card.firstElementChild;
                         fetchGameCover(row["Game"], consoleName).then((url) => {
-                            const el = document.getElementById(posterId);
-                            if (!el) return;
+                            const el = posterEl;
+                            if (!el || !el.isConnected) return;
                             el.classList.remove("skeleton");
-                            if (url) {
-                                const placeholder = el.querySelector("div");
-                                if (placeholder) placeholder.remove();
-                                const img = document.createElement("img");
-                                img.src = url;
-                                img.alt = row["Game"] || "";
-                                img.className =
-                                    "absolute inset-0 w-full h-full object-cover";
-                                img.loading = "lazy";
-                                el.insertBefore(img, el.firstChild);
-                            } else {
-                                el.classList.add("bg-gradient-to-br", "from-zinc-900", "to-black");
+                            if (!url) {
+                                el.classList.add(
+                                    "bg-gradient-to-br",
+                                    "from-zinc-900",
+                                    "to-black",
+                                );
+                                return;
                             }
+                            const placeholder = el.querySelector("div");
+                            if (placeholder) placeholder.remove();
+                            const img = document.createElement("img");
+                            img.src = url;
+                            img.alt = row["Game"] || "";
+                            img.className =
+                                "absolute inset-0 w-full h-full object-cover";
+                            img.loading = "lazy";
+                            el.insertBefore(img, el.firstChild);
                         });
                     }
                 });
+                grid.appendChild(frag);
+            }
+
+            const TABLE_COLUMNS = [
+                ["", null],
+                ["Game", "title"],
+                ["Console", "console"],
+                ["Edition", "edition"],
+                ["Cover", null],
+                ["Insert", null],
+                ["Sealed", null],
+                ["Done", null],
+                ["Purchased", "date-newest"],
+                ["Paid", "paid-desc"],
+                ["CeX cash", "value-desc"],
+                ["Δ", "gain-desc"],
+                ["Link", null],
+            ];
+
+            function renderTable(data) {
+                const wrap = document.getElementById("tableWrap");
+                if (data.length === 0) {
+                    wrap.innerHTML = `<p class="text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
+                    return;
+                }
+                const head = TABLE_COLUMNS.map(
+                    ([label, sort]) =>
+                        `<th class="${sort ? "sortable" : ""}"${
+                            sort ? ` onclick="selectSort('${sort}')"` : ""
+                        }>${escapeHtml(label)}${
+                            sort && currentSort === sort ? " ▾" : ""
+                        }</th>`,
+                ).join("");
+
+                const yn = (state) =>
+                    state === true
+                        ? `<span class="text-emerald-400">✓</span>`
+                        : state === false
+                          ? `<span class="text-red-400">✕</span>`
+                          : `<span class="text-zinc-600">–</span>`;
+
+                const body = data
+                    .map((row, index) => {
+                        const paid = rowPaid(row);
+                        const value = rowValue(row);
+                        const gain = value - paid;
+                        const priced = rowCexCash(row) !== null;
+                        const cover = coverFromRow(row, "s");
+                        const links = parseCexLinks(row["CEX Listing"]);
+                        const other = parseOtherLinks(row["CEX Listing"]);
+                        const link = links[0] || other[0];
+                        return `
+                        <tr class="${isSealed(row) ? "sealed" : ""}" onclick="openModalByIndex(${index})">
+                            <td class="w-[44px]">${
+                                cover
+                                    ? `<img src="${escapeHtml(cover)}" class="w-8 h-10 object-cover rounded" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'" alt="" />`
+                                    : ""
+                            }</td>
+                            <td class="text-zinc-100 font-medium max-w-[320px] truncate">${escapeHtml(row["Game"])}</td>
+                            <td class="text-zinc-400">${escapeHtml(normalizeConsole(row["Console Version"]))}</td>
+                            <td class="text-zinc-400">${escapeHtml(editionOf(row))}</td>
+                            <td>${yn(hasCover(row))}</td>
+                            <td>${yn(hasInsert(row))}</td>
+                            <td>${isSealed(row) ? `<span class="text-[#e9c85a]">✓</span>` : `<span class="text-zinc-600">–</span>`}</td>
+                            <td>${isCompleted(row) ? `<span class="text-emerald-400">✓</span>` : `<span class="text-zinc-600">–</span>`}</td>
+                            <td class="text-zinc-400">${escapeHtml(row["Date Purchased"] || "—")}</td>
+                            <td>${paid > 0 ? fmtMoney(paid) : "—"}</td>
+                            <td class="text-emerald-400">${priced ? fmtMoney(value) : value > 0 ? fmtMoney(value) : "—"}</td>
+                            <td class="${gain >= 0 ? "text-emerald-400" : "text-red-400"}">${priced || value > 0 ? fmtSigned(gain) : "—"}</td>
+                            <td>${
+                                link
+                                    ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener" class="text-accent hover:text-cyan-300" onclick="event.stopPropagation()">↗</a>`
+                                    : ""
+                            }</td>
+                        </tr>`;
+                    })
+                    .join("");
+
+                wrap.innerHTML = `<table class="gtable"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
             }
 
             // === MODAL =============================================================
+            function openModalByIndex(index) {
+                if (modalList[index]) openModal(modalList[index], index);
+            }
+
+            function openModalByKey(key) {
+                const idx = modalList.findIndex((r) => rowKey(r) === key);
+                if (idx >= 0) return openModal(modalList[idx], idx);
+                const row = allData.find((r) => rowKey(r) === key);
+                if (row) openModal(row, -1);
+            }
+
             async function openModal(row, index) {
                 const modal = document.getElementById("modal");
                 const body = document.getElementById("modalBody");
                 const poster = document.getElementById("modalPoster");
 
-                // Track where we are in the current grid order for prev/next.
                 modalIndex =
                     typeof index === "number" ? index : modalList.indexOf(row);
                 updateModalNav();
 
                 const consoleName = normalizeConsole(row["Console Version"]);
-                const playable = (row["Playable"] || "").toUpperCase();
-                const paid = parsePrice(row["Price Purchased"]);
-                const current = parsePrice(row["Current Price"]);
+                const paid = rowPaid(row);
+                const value = rowValue(row);
+                const gain = value - paid;
+                const priced = rowCexCash(row) !== null;
                 const cexLinks = parseCexLinks(row["CEX Listing"]);
+                const otherLinks = parseOtherLinks(row["CEX Listing"]);
                 const tbc = isTBC(row);
                 const sealed = isSealed(row);
 
-                const conditionRow = (label, val) => {
-                    const dot = CONDITION_DOT[val] || "bg-zinc-700";
-                    const v = val || "—";
-                    return `
-                        <div class="flex items-center justify-between py-2 border-b border-white/5">
-                            <span class="text-zinc-500 text-xs uppercase tracking-wider">${escapeHtml(label)}</span>
-                            <span class="flex items-center gap-2 text-sm text-zinc-100"><span class="dot ${dot}"></span>${escapeHtml(v)}</span>
-                        </div>`;
-                };
+                const infoRow = (label, valueHtml) => `
+                    <div class="flex items-center justify-between py-2 border-b border-white/5">
+                        <span class="text-zinc-500 text-xs uppercase tracking-wider">${escapeHtml(label)}</span>
+                        <span class="text-sm text-zinc-100">${valueHtml}</span>
+                    </div>`;
 
-                const tbcBadge = tbc
-                    ? `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/40">To buy · not owned</span>`
-                    : "";
+                const stateRow = (label, state, trueWord = "Present", falseWord = "Missing") =>
+                    infoRow(
+                        label,
+                        state === true
+                            ? `<span class="flex items-center gap-2"><span class="dot bg-emerald-400"></span>${trueWord}</span>`
+                            : state === false
+                              ? `<span class="flex items-center gap-2"><span class="dot bg-red-500"></span>${falseWord}</span>`
+                              : `<span class="flex items-center gap-2"><span class="dot bg-zinc-700"></span>N/A</span>`,
+                    );
 
-                const sealedBadge = sealed
-                    ? `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-[#d4af37]/15 text-[#f5d774] border border-[#d4af37]/50">Sealed</span>`
-                    : "";
-
-                const playableBadge = tbc
-                    ? ""
-                    : playable === "Y"
-                      ? `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">Playable</span>`
-                      : playable === "N"
-                        ? `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-red-500/10 text-red-300 border border-red-500/30">Not playable</span>`
-                        : "";
+                const badge = (text, cls) =>
+                    `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${cls}">${escapeHtml(text)}</span>`;
 
                 const notes = (row["Notes"] || "").trim();
-                const date = (row["Date Purchased"] || "").trim();
 
                 let html = `
                     <div class="flex items-center gap-2 mb-3 flex-wrap">
-                        <span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-white/5 text-zinc-300 border border-white/10">${escapeHtml(consoleName)}</span>
-                        ${tbcBadge}
-                        ${sealedBadge}
-                        ${playableBadge}
+                        ${badge(consoleName, "bg-white/5 text-zinc-300 border border-white/10")}
+                        ${editionOf(row) !== "Standard" ? badge(editionOf(row), "bg-cyan-500/10 text-cyan-300 border border-cyan-500/30") : ""}
+                        ${tbc ? badge("To buy · not owned", "bg-purple-500/10 text-purple-300 border border-purple-500/40") : ""}
+                        ${sealed ? badge("Sealed", "bg-[#d4af37]/15 text-[#f5d774] border border-[#d4af37]/50") : ""}
+                        ${isCompleted(row) ? badge("Completed", "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30") : ""}
                     </div>
                     <h2 class="text-3xl font-semibold text-white tracking-tight pr-12 mb-5">${escapeHtml(row["Game"] || "")}</h2>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-6">
-                        ${conditionRow("Cover art", row["Cover Art Condition"])}
-                        ${conditionRow("Insert", row["Insert Condition"])}
-                        ${conditionRow("Disc", row["Disc Condition"])}
-                        <div class="flex items-center justify-between py-2 border-b border-white/5">
-                            <span class="text-zinc-500 text-xs uppercase tracking-wider">Date purchased</span>
-                            <span class="text-sm text-zinc-100">${escapeHtml(date || "—")}</span>
-                        </div>
+                        ${stateRow("Cover art", hasCover(row))}
+                        ${stateRow("Insert", hasInsert(row))}
+                        ${stateRow("Sealed", isSealed(row) ? true : false, "Yes", "No")}
+                        ${stateRow("Completed", isCompleted(row) ? true : false, "Yes", "Not yet")}
+                        ${infoRow("Edition", escapeHtml(editionOf(row)))}
+                        ${infoRow("Date purchased", escapeHtml(row["Date Purchased"] || "—"))}
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="grid grid-cols-3 gap-4 mb-6">
                         <div class="${tbc ? "bg-purple-500/5 border-purple-500/20" : "bg-white/5 border-white/8"} rounded-lg p-4 border">
                             <div class="text-[10px] uppercase tracking-wider ${tbc ? "text-purple-300" : "text-zinc-500"} mb-1">Price paid</div>
                             <div class="text-xl font-semibold ${tbc ? "text-purple-300" : "text-white"}">${tbc ? "Not purchased" : paid > 0 ? fmtMoney(paid) : "—"}</div>
                         </div>
                         <div class="bg-accent/5 rounded-lg p-4 border border-accent/20">
-                            <div class="text-[10px] uppercase tracking-wider text-accent mb-1">${tbc ? "Target price" : "Current price"}</div>
-                            <div class="text-xl font-semibold text-accent">${current > 0 ? fmtMoney(current) : "—"}</div>
+                            <div class="text-[10px] uppercase tracking-wider text-accent mb-1">${tbc ? "Target price" : "Current value"}</div>
+                            <div class="text-xl font-semibold text-accent">${value > 0 ? fmtMoney(value) : "—"}</div>
+                            <div class="text-[10px] text-zinc-500 mt-0.5">${priced ? "CeX cash" : cexLinks.length > 0 ? "CeX price pending…" : "sheet column"}</div>
+                        </div>
+                        <div class="rounded-lg p-4 border ${gain >= 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20"}">
+                            <div class="text-[10px] uppercase tracking-wider ${gain >= 0 ? "text-emerald-400" : "text-red-400"} mb-1">Gain / loss</div>
+                            <div class="text-xl font-semibold ${gain >= 0 ? "text-emerald-400" : "text-red-400"}">${value > 0 || paid > 0 ? fmtSigned(gain) : "—"}</div>
+                            <div class="text-[10px] text-zinc-500 mt-0.5">${paid > 0 ? `${Math.round((gain / paid) * 100)}% on spend` : "no spend"}</div>
                         </div>
                     </div>
                 `;
@@ -1843,9 +2571,28 @@
 
                 if (cexLinks.length > 0) {
                     html += `
-                        <div class="mb-2">
+                        <div class="mb-4">
                             <div class="text-[10px] uppercase tracking-wider text-accent mb-2">CeX value</div>
                             <div id="cexPricing" class="text-zinc-500 text-sm">Loading CeX pricing…</div>
+                        </div>`;
+                }
+
+                if (otherLinks.length > 0) {
+                    html += `
+                        <div class="mb-2">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Listing</div>
+                            ${otherLinks
+                                .map((l) => {
+                                    let host = l;
+                                    try {
+                                        host = new URL(l).hostname.replace(
+                                            /^www\./,
+                                            "",
+                                        );
+                                    } catch (e) {}
+                                    return `<a href="${escapeHtml(l)}" target="_blank" rel="noopener" class="text-accent hover:text-cyan-300 underline text-sm mr-3">${escapeHtml(host)} →</a>`;
+                                })
+                                .join("")}
                         </div>`;
                 }
 
@@ -1857,12 +2604,12 @@
                 modal.classList.add("flex");
                 document.body.style.overflow = "hidden";
 
-                // Cover art — CeX box art preferred (synchronous), RAWG as fallback
+                // Cover art — CeX box art preferred, RAWG as fallback.
                 poster.classList.add("hidden");
                 poster.src = "";
                 poster.onerror = null;
-                const cexCover = coverFromRow(row, "l");
-                if (cexCover) {
+                const cover = coverFromRow(row, "l");
+                if (cover) {
                     poster.onerror = () => {
                         poster.onerror = null;
                         poster.classList.add("hidden");
@@ -1873,7 +2620,7 @@
                             }
                         });
                     };
-                    poster.src = cexCover;
+                    poster.src = cover;
                     poster.classList.remove("hidden");
                 } else {
                     fetchGameCover(row["Game"], consoleName).then((url) => {
@@ -1884,7 +2631,6 @@
                     });
                 }
 
-                // CeX pricing
                 if (cexLinks.length > 0) {
                     const pEl = document.getElementById("cexPricing");
                     let out = "";
@@ -1892,8 +2638,8 @@
                     for (const link of cexLinks) {
                         const sku = extractCexSku(link);
                         if (!sku) continue;
-                        const details = await fetchCexDetails(sku);
-                        if (!details) {
+                        const d = await fetchCexDetails(sku);
+                        if (!d) {
                             out += `<div class="mb-2 text-red-300 text-xs">Could not load SKU ${escapeHtml(sku)}</div>`;
                             continue;
                         }
@@ -1903,24 +2649,27 @@
                                 <div class="grid grid-cols-3 gap-2 mb-2">
                                     <div class="bg-white/5 rounded-lg p-3 border border-white/8">
                                         <div class="text-[10px] uppercase tracking-wider text-zinc-500">Sell</div>
-                                        <div class="text-base font-semibold text-white">${fmtMoney(Number(details.sellPrice) || 0)}</div>
+                                        <div class="text-base font-semibold text-white">${fmtMoney(d.sell)}</div>
                                     </div>
                                     <div class="bg-emerald-500/5 rounded-lg p-3 border border-emerald-500/20">
                                         <div class="text-[10px] uppercase tracking-wider text-emerald-400">Cash</div>
-                                        <div class="text-base font-semibold text-emerald-400">${fmtMoney(Number(details.cashPrice) || 0)}</div>
+                                        <div class="text-base font-semibold text-emerald-400">${fmtMoney(d.cash)}</div>
                                     </div>
                                     <div class="bg-amber-500/5 rounded-lg p-3 border border-amber-500/20">
                                         <div class="text-[10px] uppercase tracking-wider text-amber-400">Voucher</div>
-                                        <div class="text-base font-semibold text-amber-400">${fmtMoney(Number(details.exchangePrice) || 0)}</div>
+                                        <div class="text-base font-semibold text-amber-400">${fmtMoney(d.voucher)}</div>
                                     </div>
                                 </div>
                                 <div class="flex items-center justify-between text-xs">
-                                    <span class="text-zinc-500 truncate">${escapeHtml(details.boxName || "")}</span>
+                                    <span class="text-zinc-500 truncate">${escapeHtml(d.boxName || "")}</span>
                                     <a href="${escapeHtml(link)}" target="_blank" rel="noopener" class="text-accent hover:text-cyan-300 underline ml-2" onclick="event.stopPropagation()">CeX page →</a>
                                 </div>
                             </div>`;
                     }
-                    pEl.innerHTML = out || `<span class="text-red-300">Could not fetch CeX data</span>`;
+                    if (pEl)
+                        pEl.innerHTML =
+                            out ||
+                            `<span class="text-red-300">Could not fetch CeX data</span>`;
                 }
             }
 
@@ -1932,8 +2681,6 @@
                 modalIndex = -1;
             }
 
-            // Step to the previous/next game in the current grid order, wrapping
-            // around at the ends.
             function navModal(dir) {
                 if (!modalList.length || modalIndex < 0) return;
                 const next =
@@ -1943,24 +2690,38 @@
                 openModal(modalList[next], next);
             }
 
-            // Show the arrows only when there's more than one game to page through.
             function updateModalNav() {
-                const prev = document.getElementById("modalPrev");
-                const next = document.getElementById("modalNext");
-                const show = modalList.length > 1;
-                [prev, next].forEach((b) => {
+                const show = modalList.length > 1 && modalIndex >= 0;
+                ["modalPrev", "modalNext"].forEach((id) => {
+                    const b = document.getElementById(id);
                     if (b) b.classList.toggle("hidden", !show);
                 });
             }
 
             // === TOGGLES + EVENTS ==================================================
-            function toggleFilters() {
-                const fs = document.getElementById("filtersSection");
-                const ic = document.getElementById("filterToggleIcon");
+            function togglePanel(sectionId, iconId, otherId) {
+                const fs = document.getElementById(sectionId);
+                const ic = document.getElementById(iconId);
+                const other = document.getElementById(otherId);
+                if (other) other.classList.add("collapsed");
                 fs.classList.toggle("collapsed");
                 ic.style.transform = fs.classList.contains("collapsed")
                     ? "rotate(0deg)"
                     : "rotate(180deg)";
+            }
+            function toggleFilters() {
+                togglePanel(
+                    "filtersSection",
+                    "filterToggleIcon",
+                    "breakdownSection",
+                );
+            }
+            function toggleBreakdown() {
+                togglePanel(
+                    "breakdownSection",
+                    "breakdownToggleIcon",
+                    "filtersSection",
+                );
             }
 
             document.addEventListener("click", (e) => {
@@ -1979,20 +2740,39 @@
             document.getElementById("modal").onclick = function (e) {
                 if (e.target === this) closeModal();
             };
+
             document.addEventListener("keydown", (e) => {
                 const modal = document.getElementById("modal");
-                const modalOpen = modal && !modal.classList.contains("hidden");
-                if (e.key === "Escape") closeModal();
-                if (!modalOpen) return;
-                if (e.key === "ArrowLeft") navModal(-1);
-                if (e.key === "ArrowRight") navModal(1);
+                const modalOpen = !modal.classList.contains("hidden");
+                const search = document.getElementById("searchBox");
+                if (e.key === "Escape") {
+                    if (modalOpen) return closeModal();
+                    if (document.activeElement === search) {
+                        search.value = "";
+                        onSearchInput();
+                        search.blur();
+                    }
+                    return;
+                }
+                if (modalOpen) {
+                    if (e.key === "ArrowLeft") navModal(-1);
+                    if (e.key === "ArrowRight") navModal(1);
+                    return;
+                }
+                if (e.key === "/" && document.activeElement !== search) {
+                    e.preventDefault();
+                    search.focus();
+                }
             });
 
             // === INIT ==============================================================
             window.addEventListener("DOMContentLoaded", async () => {
+                cexCache = loadCexCache();
+                readUrlState();
+                applyView();
+                buildSortDropdown();
                 const ok = await fetchDataFromSource(true);
-                // Open the CeX value panel and value the collection straight away.
-                if (ok && allData.length > 0) calculateCollectionValue();
+                if (ok && allData.length > 0) loadCexPrices(false);
             });
         </script>
     </body>
