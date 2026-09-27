@@ -525,6 +525,111 @@
                 animation: bootIn 0.6s ease-out;
             }
 
+            /* ---- Print / inventory report ---------------------------------- */
+            #printReport {
+                display: none;
+            }
+            @media print {
+                body {
+                    background: #fff !important;
+                    color: #000 !important;
+                }
+                body > div.w-full,
+                #modal,
+                #rollOverlay,
+                #trophyOverlay,
+                #wrappedOverlay,
+                #guessOverlay,
+                #healthOverlay,
+                #error,
+                #success,
+                #loadingOverlay {
+                    display: none !important;
+                }
+                #printReport {
+                    display: block !important;
+                    color: #000;
+                    font-size: 10px;
+                }
+                #printReport h1 {
+                    font-size: 20px;
+                    font-weight: 700;
+                }
+                #printReport h2 {
+                    font-size: 12px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
+                    margin: 18px 0 6px;
+                    border-bottom: 1px solid #000;
+                    padding-bottom: 3px;
+                }
+                #printReport table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                #printReport th {
+                    text-align: left;
+                    font-size: 9px;
+                    text-transform: uppercase;
+                    border-bottom: 1px solid #000;
+                    padding: 3px 4px;
+                }
+                #printReport td {
+                    padding: 2px 4px;
+                    border-bottom: 1px solid #ddd;
+                }
+                #printReport tr {
+                    page-break-inside: avoid;
+                }
+                #printReport .page-break {
+                    page-break-before: always;
+                }
+                .num {
+                    text-align: right;
+                    font-variant-numeric: tabular-nums;
+                }
+                @page {
+                    margin: 14mm;
+                }
+            }
+
+            /* ---- Price-change arrows --------------------------------------- */
+            .delta-up {
+                color: #34d399;
+            }
+            .delta-down {
+                color: #f87171;
+            }
+
+            /* ---- Health check ---------------------------------------------- */
+            .health-row {
+                border-left: 3px solid transparent;
+            }
+            .health-row.warn {
+                border-left-color: #f59e0b;
+            }
+            .health-row.info {
+                border-left-color: #22d3ee;
+            }
+            .health-row.ok {
+                border-left-color: #34d399;
+            }
+
+            /* ---- Sparkline -------------------------------------------------- */
+            .spark {
+                display: flex;
+                align-items: flex-end;
+                gap: 2px;
+                height: 44px;
+            }
+            .spark div {
+                flex: 1;
+                background: linear-gradient(180deg, #22d3ee, #0891b2);
+                border-radius: 2px 2px 0 0;
+                min-height: 2px;
+            }
+
             @keyframes spin {
                 from {
                     transform: rotate(0deg);
@@ -804,6 +909,20 @@
                         >
                             💷
                         </button>
+                        <button
+                            class="ghost-btn"
+                            onclick="openHealth()"
+                            title="Data health check"
+                        >
+                            🩺
+                        </button>
+                        <button
+                            class="ghost-btn"
+                            onclick="printInventory()"
+                            title="Printable inventory / insurance report"
+                        >
+                            🖨
+                        </button>
                     </div>
                 </div>
 
@@ -947,6 +1066,30 @@
                 <div id="guessBody"></div>
             </div>
         </div>
+
+        <!-- Data health -->
+        <div
+            id="healthOverlay"
+            class="hidden fixed inset-0 z-[450] bg-black/92 overflow-y-auto scroll-thin p-6 md:p-10"
+        >
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white">
+                            Data health
+                        </h2>
+                        <p id="healthSummary" class="text-zinc-500 text-sm mt-1"></p>
+                    </div>
+                    <button class="ghost-btn" onclick="closeOverlay('healthOverlay')">
+                        Close
+                    </button>
+                </div>
+                <div id="healthBody" class="flex flex-col gap-3"></div>
+            </div>
+        </div>
+
+        <!-- Print-only inventory report -->
+        <div id="printReport"></div>
 
         <!-- Toasts -->
         <div
@@ -1155,6 +1298,7 @@
             let searchTerm = "";
             let searchTimer = null;
             let restoringState = false;
+            let duplicateKeys = new Set();
 
             const SORT_OPTIONS = [
                 ["title", "Title (A–Z)"],
@@ -1202,6 +1346,11 @@
             }
             function isCompleted(row) {
                 return triState(row["Completed"]) === true;
+            }
+            function isDuplicate(row) {
+                return duplicateKeys.has(
+                    `${row["Game"]}|${normalizeConsole(row["Console Version"])}`.toLowerCase(),
+                );
             }
             function editionOf(row) {
                 return (row["Edition"] || "").trim() || "Standard";
@@ -1553,6 +1702,17 @@
                 }
 
                 allData = parsed;
+                // Titles owned more than once on the same console: the cards show a
+                // purchase date for these, since three of the pairs share an Edition
+                // and would otherwise look identical.
+                const seenKeys = {};
+                allData.forEach((r) => {
+                    const k = `${r["Game"]}|${normalizeConsole(r["Console Version"])}`.toLowerCase();
+                    seenKeys[k] = (seenKeys[k] || 0) + 1;
+                });
+                duplicateKeys = new Set(
+                    Object.keys(seenKeys).filter((k) => seenKeys[k] > 1),
+                );
                 filteredData = [...allData];
                 createFilters();
                 buildSortDropdown();
@@ -1838,6 +1998,10 @@
 
                 cexLoading = true;
                 cexFailures = 0;
+                // Snapshot what we knew before, so deltas can be worked out after.
+                const before = {};
+                for (const [sku, rec] of Object.entries(cexCache))
+                    before[sku] = rec.sell || 0;
                 const btn = document.getElementById("calcCexBtn");
                 const icon = document.getElementById("calcCexIcon");
                 btn.disabled = true;
@@ -1869,6 +2033,7 @@
 
                 cexPricedAt = Date.now();
                 cexLoading = false;
+                recordHistory(before);
                 btn.disabled = false;
                 btn.style.opacity = "1";
                 icon.classList.remove("spin");
@@ -2196,6 +2361,14 @@
                             ${renderHeatmap(owned)}
                         </div>
                         <div class="xl:col-span-2">
+                            <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Series</h3>
+                            ${franchisePanel()}
+                        </div>
+                        <div class="xl:col-span-2">
+                            <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Value over time</h3>
+                            ${historyPanel()}
+                        </div>
+                        <div class="xl:col-span-2">
                             <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Movers</h3>
                             ${movers}
                         </div>
@@ -2208,6 +2381,9 @@
                 });
                 el.querySelectorAll("[data-gamekey]").forEach((d) => {
                     d.onclick = () => openModalByKey(d.dataset.gamekey);
+                });
+                el.querySelectorAll("[data-series]").forEach((d) => {
+                    d.onclick = () => filterToSeries(d.dataset.series);
                 });
             }
 
@@ -2697,11 +2873,15 @@
                         </div>
                         <div class="p-3 flex flex-col gap-2 flex-1">
                             <h3 class="text-[15px] font-semibold text-zinc-100 leading-snug line-clamp-2 h-[42px] overflow-hidden">${escapeHtml(row["Game"] || "Untitled")}</h3>
-                            <div class="text-xs text-zinc-500 truncate">${escapeHtml(consoleName)}</div>
+                            <div class="text-xs text-zinc-500 truncate">${escapeHtml(consoleName)}${
+                                isDuplicate(row)
+                                    ? ` · <span class="text-zinc-600" title="You own more than one copy — shown by purchase date">${escapeHtml(row["Date Purchased"] || "")}</span>`
+                                    : ""
+                            }</div>
                             <div class="flex items-end justify-between mt-auto pt-2 border-t border-white/5">
                                 ${tbc ? `<div class="text-[10px] uppercase tracking-wider text-purple-300 font-semibold">Wishlist</div>` : `<div class="flex gap-1.5">${completenessPills(row)}</div>`}
                                 <div class="text-right leading-tight">
-                                    <div class="text-sm font-semibold ${tbc ? "text-purple-300" : "text-accent"}">${value > 0 ? fmtMoney(value) : "—"}</div>
+                                    <div class="text-sm font-semibold ${tbc ? "text-purple-300" : "text-accent"}">${value > 0 ? fmtMoney(value) : "—"} ${deltaBadge(row)}</div>
                                     ${!tbc && paid > 0 ? `<div class="text-[10px] text-zinc-500">paid ${fmtMoney(paid)}</div>` : ""}
                                 </div>
                             </div>
@@ -2806,7 +2986,7 @@
                             <td>${isCompleted(row) ? `<span class="text-emerald-400">✓</span>` : `<span class="text-zinc-600">–</span>`}</td>
                             <td class="text-zinc-400">${escapeHtml(row["Date Purchased"] || "—")}</td>
                             <td>${paid > 0 ? fmtMoney(paid) : "—"}</td>
-                            <td class="text-emerald-400">${priced ? fmtMoney(value) : value > 0 ? fmtMoney(value) : "—"}</td>
+                            <td class="text-emerald-400">${priced ? fmtMoney(value) : value > 0 ? fmtMoney(value) : "—"} ${deltaBadge(row)}</td>
                             <td class="${gain >= 0 ? "text-emerald-400" : "text-red-400"}">${priced || value > 0 ? fmtSigned(gain) : "—"}</td>
                             <td>${
                                 link
@@ -2899,7 +3079,7 @@
                         <div class="bg-accent/5 rounded-lg p-4 border border-accent/20">
                             <div class="text-[10px] uppercase tracking-wider text-accent mb-1">${tbc ? "Target price" : "Current value"}</div>
                             <div class="text-xl font-semibold text-accent">${value > 0 ? fmtMoney(value) : "—"}</div>
-                            <div class="text-[10px] text-zinc-500 mt-0.5">${priced ? "CeX sell price" : cexLinks.length > 0 ? "CeX price pending…" : "sheet column"}</div>
+                            <div class="text-[10px] text-zinc-500 mt-0.5">${priced ? "CeX sell price" : cexLinks.length > 0 ? "CeX price pending…" : "sheet column"} ${deltaBadge(row, "text-[10px]")}</div>
                         </div>
                         <div class="rounded-lg p-4 border ${gain >= 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20"}">
                             <div class="text-[10px] uppercase tracking-wider ${gain >= 0 ? "text-emerald-400" : "text-red-400"} mb-1">Gain / loss</div>
@@ -3733,6 +3913,454 @@
                 }
             }
 
+            // === PRICE HISTORY =====================================================
+            // Each completed CeX refresh appends a totals snapshot and remembers the
+            // per-SKU prices it replaced, so games can show what moved since.
+            const HISTORY_KEY = "cexHistory_v1";
+            const PREVPRICE_KEY = "cexPrevPrices_v1";
+            const HISTORY_MAX = 60;
+            const HISTORY_MIN_GAP = 60 * 60 * 1000;
+            let priceHistory = [];
+            let prevPrices = {};
+
+            function loadHistory() {
+                try {
+                    priceHistory =
+                        JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+                } catch (e) {
+                    priceHistory = [];
+                }
+                try {
+                    prevPrices =
+                        JSON.parse(localStorage.getItem(PREVPRICE_KEY)) || {};
+                } catch (e) {
+                    prevPrices = {};
+                }
+            }
+
+            function recordHistory(before) {
+                const t = collectionTotals(allData);
+                const last = priceHistory[priceHistory.length - 1];
+                if (!last || Date.now() - last.ts >= HISTORY_MIN_GAP) {
+                    priceHistory.push({
+                        ts: Date.now(),
+                        value: Math.round(t.value * 100) / 100,
+                        paid: Math.round(t.paid * 100) / 100,
+                        priced: t.priced,
+                    });
+                    if (priceHistory.length > HISTORY_MAX)
+                        priceHistory = priceHistory.slice(-HISTORY_MAX);
+                }
+                // Only replace the comparison baseline when we actually had one.
+                if (before && Object.keys(before).length) prevPrices = before;
+                try {
+                    localStorage.setItem(
+                        HISTORY_KEY,
+                        JSON.stringify(priceHistory),
+                    );
+                    localStorage.setItem(
+                        PREVPRICE_KEY,
+                        JSON.stringify(prevPrices),
+                    );
+                } catch (e) {}
+            }
+
+            // Change in this row's CeX price since the previous refresh, or null.
+            function rowPriceDelta(row) {
+                const skus = rowSkus(row);
+                if (!skus.length) return null;
+                let now = 0;
+                let then = 0;
+                let seen = false;
+                for (const sku of skus) {
+                    const rec = cexCache[sku];
+                    if (!rec || prevPrices[sku] === undefined) continue;
+                    now += rec.sell || 0;
+                    then += prevPrices[sku] || 0;
+                    seen = true;
+                }
+                if (!seen) return null;
+                const d = now - then;
+                return Math.abs(d) < 0.005 ? 0 : d;
+            }
+
+            function deltaBadge(row, cls = "text-[10px]") {
+                const d = rowPriceDelta(row);
+                if (d === null || d === 0) return "";
+                return `<span class="${cls} ${d > 0 ? "delta-up" : "delta-down"}" title="Since the last price check">${
+                    d > 0 ? "▲" : "▼"
+                }${fmtMoney(Math.abs(d)).replace("£", "£")}</span>`;
+            }
+
+            function historyPanel() {
+                if (priceHistory.length < 2)
+                    return `<p class="text-xs text-zinc-500">Only one price check so far — come back after the next refresh and this will show how the collection has moved.</p>`;
+                const vals = priceHistory.map((h) => h.value);
+                const min = Math.min(...vals);
+                const max = Math.max(...vals);
+                const span = Math.max(0.01, max - min);
+                const first = priceHistory[0];
+                const last = priceHistory[priceHistory.length - 1];
+                const move = last.value - first.value;
+                const bars = priceHistory
+                    .map(
+                        (h) =>
+                            `<div style="height:${Math.max(4, ((h.value - min) / span) * 100)}%" title="${escapeHtml(
+                                `${new Date(h.ts).toLocaleString("en-GB")} · ${fmtMoney(h.value)}`,
+                            )}"></div>`,
+                    )
+                    .join("");
+                return `
+                    <div class="spark mb-3">${bars}</div>
+                    <div class="text-xs text-zinc-400">
+                        <span class="${move >= 0 ? "delta-up" : "delta-down"} font-semibold">${fmtSigned(move)}</span>
+                        since ${escapeHtml(new Date(first.ts).toLocaleDateString("en-GB"))}
+                        <span class="text-zinc-600">· ${priceHistory.length} checks</span>
+                    </div>`;
+            }
+
+            // === FRANCHISES ========================================================
+            // Trim a title down to the series it belongs to: drop the subtitle after
+            // a colon or dash, then a trailing sequel number or roman numeral.
+            function franchiseOf(title) {
+                let t = String(title || "").trim();
+                t = t.split(/\s*[:–—]\s*/)[0];
+                t = t.split(/\s+-\s+/)[0];
+                t = t.replace(/\s*\([^)]*\)\s*$/, "");
+                t = t.replace(/\s+(\d{1,2}|[IVX]{1,4})$/i, "");
+                t = t.replace(/^(the|a)\s+/i, "");
+                return t.trim();
+            }
+
+            function franchiseGroups() {
+                const groups = new Map();
+                for (const row of allData.filter((r) => !isTBC(r))) {
+                    const key = franchiseOf(row["Game"]);
+                    if (key.length < 4) continue;
+                    if (!groups.has(key)) groups.set(key, []);
+                    groups.get(key).push(row);
+                }
+                return [...groups.entries()]
+                    .filter(([, rows]) => rows.length > 1)
+                    .sort(
+                        (a, b) =>
+                            b[1].length - a[1].length ||
+                            a[0].localeCompare(b[0]),
+                    );
+            }
+
+            function franchisePanel() {
+                const groups = franchiseGroups();
+                if (!groups.length)
+                    return `<p class="text-xs text-zinc-500">No repeated series found.</p>`;
+                const inSeries = groups.reduce((n, g) => n + g[1].length, 0);
+                return `
+                    <p class="text-xs text-zinc-500 mb-3">${inSeries} games across ${groups.length} series</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        ${groups
+                            .slice(0, 18)
+                            .map(([name, rows]) => {
+                                const paid = rows.reduce(
+                                    (n, r) => n + rowPaid(r),
+                                    0,
+                                );
+                                const value = rows.reduce(
+                                    (n, r) => n + rowValue(r),
+                                    0,
+                                );
+                                const covers = rows
+                                    .slice(0, 6)
+                                    .map((r) => {
+                                        const c = coverFromRow(r, "s");
+                                        return c
+                                            ? `<img src="${escapeHtml(c)}" class="w-6 h-8 object-cover rounded-sm" loading="lazy" onerror="this.style.visibility='hidden'" alt="" />`
+                                            : `<div class="w-6 h-8 rounded-sm bg-white/5"></div>`;
+                                    })
+                                    .join("");
+                                return `
+                                <div class="flex items-center gap-3 p-2.5 rounded-lg border border-white/8 bg-white/[0.02] cursor-pointer hover:border-accent/40 transition" data-series="${escapeHtml(name)}">
+                                    <div class="flex gap-1 shrink-0">${covers}</div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="text-sm text-zinc-100 font-medium truncate">${escapeHtml(name)}</div>
+                                        <div class="text-[11px] text-zinc-500">${rows.length} games · ${fmtMoney(paid)} → ${fmtMoney(value)}</div>
+                                    </div>
+                                    <div class="text-lg font-bold text-accent tabular-nums">${rows.length}</div>
+                                </div>`;
+                            })
+                            .join("")}
+                    </div>`;
+            }
+
+            function filterToSeries(name) {
+                const box = document.getElementById("searchBox");
+                box.value = name;
+                searchTerm = name.toLowerCase();
+                render();
+                document
+                    .getElementById("cardsGrid")
+                    .scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            // === DATA HEALTH =======================================================
+            function healthChecks() {
+                const owned = allData.filter((r) => !isTBC(r));
+                const dupKey = (r) =>
+                    `${r["Game"]}|${normalizeConsole(r["Console Version"])}`.toLowerCase();
+                const dupCount = {};
+                owned.forEach((r) => {
+                    dupCount[dupKey(r)] = (dupCount[dupKey(r)] || 0) + 1;
+                });
+                const today = new Date();
+
+                const checks = [
+                    {
+                        label: "Loose, but cover art is ticked",
+                        level: "warn",
+                        why: "A loose game shouldn't have its box.",
+                        rows: owned.filter(
+                            (r) =>
+                                editionOf(r).toLowerCase() === "loose" &&
+                                hasCover(r) === true,
+                        ),
+                    },
+                    {
+                        label: "No cover art, but not marked Loose",
+                        level: "warn",
+                        why: "Either the edition or the cover-art tick looks wrong.",
+                        rows: owned.filter(
+                            (r) =>
+                                hasCover(r) === false &&
+                                editionOf(r).toLowerCase() !== "loose",
+                        ),
+                    },
+                    {
+                        label: "Sealed, but marked completed",
+                        level: "warn",
+                        why: "You can't have finished a game that's still shrink-wrapped.",
+                        rows: owned.filter(
+                            (r) => isSealed(r) && isCompleted(r),
+                        ),
+                    },
+                    {
+                        label: "Sealed, but something's missing from the box",
+                        level: "warn",
+                        why: "A sealed copy should be complete.",
+                        rows: owned.filter(
+                            (r) =>
+                                isSealed(r) &&
+                                (hasCover(r) === false ||
+                                    hasInsert(r) === false),
+                        ),
+                    },
+                    {
+                        label: "Purchase date is in the future",
+                        level: "warn",
+                        why: "Probably a typo in the year.",
+                        rows: owned.filter((r) => {
+                            const d = parseUkDate(r["Date Purchased"]);
+                            return d && !isNaN(d) && d > today;
+                        }),
+                    },
+                    {
+                        label: "Date missing or not dd/mm/yyyy",
+                        level: "warn",
+                        why: "These drop out of the timeline and heatmap.",
+                        rows: owned.filter((r) => {
+                            const d = parseUkDate(r["Date Purchased"]);
+                            return !d || isNaN(d);
+                        }),
+                    },
+                    {
+                        label: "Month column disagrees with the date",
+                        level: "warn",
+                        why: "One of the two has been edited without the other.",
+                        rows: owned.filter((r) => {
+                            const d = parseUkDate(r["Date Purchased"]);
+                            const m = (r["Month"] || "").trim();
+                            if (!d || isNaN(d) || !m) return false;
+                            // The sheet writes "Sep-26"; monthLabel gives "Sep 26".
+                            const flat = (x) =>
+                                x.replace(/[-\s]/g, "").toLowerCase();
+                            return flat(monthLabel(monthKey(d))) !== flat(m);
+                        }),
+                    },
+                    {
+                        label: "No usable CeX listing",
+                        level: "info",
+                        why: "These can't be priced automatically — they fall back to the Current Price column.",
+                        rows: owned.filter((r) => rowSkus(r).length === 0),
+                    },
+                    {
+                        label: "Purchase price is £0.00",
+                        level: "info",
+                        why: "Fine if it was a gift or bundle — worth a look if it just wasn't filled in.",
+                        rows: owned.filter((r) => rowPaid(r) === 0),
+                    },
+                    {
+                        label: "Edition left blank",
+                        level: "info",
+                        why: "Treated as Standard.",
+                        rows: owned.filter(
+                            (r) => !(r["Edition"] || "").trim(),
+                        ),
+                    },
+                    {
+                        label: "Same game twice on the same console",
+                        level: "info",
+                        why: "Expected if you own two copies — check the dates and prices to be sure it isn't a double entry.",
+                        rows: owned.filter((r) => dupCount[dupKey(r)] > 1),
+                    },
+                ];
+                return checks.filter((c) => c.rows.length > 0);
+            }
+
+            function openHealth() {
+                const checks = healthChecks();
+                const warn = checks.filter((c) => c.level === "warn");
+                const flagged = checks.reduce((n, c) => n + c.rows.length, 0);
+                document.getElementById("healthSummary").textContent =
+                    warn.length === 0
+                        ? `${allData.length} rows checked · nothing to fix · ${flagged} noted for information`
+                        : `${allData.length} rows checked · ${warn.reduce((n, c) => n + c.rows.length, 0)} to look at`;
+
+                document.getElementById("healthBody").innerHTML = checks.length
+                    ? checks
+                          .map(
+                              (c) => `
+                        <div class="health-row ${c.level} bg-surface border border-white/8 rounded-lg p-4 pl-5">
+                            <div class="flex items-baseline justify-between gap-4">
+                                <span class="text-sm font-semibold ${c.level === "warn" ? "text-amber-300" : "text-zinc-200"}">${escapeHtml(c.label)}</span>
+                                <span class="text-sm font-bold tabular-nums ${c.level === "warn" ? "text-amber-300" : "text-zinc-400"}">${c.rows.length}</span>
+                            </div>
+                            <div class="text-[11px] text-zinc-500 mt-1">${escapeHtml(c.why)}</div>
+                            <div class="mt-2.5 flex flex-wrap gap-1.5">
+                                ${c.rows
+                                    .slice(0, 40)
+                                    .map(
+                                        (r) =>
+                                            `<span class="text-[11px] px-2 py-1 rounded border border-white/10 bg-white/5 text-zinc-300 cursor-pointer hover:border-accent/50" data-gamekey="${escapeHtml(rowKey(r))}">${escapeHtml(r["Game"])} <span class="text-zinc-600">${escapeHtml(normalizeConsole(r["Console Version"]))}</span></span>`,
+                                    )
+                                    .join("")}
+                                ${c.rows.length > 40 ? `<span class="text-[11px] text-zinc-600 px-2 py-1">+${c.rows.length - 40} more</span>` : ""}
+                            </div>
+                        </div>`,
+                          )
+                          .join("")
+                    : `<p class="text-sm text-emerald-400">Nothing flagged — the sheet is clean.</p>`;
+
+                document
+                    .getElementById("healthBody")
+                    .querySelectorAll("[data-gamekey]")
+                    .forEach((el) => {
+                        el.onclick = () => {
+                            closeOverlay("healthOverlay");
+                            openModalByKey(el.dataset.gamekey);
+                        };
+                    });
+                openOverlay("healthOverlay");
+            }
+
+            // === PRINTABLE INVENTORY ===============================================
+            function printInventory() {
+                if (!allData.length) return;
+                const owned = allData.filter((r) => !isTBC(r));
+                const t = collectionTotals(allData);
+                const now = new Date().toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                });
+
+                const byConsole = new Map();
+                for (const row of owned) {
+                    const name = normalizeConsole(row["Console Version"]);
+                    if (!byConsole.has(name))
+                        byConsole.set(name, { n: 0, paid: 0, value: 0 });
+                    const c = byConsole.get(name);
+                    c.n++;
+                    c.paid += rowPaid(row);
+                    c.value += rowValue(row);
+                }
+
+                const sorted = [...owned].sort(
+                    (a, b) =>
+                        normalizeConsole(a["Console Version"]).localeCompare(
+                            normalizeConsole(b["Console Version"]),
+                        ) || (a["Game"] || "").localeCompare(b["Game"] || ""),
+                );
+                const notable = [...owned]
+                    .filter((r) => rowValue(r) >= 10)
+                    .sort((a, b) => rowValue(b) - rowValue(a));
+
+                const money = (n) =>
+                    `£${(Number(n) || 0).toFixed(2)}`;
+
+                document.getElementById("printReport").innerHTML = `
+                    <h1>Game Collection — Inventory</h1>
+                    <p style="margin:4px 0 2px">${owned.length} items · prepared ${escapeHtml(now)}</p>
+                    <p style="margin:0 0 4px;font-size:9px;color:#555">
+                        Valuation is CeX's current retail price (replacement cost) where a listing exists,
+                        otherwise the sheet's Current Price column.
+                        ${t.priced} of ${owned.length} items priced from CeX.
+                    </p>
+
+                    <h2>Summary</h2>
+                    <table>
+                        <tr><td>Total items</td><td class="num">${owned.length}</td></tr>
+                        <tr><td>Total paid</td><td class="num">${money(t.paid)}</td></tr>
+                        <tr><td><strong>Estimated replacement value</strong></td><td class="num"><strong>${money(t.value)}</strong></td></tr>
+                        <tr><td>Items valued at £10 or more</td><td class="num">${notable.length}</td></tr>
+                        <tr><td>Sealed / unopened</td><td class="num">${owned.filter(isSealed).length}</td></tr>
+                    </table>
+
+                    <h2>By console</h2>
+                    <table>
+                        <thead><tr><th>Console</th><th class="num">Items</th><th class="num">Paid</th><th class="num">Value</th></tr></thead>
+                        <tbody>
+                        ${[...byConsole.entries()]
+                            .sort((a, b) => b[1].value - a[1].value)
+                            .map(
+                                ([name, c]) =>
+                                    `<tr><td>${escapeHtml(name)}</td><td class="num">${c.n}</td><td class="num">${money(c.paid)}</td><td class="num">${money(c.value)}</td></tr>`,
+                            )
+                            .join("")}
+                        <tr><td><strong>Total</strong></td><td class="num"><strong>${owned.length}</strong></td><td class="num"><strong>${money(t.paid)}</strong></td><td class="num"><strong>${money(t.value)}</strong></td></tr>
+                        </tbody>
+                    </table>
+
+                    ${
+                        notable.length
+                            ? `<h2>Higher-value items (£10+)</h2>
+                    <table>
+                        <thead><tr><th>Title</th><th>Console</th><th>Edition</th><th class="num">Value</th></tr></thead>
+                        <tbody>
+                        ${notable
+                            .map(
+                                (r) =>
+                                    `<tr><td>${escapeHtml(r["Game"])}</td><td>${escapeHtml(normalizeConsole(r["Console Version"]))}</td><td>${escapeHtml(editionOf(r))}</td><td class="num">${money(rowValue(r))}</td></tr>`,
+                            )
+                            .join("")}
+                        </tbody>
+                    </table>`
+                            : ""
+                    }
+
+                    <div class="page-break"></div>
+                    <h2>Full inventory</h2>
+                    <table>
+                        <thead><tr><th>#</th><th>Title</th><th>Console</th><th>Edition</th><th>Purchased</th><th class="num">Paid</th><th class="num">Value</th></tr></thead>
+                        <tbody>
+                        ${sorted
+                            .map(
+                                (r, i) =>
+                                    `<tr><td>${i + 1}</td><td>${escapeHtml(r["Game"])}</td><td>${escapeHtml(normalizeConsole(r["Console Version"]))}</td><td>${escapeHtml(editionOf(r))}${isSealed(r) ? " (sealed)" : ""}</td><td>${escapeHtml(r["Date Purchased"] || "—")}</td><td class="num">${money(rowPaid(r))}</td><td class="num">${money(rowValue(r))}</td></tr>`,
+                            )
+                            .join("")}
+                        </tbody>
+                    </table>`;
+                window.print();
+            }
+
             // === TOGGLES + EVENTS ==================================================
             function togglePanel(sectionId, iconId, otherId) {
                 const fs = document.getElementById(sectionId);
@@ -3824,6 +4452,7 @@
             // === INIT ==============================================================
             window.addEventListener("DOMContentLoaded", async () => {
                 cexCache = loadCexCache();
+                loadHistory();
                 try {
                     if (localStorage.getItem("crtMode") === "1")
                         document.body.classList.add("crt");
