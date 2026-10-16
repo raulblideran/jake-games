@@ -1,0 +1,2041 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Achievement Hall</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            accent: "#22d3ee",
+                            "accent-dim": "#0891b2",
+                            ink: "#0a0a0a",
+                            surface: "#111111",
+                            gold: "#facc15",
+                        },
+                        fontFamily: {
+                            sans: [
+                                "Inter",
+                                "ui-sans-serif",
+                                "system-ui",
+                                "-apple-system",
+                                "Segoe UI",
+                                "Roboto",
+                                "sans-serif",
+                            ],
+                        },
+                        animation: {
+                            fadeInUp: "fadeInUp 0.35s ease",
+                        },
+                        keyframes: {
+                            fadeInUp: {
+                                "0%": {
+                                    opacity: "0",
+                                    transform: "translateY(12px)",
+                                },
+                                "100%": {
+                                    opacity: "1",
+                                    transform: "translateY(0)",
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+        <style>
+            html {
+                background: #0a0a0a;
+            }
+            body {
+                background: #0a0a0a;
+                font-feature-settings: "ss01", "cv11";
+                letter-spacing: -0.005em;
+                overflow-x: hidden;
+            }
+            .card {
+                background: #111111;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 16px;
+                padding: 20px;
+                min-width: 0;
+            }
+            .card h2 {
+                font-size: 18px;
+                font-weight: 700;
+                color: #fff;
+                letter-spacing: -0.01em;
+            }
+            .card .sub {
+                font-size: 13px;
+                color: #71717a;
+                margin-top: 2px;
+            }
+            .kicker {
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.2em;
+                color: #22d3ee;
+                font-weight: 600;
+            }
+            .accent-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 9px 14px;
+                border: 1px solid rgba(34, 211, 238, 0.35);
+                background: rgba(34, 211, 238, 0.08);
+                color: #67e8f9;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.15s ease;
+            }
+            .accent-btn:hover {
+                background: rgba(34, 211, 238, 0.15);
+                color: #fff;
+            }
+            .seg {
+                display: inline-flex;
+                flex-wrap: wrap;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 10px;
+                overflow: hidden;
+            }
+            .seg button {
+                padding: 6px 12px;
+                font-size: 12px;
+                font-weight: 600;
+                color: #a1a1aa;
+                transition: all 0.15s ease;
+            }
+            .seg button:hover {
+                color: #fff;
+            }
+            .seg button.on {
+                background: rgba(34, 211, 238, 0.15);
+                color: #67e8f9;
+            }
+            select.field,
+            input.field {
+                background: #0a0a0a;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 10px;
+                padding: 8px 12px;
+                font-size: 13px;
+                color: #e4e4e7;
+                outline: none;
+                max-width: 100%;
+            }
+            select.field:focus,
+            input.field:focus {
+                border-color: rgba(34, 211, 238, 0.6);
+            }
+
+            /* ---- Odometer ---------------------------------------------- */
+            .odo {
+                display: inline-flex;
+                font-variant-numeric: tabular-nums;
+                line-height: 1.1;
+            }
+            .odo .d {
+                display: inline-block;
+                height: 1.1em;
+                overflow: hidden;
+            }
+            .odo .s {
+                display: flex;
+                flex-direction: column;
+                transition: transform 2.2s cubic-bezier(0.15, 0.9, 0.2, 1);
+            }
+            .odo .s span {
+                height: 1.1em;
+                line-height: 1.1em;
+                display: block;
+            }
+
+            /* ---- Trophy wall ------------------------------------------- */
+            #wall {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 3px;
+            }
+            .tile {
+                width: 15px;
+                height: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+            }
+            .tile i {
+                display: block;
+                width: 100%;
+                height: 100%;
+                border-radius: 3px;
+                background: var(--c);
+                transform: scale(var(--k));
+                transition: transform 0.15s ease;
+            }
+            .tile.on i {
+                background: linear-gradient(135deg, #fef08a, #facc15 45%, #ca8a04);
+                box-shadow: 0 0 8px rgba(250, 204, 21, 0.55);
+                animation: twinkle 3.2s ease-in-out infinite;
+                animation-delay: var(--dl);
+            }
+            .tile:hover i {
+                transform: scale(1.6);
+                position: relative;
+                z-index: 2;
+            }
+            .tile.pop i {
+                animation: popIn 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+                animation-delay: var(--pd);
+            }
+            .tile.on.pop i {
+                animation:
+                    popIn 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both,
+                    twinkle 3.2s ease-in-out infinite;
+                animation-delay: var(--pd), var(--dl);
+            }
+            @keyframes twinkle {
+                0%,
+                100% {
+                    filter: brightness(1);
+                }
+                50% {
+                    filter: brightness(1.35);
+                }
+            }
+            @keyframes popIn {
+                0% {
+                    transform: scale(0);
+                    opacity: 0;
+                }
+                100% {
+                    transform: scale(var(--k));
+                    opacity: 1;
+                }
+            }
+            #tip {
+                position: fixed;
+                z-index: 60;
+                pointer-events: none;
+                max-width: 280px;
+                background: rgba(17, 17, 17, 0.96);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 10px;
+                padding: 10px 12px;
+                font-size: 12px;
+                color: #d4d4d8;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                opacity: 0;
+                transition: opacity 0.1s ease;
+            }
+
+            /* ---- Misc -------------------------------------------------- */
+            .bar-track {
+                height: 6px;
+                background: rgba(255, 255, 255, 0.06);
+                border-radius: 999px;
+                overflow: hidden;
+            }
+            .bar-fill {
+                height: 100%;
+                border-radius: 999px;
+                background: linear-gradient(90deg, #22d3ee, #facc15);
+            }
+            .scroll-thin::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            .scroll-thin::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.12);
+                border-radius: 999px;
+            }
+            th.sortable {
+                cursor: pointer;
+                user-select: none;
+            }
+            th.sortable:hover {
+                color: #fff;
+            }
+            .spinner {
+                width: 40px;
+                height: 40px;
+                border-radius: 999px;
+                border: 3px solid rgba(250, 204, 21, 0.2);
+                border-top-color: #facc15;
+                animation: spin 0.8s linear infinite;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                *,
+                *::before,
+                *::after {
+                    animation: none !important;
+                    transition: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body class="min-h-screen bg-ink text-zinc-100 font-sans antialiased">
+        <!-- Sticky focus bar -->
+        <nav
+            class="sticky top-0 z-40 bg-ink/85 backdrop-blur border-b border-white/5"
+        >
+            <div
+                class="px-4 md:px-10 py-3 flex items-center gap-3 flex-wrap"
+            >
+                <a href="index.html" class="accent-btn">← Collection</a>
+                <a href="stats.html" class="accent-btn">📈 Stats</a>
+                <select id="focusSelect" class="field" aria-label="Focus on a game">
+                    <option value="">All games</option>
+                </select>
+                <button
+                    id="focusPill"
+                    class="hidden items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-gold/15 text-gold border border-gold/40 hover:bg-gold/25"
+                    title="Clear focus"
+                >
+                    <span id="focusPillText"></span><span aria-hidden="true">✕</span>
+                </button>
+                <span class="text-xs text-zinc-500 hidden md:inline"
+                    >Tip: click any game in any chart to focus the whole page on it.</span
+                >
+            </div>
+        </nav>
+
+        <div id="loading" class="fixed inset-0 z-50 bg-ink flex flex-col items-center justify-center gap-4">
+            <div class="spinner"></div>
+            <div id="loadingText" class="text-sm text-zinc-400">Polishing trophies…</div>
+        </div>
+
+        <main class="px-4 md:px-10 py-8 md:py-10 space-y-6">
+            <!-- 1. Hero -->
+            <header class="animate-fadeInUp">
+                <div class="flex items-center gap-3 mb-2">
+                    <div
+                        class="w-2 h-2 rounded-full bg-gold shadow-[0_0_12px_rgba(250,204,21,0.7)]"
+                    ></div>
+                    <span
+                        class="text-xs uppercase tracking-[0.2em] text-zinc-500 font-medium"
+                        >Xbox 360 · Achievements</span
+                    >
+                </div>
+                <h1
+                    id="heroTitle"
+                    class="text-4xl md:text-5xl font-bold tracking-tight text-white"
+                >
+                    Achievement Hall
+                </h1>
+                <p id="heroSub" class="text-zinc-500 mt-2 text-sm"></p>
+            </header>
+
+            <!-- 14. Browser -->
+            <section class="card" id="browserCard">
+                <h2>🔎 Achievement Browser</h2>
+                <p class="sub">Search and sort every achievement.</p>
+                <div class="flex items-center gap-3 flex-wrap mt-4">
+                    <input id="search" class="field w-full sm:w-72" placeholder="Search name, description, game…" />
+                    <div class="seg" id="statusSeg">
+                        <button data-v="all" class="on">All</button>
+                        <button data-v="on">Unlocked</button>
+                        <button data-v="off">Locked</button>
+                    </div>
+                    <span id="browserCount" class="text-xs text-zinc-500"></span>
+                </div>
+                <div class="mt-4 overflow-x-auto scroll-thin max-h-[640px] overflow-y-auto">
+                    <table class="w-full text-sm min-w-[640px]">
+                        <thead class="sticky top-0 bg-surface text-zinc-500 text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="sortable text-left py-2 px-2" data-k="on">✓</th>
+                                <th class="sortable text-left py-2 px-2" data-k="name">Achievement</th>
+                                <th class="sortable text-left py-2 px-2" data-k="game">Game</th>
+                                <th class="sortable text-left py-2 px-2" data-k="cat">Category</th>
+                                <th class="sortable text-right py-2 px-2" data-k="gs">G</th>
+                            </tr>
+                        </thead>
+                        <tbody id="browserBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="card grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 items-center">
+                <div>
+                    <div class="kicker mb-3">Gamerscore</div>
+                    <div class="flex items-end gap-3 flex-wrap">
+                        <div
+                            id="odo"
+                            class="odo text-6xl md:text-8xl font-extrabold text-gold drop-shadow-[0_0_24px_rgba(250,204,21,0.35)]"
+                        ></div>
+                        <div class="text-2xl md:text-3xl font-bold text-zinc-600 pb-1 md:pb-2">
+                            / <span id="gsTotal">0</span>G
+                        </div>
+                    </div>
+                    <div class="mt-5">
+                        <div class="text-xs text-zinc-500 uppercase tracking-wider">Hunter rank</div>
+                        <div id="rankName" class="text-2xl font-bold text-white mt-1"></div>
+                        <div class="bar-track mt-3 max-w-md"><div id="rankBar" class="bar-fill" style="width: 0%"></div></div>
+                        <div id="rankNext" class="text-xs text-zinc-500 mt-2"></div>
+                    </div>
+                    <div id="heroStats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6"></div>
+                </div>
+                <div id="gauge" class="h-[300px] md:h-[340px]"></div>
+            </section>
+
+            <!-- 2. Race + 3. Wall -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section class="card">
+                    <h2>🏁 The Completion Race</h2>
+                    <p class="sub">Every game sprints to its completion %. Gold = 100%. Click a bar to focus.</p>
+                    <div class="flex justify-end mt-2">
+                        <button id="replayRace" class="accent-btn">↻ Replay race</button>
+                    </div>
+                    <div id="race" class="h-[720px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🏆 The Trophy Wall</h2>
+                    <p class="sub">
+                        One tile per achievement. Gold tiles are unlocked, and bigger tiles are worth more G. Hover to read one, click to focus its game.
+                    </p>
+                    <div class="flex items-center gap-3 flex-wrap mt-3">
+                        <div class="seg" id="wallSort">
+                            <button data-s="game" class="on">By game</button>
+                            <button data-s="gs">By Gamerscore</button>
+                            <button data-s="unlocked">Unlocked first</button>
+                            <button data-s="shuffle">Shuffle 🎲</button>
+                        </div>
+                        <span id="wallCount" class="text-xs text-zinc-500"></span>
+                    </div>
+                    <div id="wall" class="mt-4"></div>
+                </section>
+            </div>
+
+            <!-- 4. Sunburst + 5. Treemap -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section class="card">
+                    <h2>🌞 Gamerscore Sunburst</h2>
+                    <p class="sub">Game, then unlocked or locked, then point value, sized by G. Click a slice to zoom in and the centre to zoom out.</p>
+                    <div id="sunburst" class="h-[520px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🧱 Every Achievement, Mapped</h2>
+                    <p class="sub">All achievements as blocks sized by G, grouped by game. Click to zoom in and use the breadcrumb to go back.</p>
+                    <div id="treemap" class="h-[520px] mt-2"></div>
+                </section>
+            </div>
+
+            <!-- 6. Radar + 7. Sankey -->
+            <div class="grid grid-cols-1 xl:grid-cols-[1fr_1.4fr] gap-6">
+                <section class="card">
+                    <h2>🧬 What Kind of Gamer Is Jake?</h2>
+                    <p class="sub">Each achievement is sorted into a category from its description. Compares what the games ask for with what Jake actually unlocks.</p>
+                    <div id="radar" class="h-[420px] mt-2"></div>
+                    <div id="radarInsight" class="text-sm text-zinc-300 space-y-1"></div>
+                </section>
+                <section class="card">
+                    <h2>🌊 Where the Gamerscore Flows</h2>
+                    <p class="sub">Game, then category, then unlocked or locked, weighted by Gamerscore. Hover a node to trace its flow.</p>
+                    <div id="sankey" class="h-[620px] mt-2"></div>
+                </section>
+            </div>
+
+            <!-- 8. Anatomy -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section class="card">
+                    <h2>📊 Gamerscore Anatomy</h2>
+                    <p class="sub">How many achievements are worth each point value, split into unlocked and locked.</p>
+                    <div id="hist" class="h-[380px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🌹 Where the Points Came From</h2>
+                    <p class="sub">Nightingale rose of earned Gamerscore per game. Petal size is the G Jake has actually banked.</p>
+                    <div id="rose" class="h-[380px] mt-2"></div>
+                </section>
+            </div>
+
+            <!-- 9. Word cloud + 10. Value -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section class="card">
+                    <h2>☁️ The Language of Achievements</h2>
+                    <p class="sub">The most common words in achievement descriptions. Gold words come mostly from unlocked achievements. Click a word to search for it below.</p>
+                    <div id="cloud" class="h-[440px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>💷 Gamerscore Per Pound</h2>
+                    <p class="sub">Price paid (from MASTER) against G earned. Bubble size is the total G on offer.</p>
+                    <div id="valueHeadline" class="mt-3 text-sm"></div>
+                    <div id="scatter" class="h-[400px] mt-2"></div>
+                </section>
+            </div>
+
+            <!-- 11. Skyline -->
+            <section class="card" id="skylineCard">
+                <h2>🏙️ Achievement Skyline (3D)</h2>
+                <p class="sub">Games along one axis and point value along the other. Tower height is the number of achievements, gold for unlocked and slate for locked. Drag to rotate and scroll to zoom. This chart always shows every game.</p>
+                <div id="skyline" class="h-[560px] mt-2"></div>
+            </section>
+
+            <!-- 12. To-do -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+                <section class="card">
+                    <h2>🎯 Closest to 100%</h2>
+                    <p class="sub">Started games ordered by how few achievements are left.</p>
+                    <div id="closest" class="mt-4 space-y-3"></div>
+                </section>
+                <section class="card">
+                    <h2>🍒 Low-Hanging Fruit</h2>
+                    <p class="sub">Locked achievements whose wording sounds easy, such as tutorials, first steps or chapter 1. This is a guess from the text.</p>
+                    <div id="quickWins" class="mt-4 space-y-2"></div>
+                    <div id="projection" class="mt-5 text-sm text-zinc-400 border-t border-white/5 pt-4"></div>
+                </section>
+            </div>
+
+            <!-- 13. Facts -->
+            <section>
+                <div class="kicker mb-3">Fun facts</div>
+                <div id="facts" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+            </section>
+
+            <footer class="text-xs text-zinc-600 pt-4 pb-10" id="footer"></footer>
+        </main>
+
+        <div id="tip"></div>
+
+        <script>
+            // === CONFIG ============================================================
+            const SHEET_PUB =
+                "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM8N_x95reV1Y4vKQZfAyOfmJ0HqhRfcwEuCyIQLyYcmZWSxGCqFv1zJVGi-Q2wviNNl0gGzhd1MxG/pub";
+            const TABS = {
+                achievements: "296773517",
+                master: "1687075549",
+                titleMap: "2136415538",
+            };
+            const tabUrl = (gid) =>
+                `${SHEET_PUB}?gid=${gid}&single=true&output=csv`;
+
+            const PRIMARY_PROXY =
+                "https://cex-proxy.raul-blideran98.workers.dev";
+
+            const CORS_PROXIES = [
+                ...(PRIMARY_PROXY
+                    ? [
+                          {
+                              url: (url) =>
+                                  `${PRIMARY_PROXY}/?url=${encodeURIComponent(url)}`,
+                              timeout: 12000,
+                          },
+                      ]
+                    : []),
+                {
+                    url: (url) =>
+                        `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                    timeout: 15000,
+                },
+                {
+                    url: (url) =>
+                        `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                    timeout: 8000,
+                },
+            ];
+            const CACHE_DURATION = 5 * 60 * 1000;
+
+            const GOLD = "#facc15";
+            const LOCKED = "#334155";
+            const CYAN = "#22d3ee";
+            const REDUCED = window.matchMedia(
+                "(prefers-reduced-motion: reduce)",
+            ).matches;
+
+            // Same map as index.html: CeX's image directory is not a mechanical
+            // transform of the categoryName slug.
+            const CEX_IMAGE_DIRS = {
+                "XBOX-360-GAMES": "Xbox 360 Software",
+                "XBOX-360-SOFTWARE": "Xbox 360 Software",
+                "XBOX-360-RARITIES": "Xbox 360 Rarities",
+                "XBOX-ONE-GAMES": "Xbox One Software",
+                "XBOX-SERIES-GAMES": "Xbox Series Software",
+                "XBOX-SMART-DELIVERY-GAMES": "Xbox Smart Delivery Games",
+            };
+
+            // === FETCH =============================================================
+            let workingProxyIndex = 0;
+
+            function fetchWithTimeout(url, timeoutMs) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), timeoutMs);
+                return fetch(url, {
+                    signal: controller.signal,
+                    cache: "no-store",
+                }).finally(() => clearTimeout(timer));
+            }
+
+            async function fetchWithProxy(url) {
+                for (let i = workingProxyIndex; i < CORS_PROXIES.length; i++) {
+                    const { url: proxyFn, timeout } = CORS_PROXIES[i];
+                    try {
+                        const resp = await fetchWithTimeout(
+                            proxyFn(url),
+                            timeout,
+                        );
+                        if (resp.ok) {
+                            workingProxyIndex = i;
+                            return resp;
+                        }
+                    } catch (e) {
+                        console.warn(`Proxy ${i} failed`, e.message);
+                    }
+                }
+                return null;
+            }
+
+            function readCache(gid) {
+                try {
+                    const text = localStorage.getItem(`achCSV_${gid}`);
+                    const ts = Number(localStorage.getItem(`achCSVts_${gid}`));
+                    return text ? { text, fresh: Date.now() - ts < CACHE_DURATION } : null;
+                } catch {
+                    return null;
+                }
+            }
+
+            function writeCache(gid, text) {
+                try {
+                    localStorage.setItem(`achCSV_${gid}`, text);
+                    localStorage.setItem(`achCSVts_${gid}`, String(Date.now()));
+                } catch {}
+            }
+
+            // The published CSV sends CORS headers, so try it directly before
+            // falling back to the proxy chain the collection page uses.
+            async function loadTab(gid) {
+                const cached = readCache(gid);
+                if (cached && cached.fresh) return cached.text;
+                const url = `${tabUrl(gid)}&_=${Date.now()}`;
+                try {
+                    const r = await fetchWithTimeout(url, 12000);
+                    if (r.ok) {
+                        const text = await r.text();
+                        writeCache(gid, text);
+                        return text;
+                    }
+                } catch (e) {
+                    console.warn("Direct sheet fetch failed", e.message);
+                }
+                const r = await fetchWithProxy(url);
+                if (r) {
+                    const text = await r.text();
+                    writeCache(gid, text);
+                    return text;
+                }
+                if (cached) return cached.text;
+                throw new Error(`Could not load sheet tab ${gid}`);
+            }
+
+            // === CSV ===============================================================
+            function parseCSVLine(line, delimiter = ",") {
+                const values = [];
+                let current = "";
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    const nx = line[i + 1];
+                    if (ch === '"') {
+                        if (inQuotes && nx === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (ch === delimiter && !inQuotes) {
+                        values.push(current);
+                        current = "";
+                    } else {
+                        current += ch;
+                    }
+                }
+                values.push(current);
+                return values;
+            }
+
+            // Splits CSV into rows, respecting quoted fields that contain newlines.
+            function splitCsvRows(text) {
+                const rows = [];
+                let cur = "";
+                let inQuotes = false;
+                for (let i = 0; i < text.length; i++) {
+                    const ch = text[i];
+                    if (ch === '"') {
+                        inQuotes = !inQuotes;
+                        cur += ch;
+                    } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+                        if (ch === "\r" && text[i + 1] === "\n") i++;
+                        if (cur.trim() !== "") rows.push(cur);
+                        cur = "";
+                    } else {
+                        cur += ch;
+                    }
+                }
+                if (cur.trim() !== "") rows.push(cur);
+                return rows;
+            }
+
+            // Returns {headers, rows} where the header row is the first of the
+            // first few rows whose cells satisfy `isHeader`.
+            function tableFrom(text, isHeader) {
+                const lines = splitCsvRows(text).map((l) => parseCSVLine(l));
+                const idx = lines
+                    .slice(0, 6)
+                    .findIndex((cells) =>
+                        isHeader(cells.map((c) => c.replace(/\s+/g, " ").trim())),
+                    );
+                if (idx === -1) return null;
+                const headers = lines[idx].map((c) =>
+                    c.replace(/\s+/g, " ").trim(),
+                );
+                return { headers, rows: lines.slice(idx + 1) };
+            }
+
+            const colIndex = (headers, re) => headers.findIndex((h) => re.test(h));
+
+            // === HELPERS ===========================================================
+            function escapeHtml(s) {
+                return String(s ?? "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+            }
+            const norm = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const fmt = (n) => Number(n).toLocaleString("en-GB");
+            const pct = (a, b) => (b ? (a / b) * 100 : 0);
+            const short = (s, n = 22) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+
+            function parsePrice(str) {
+                const n = parseFloat(String(str ?? "").replace(/[^0-9.]/g, ""));
+                return Number.isFinite(n) ? n : null;
+            }
+
+            function extractCexSku(url) {
+                const m = url.match(/[?&]id=([^&]+)/);
+                return m ? m[1] : null;
+            }
+            function extractCexParam(url, name) {
+                const m = url.match(new RegExp(`[?&]${name}=([^&]*)`));
+                return m ? decodeURIComponent(m[1]) : null;
+            }
+            function cexImageDir(slug) {
+                const known = CEX_IMAGE_DIRS[slug.toUpperCase()];
+                if (known) return known;
+                return slug
+                    .split("-")
+                    .map((s) =>
+                        s.toUpperCase() === "GAMES"
+                            ? "Software"
+                            : s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(),
+                    )
+                    .join(" ");
+            }
+            function cexImageFromUrl(cexUrl, size = "m") {
+                const sku = extractCexSku(cexUrl);
+                const slug = extractCexParam(cexUrl, "categoryName");
+                if (!sku || !slug) return null;
+                return `https://uk.static.webuy.com/product_images/Gaming/${encodeURIComponent(
+                    cexImageDir(slug),
+                )}/${sku}_${size}.jpg`;
+            }
+            function coverFromLinks(linkStr) {
+                const link = String(linkStr ?? "")
+                    .split(/[,\s]+/)
+                    .find((t) => /^https?:\/\/[^/]*(webuy|cex)\./i.test(t));
+                return link ? cexImageFromUrl(link, "s") : null;
+            }
+
+            // === CATEGORIES ========================================================
+            // Rules run in order, so "complete the game on Hard" is Difficulty
+            // rather than Story.
+            const CATEGORIES = [
+                { key: "Multiplayer", color: "#a78bfa", re: /\bonline\b|multiplayer|ranked|xbox live|co-?op|player match|\bteam\b|clan|prestige|versus|lobby|\bsquad\b|split-?screen|\bplayers?\b|tumble|mini ?game|as the (spitter|boomer|tank|hunter|charger|jockey|smoker)/ },
+                { key: "Difficulty", color: "#f87171", re: /\bhard\b|hardened|veteran|insane|nightmare|legendary|expert|hardcore|without dying|no damage|without (taking|being|getting)|on the highest/ },
+                { key: "Story", color: "#60a5fa", re: /\b(complete|completed|finish|finished|beat)\b.*\b(chapter|episode|act|mission|level|story|game|campaign|prologue|epilogue|part)\b|\bchapter\b|\bepisode\b|\bcampaign\b|\bstory\b|\bending\b|\bact (\d|i)\b|\bquest\b|complete[sd]? ["“]|\b100%|\bcleared\b|\bfinale\b|storm the|\bmeet up\b|\bescape\b|\bsave\b|\blocate\b|\bconvince/ },
+                { key: "Collectibles", color: "#34d399", re: /collect|find (all|every|the)|\bhidden\b|\bsecret|thermos|manuscript|\bpages\b|packages|dog tags|\bintel\b|discover|every sign|\bclues?\b|\bunlock (all|every)|all (the )?(weapons|cars|outfits|items|costumes|islands)|photograph|emblem|\bposters\b|complete every|every (costume|song|hotspot)|acquire|harvest/ },
+                { key: "Skill", color: "#fb923c", re: /in under|within \d|consecutive|in a row|perfect|streak|combo|\bscore|points|time trial|record|\bseconds\b|\bminutes\b|without (missing|firing|reloading|skipping)|flawless|\bstars?\b|\bmedals?\b|\bmaster\b|challenges?\b|awards?\b|highest|at once|same time|one dazzling|single|trials?\b|\brank\b|faster than|dodge/ },
+                { key: "Combat", color: "#f43f5e", re: /\bkill|takedown|take (out|down)|took out|enem(y|ies)|defeat|headshot|shoot|shot\b|destroy|zombie|melee|grenade|explosive|weapon|\bgun\b|knife|stealth|eliminate|\bbattle|\bfight|\bdeath\b|assassinat|\binfected\b|\btaken\b|soldiers?|henchmen|\bammo\b|flashbang|\bfury\b|ignite|\bburn|criminals|wither|\bp99\b|\bm2\b|disable|surviv|\bdefend|\bwaves?\b|\bhack|bile bomb/ },
+                { key: "Driving", color: "#38bdf8", re: /\brace|\bdrive|driving|\bcars?\b|vehicle|\blaps?\b|drift|\bspeed|mph|rally|\bhorses?\b|\bride\b|\briding\b|\bcrash|motorbike|\bbike\b|helicopter|plane|\btaxi\b|\bchute\b|freefall|convoy|stunt|saddle/ },
+                { key: "Exploration", color: "#2dd4bf", re: /explore|exploration|\bvisit|travel|\barea\b|\bworld\b|location|\bmap\b|\breach|\bclimb|\bjump|\bfly\b|landmark|\bview|\bfind\b|\bfound\b|lighthouse|islands?|portal|nether|hotspot|check in|safehouse|national park|distance/ },
+                { key: "Lifestyle", color: "#f472b6", re: /craft|smelt|construct|\bbuild|\bspawn|\bdate\b|girlfriend|moodlet|\bsims?\b|skill\b|clothes|tattoo|\bspend|\$\d|§|money|credits|\bcash\b|earn over|\bbuy\b|purchase|tasks?\b|contracts?\b|sponsorship|\bjobs?\b|\bcall(ed)?\b|learn|tutorial|extinguish|revive|saved|rescue|deliver|\bsong|\bapp\b|\bcook|\bmarr|friend|romantic|child|family|karma|party|\bpay\b|leather|\bmake\b|brew|\btame|\bfarm|\bfuel|\bplay for|wristband|\bdarts?\b|\btrain\b/ },
+                { key: "Oddball", color: "#a1a1aa", re: /.*/ },
+            ];
+            const CAT_COLOR = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.color]));
+            function classify(a) {
+                const text = `${a.name} ${a.desc}`.toLowerCase();
+                return CATEGORIES.find((c) => c.re.test(text)).key;
+            }
+
+            const GS_BUCKETS = [
+                { label: "≤5G", test: (g) => g <= 5 },
+                { label: "10G", test: (g) => g > 5 && g <= 10 },
+                { label: "15G", test: (g) => g > 10 && g <= 15 },
+                { label: "20G", test: (g) => g > 15 && g <= 20 },
+                { label: "25–30G", test: (g) => g > 20 && g <= 30 },
+                { label: "35–50G", test: (g) => g > 30 && g <= 50 },
+                { label: "55–100G", test: (g) => g > 50 && g <= 100 },
+                { label: "100G+", test: (g) => g > 100 },
+            ];
+            const bucketOf = (g) => GS_BUCKETS.findIndex((b) => b.test(g));
+
+            const RANKS = [
+                [0, "Fresh Spawn"],
+                [5, "Disc Tray Tourist"],
+                [10, "Casual Collector"],
+                [15, "Achievement Gremlin"],
+                [25, "Gamerscore Goblin"],
+                [40, "Trophy Hoarder"],
+                [60, "Completionist-in-Training"],
+                [80, "Achievement Overlord"],
+                [100, "Literally Finished Xbox"],
+            ];
+
+            // === STATE =============================================================
+            let ACH = []; // every achievement
+            let GAMES = []; // per-game aggregates over ACH
+            let GAME_COLOR = {};
+            let focus = null;
+            let wordFilter = null;
+            let wallSort = "game";
+            let browserSort = { k: "game", dir: 1 };
+            let browserStatus = "all";
+            const charts = {};
+
+            const view = () => (focus ? ACH.filter((a) => a.game === focus) : ACH);
+
+            function aggregate(list) {
+                const by = new Map();
+                list.forEach((a) => {
+                    if (!by.has(a.game))
+                        by.set(a.game, { name: a.game, total: 0, unl: 0, gs: 0, gsUnl: 0 });
+                    const g = by.get(a.game);
+                    g.total++;
+                    g.gs += a.gs;
+                    if (a.on) {
+                        g.unl++;
+                        g.gsUnl += a.gs;
+                    }
+                });
+                return [...by.values()].map((g) => ({ ...g, pct: pct(g.unl, g.total) }));
+            }
+
+            // === LOAD ==============================================================
+            async function init() {
+                const [achText, masterText, mapText] = await Promise.allSettled([
+                    loadTab(TABS.achievements),
+                    loadTab(TABS.master),
+                    loadTab(TABS.titleMap),
+                ]);
+                if (achText.status !== "fulfilled") throw achText.reason;
+
+                const t = tableFrom(achText.value, (c) =>
+                    c.some((h) => /^achievement$/i.test(h)) && c.some((h) => /^game$/i.test(h)),
+                );
+                if (!t) throw new Error("Could not find the Achievements header row");
+                const ci = {
+                    name: colIndex(t.headers, /^achievement$/i),
+                    gs: colIndex(t.headers, /gamerscore/i),
+                    check: colIndex(t.headers, /check|unlocked|done/i),
+                    desc: colIndex(t.headers, /desc/i),
+                    game: colIndex(t.headers, /^game$/i),
+                };
+                // Most of the tab is padding rows holding only an unticked checkbox.
+                ACH = t.rows
+                    .map((r) => ({
+                        name: (r[ci.name] ?? "").trim(),
+                        game: (r[ci.game] ?? "").trim(),
+                        gs: parseInt(r[ci.gs], 10) || 0,
+                        on: String(r[ci.check] ?? "").trim().toUpperCase() === "TRUE",
+                        desc: (r[ci.desc] ?? "").trim(),
+                    }))
+                    .filter((a) => a.name && a.game);
+                if (!ACH.length) throw new Error("The Achievements tab has no rows");
+                ACH.forEach((a, i) => {
+                    a.id = i;
+                    a.cat = classify(a);
+                    a.bucket = bucketOf(a.gs);
+                });
+
+                GAMES = aggregate(ACH);
+                GAMES.forEach((g, i) => {
+                    const h = Math.round((i * 360) / GAMES.length + 190) % 360;
+                    GAME_COLOR[g.name] = `hsl(${h}, 70%, 62%)`;
+                });
+
+                joinMaster(
+                    masterText.status === "fulfilled" ? masterText.value : null,
+                    mapText.status === "fulfilled" ? mapText.value : null,
+                );
+
+                const sel = document.getElementById("focusSelect");
+                [...GAMES]
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .forEach((g) => {
+                        const o = document.createElement("option");
+                        o.value = g.name;
+                        o.textContent = g.name;
+                        sel.appendChild(o);
+                    });
+
+                document.getElementById("footer").textContent =
+                    `${fmt(ACH.length)} achievements across ${GAMES.length} games, read live from the "360 Achievements" tab. Categories are guessed from description keywords.`;
+            }
+
+            // Pulls price, purchase date and box art from MASTER. The achievement
+            // tab uses the same game names as MASTER, with Title Map's API names
+            // as a fallback alias.
+            function joinMaster(masterText, mapText) {
+                const alias = {};
+                if (mapText) {
+                    const t = tableFrom(mapText, (c) => c.includes("Game") && c.includes("API Name"));
+                    if (t) {
+                        const gi = t.headers.indexOf("Game");
+                        const ai = t.headers.indexOf("API Name");
+                        t.rows.forEach((r) => {
+                            if (r[gi] && r[ai]) alias[norm(r[ai])] = norm(r[gi]);
+                        });
+                    }
+                }
+                if (!masterText) return;
+                const t = tableFrom(masterText, (c) =>
+                    c.some((h) => /^game$/i.test(h)) && c.some((h) => /console/i.test(h)),
+                );
+                if (!t) return;
+                const h = t.headers;
+                const ci = {
+                    game: colIndex(h, /^game$/i),
+                    console: colIndex(h, /console/i),
+                    price: colIndex(h, /(purchase|paid)\s*price|price\s*purchased/i),
+                    date: colIndex(h, /date\s*purchas/i),
+                    completed: colIndex(h, /complete/i),
+                    links: colIndex(h, /cex|listing/i),
+                };
+                const byName = {};
+                t.rows.forEach((r) => {
+                    if (!/360/.test(r[ci.console] ?? "")) return;
+                    const k = norm(r[ci.game]);
+                    if (k && !byName[k]) byName[k] = r;
+                });
+                GAMES.forEach((g) => {
+                    const r = byName[norm(g.name)] || byName[alias[norm(g.name)]];
+                    if (!r) return;
+                    g.price = ci.price >= 0 ? parsePrice(r[ci.price]) : null;
+                    g.date = ci.date >= 0 ? r[ci.date] : "";
+                    g.completedFlag = ci.completed >= 0 && /true/i.test(r[ci.completed]);
+                    g.cover = ci.links >= 0 ? coverFromLinks(r[ci.links]) : null;
+                });
+            }
+
+            const gameInfo = (name) => GAMES.find((g) => g.name === name) || {};
+
+            // === ECHARTS THEME =====================================================
+            const TOOLTIP = {
+                backgroundColor: "rgba(17,17,17,0.96)",
+                borderColor: "rgba(255,255,255,0.12)",
+                textStyle: { color: "#e4e4e7", fontSize: 12 },
+                extraCssText: "border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:300px;white-space:normal;",
+            };
+            echarts.registerTheme("hall", {
+                backgroundColor: "transparent",
+                textStyle: { fontFamily: "Inter, sans-serif", color: "#a1a1aa" },
+                color: [GOLD, CYAN, "#a78bfa", "#f87171", "#34d399", "#fb923c"],
+                tooltip: TOOLTIP,
+                legend: { textStyle: { color: "#a1a1aa" } },
+                categoryAxis: {
+                    axisLine: { lineStyle: { color: "#3f3f46" } },
+                    axisLabel: { color: "#a1a1aa" },
+                    splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
+                },
+                valueAxis: {
+                    axisLine: { lineStyle: { color: "#3f3f46" } },
+                    axisLabel: { color: "#71717a" },
+                    splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
+                },
+            });
+
+            function chart(id) {
+                if (!charts[id]) {
+                    charts[id] = echarts.init(document.getElementById(id), "hall");
+                }
+                return charts[id];
+            }
+            const base = () => ({ animation: !REDUCED, tooltip: { ...TOOLTIP } });
+            const achTip = (a) =>
+                `<div style="font-weight:700;color:#fff">${a.on ? "🏆 " : "🔒 "}${escapeHtml(a.name)}</div>` +
+                `<div style="color:${GOLD};font-weight:600;margin:2px 0">${a.gs}G · ${escapeHtml(a.game)}</div>` +
+                `<div style="color:#a1a1aa">${escapeHtml(a.desc || "No description")}</div>`;
+
+            // === FOCUS =============================================================
+            function setFocus(name) {
+                focus = name && name !== focus ? name : null;
+                document.getElementById("focusSelect").value = focus || "";
+                const pill = document.getElementById("focusPill");
+                pill.classList.toggle("hidden", !focus);
+                pill.classList.toggle("inline-flex", !!focus);
+                document.getElementById("focusPillText").textContent = focus ? `Focused: ${focus}` : "";
+                renderAll(false);
+            }
+
+            // === 1. HERO ===========================================================
+            function setOdometer(el, n) {
+                const s = fmt(n);
+                el.innerHTML = [...s]
+                    .map((ch) =>
+                        /\d/.test(ch)
+                            ? `<span class="d"><span class="s">${"01234567890123456789"
+                                  .split("")
+                                  .map((d) => `<span>${d}</span>`)
+                                  .join("")}</span></span>`
+                            : `<span>${ch}</span>`,
+                    )
+                    .join("");
+                const digits = [...s].filter((ch) => /\d/.test(ch));
+                requestAnimationFrame(() =>
+                    requestAnimationFrame(() => {
+                        el.querySelectorAll(".s").forEach((strip, i) => {
+                            strip.style.transitionDelay = `${i * 0.12}s`;
+                            strip.style.transform = `translateY(-${(Number(digits[i]) + 10) * 5}%)`;
+                        });
+                    }),
+                );
+            }
+
+            function renderHero() {
+                const v = view();
+                const gs = v.reduce((s, a) => s + a.gs, 0);
+                const gsUnl = v.reduce((s, a) => s + (a.on ? a.gs : 0), 0);
+                const unl = v.filter((a) => a.on).length;
+                const games = aggregate(v);
+                const gsPct = pct(gsUnl, gs);
+
+                document.getElementById("heroTitle").textContent = focus || "Achievement Hall";
+                document.getElementById("heroSub").textContent = focus
+                    ? `${unl} of ${v.length} achievements unlocked in ${focus}.`
+                    : `${fmt(v.length)} achievements across ${games.length} Xbox 360 games, and how Jake is getting on with them.`;
+                setOdometer(document.getElementById("odo"), gsUnl);
+                document.getElementById("gsTotal").textContent = fmt(gs);
+
+                let ri = 0;
+                RANKS.forEach(([t], i) => {
+                    if (gsPct >= t) ri = i;
+                });
+                const [lo, name] = RANKS[ri];
+                const next = RANKS[ri + 1];
+                document.getElementById("rankName").textContent = `${name} ${["🐣", "💿", "🧺", "👹", "👺", "🐉", "🎓", "👑", "🌌"][ri]}`;
+                if (next) {
+                    const need = Math.ceil((next[0] / 100) * gs - gsUnl);
+                    const into = ((gsPct - lo) / (next[0] - lo)) * 100;
+                    document.getElementById("rankBar").style.width = `${Math.max(2, into)}%`;
+                    document.getElementById("rankNext").textContent = `${fmt(need)}G more to reach “${next[1]}” (${next[0]}% of the Gamerscore).`;
+                } else {
+                    document.getElementById("rankBar").style.width = "100%";
+                    document.getElementById("rankNext").textContent = "Maxed out. Nothing left to unlock.";
+                }
+
+                const best = v.filter((a) => a.on).sort((a, b) => b.gs - a.gs)[0];
+                const tiles = [
+                    ["Unlocked", `${fmt(unl)}<span class="text-zinc-600 text-base"> / ${fmt(v.length)}</span>`],
+                    ["Games at 100%", `${games.filter((g) => g.unl === g.total).length} 🏆`],
+                    ["Untouched", `${games.filter((g) => g.unl === 0).length} 🪦`],
+                    ["Avg G / unlock", unl ? (gsUnl / unl).toFixed(1) : "—"],
+                ];
+                document.getElementById("heroStats").innerHTML = tiles
+                    .map(
+                        ([k, v]) => `<div class="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-3">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500">${k}</div>
+                            <div class="text-xl font-bold text-white mt-1">${v}</div></div>`,
+                    )
+                    .join("");
+
+                const achPct = pct(unl, v.length);
+                const ring = (value, radius, color, label, offset) => ({
+                    type: "gauge",
+                    startAngle: 220,
+                    endAngle: -40,
+                    radius,
+                    min: 0,
+                    max: 100,
+                    progress: {
+                        show: true,
+                        width: 16,
+                        roundCap: true,
+                        itemStyle: {
+                            color,
+                            shadowBlur: 18,
+                            shadowColor: color,
+                        },
+                    },
+                    axisLine: { roundCap: true, lineStyle: { width: 16, color: [[1, "rgba(255,255,255,0.06)"]] } },
+                    pointer: { show: false },
+                    axisTick: { show: false },
+                    splitLine: { show: false },
+                    axisLabel: { show: false },
+                    anchor: { show: false },
+                    title: { show: true, offsetCenter: [0, offset[1]], color: "#71717a", fontSize: 12 },
+                    detail: {
+                        valueAnimation: true,
+                        offsetCenter: [0, offset[0]],
+                        formatter: (x) => `${x.toFixed(1)}%`,
+                        color,
+                        fontSize: 26,
+                        fontWeight: 800,
+                    },
+                    data: [{ value: +value.toFixed(1), name: label }],
+                });
+                chart("gauge").setOption(
+                    {
+                        ...base(),
+                        tooltip: { show: false },
+                        series: [
+                            ring(gsPct, "95%", GOLD, "of Gamerscore", ["-18%", "-2%"]),
+                            ring(achPct, "72%", CYAN, "of achievements", ["20%", "36%"]),
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === 2. RACE ===========================================================
+            let raceTimer = null;
+            function renderRace(animate) {
+                const c = chart("race");
+                const names = GAMES.map((g) => g.name);
+                const rich = {
+                    n: { color: "#d4d4d8", fontSize: 11, padding: [0, 0, 0, 6] },
+                    ph: { fontSize: 16, width: 22, align: "center" },
+                };
+                const key = {};
+                GAMES.forEach((g, i) => {
+                    key[g.name] = g.cover ? `c${i}` : "ph";
+                    if (g.cover)
+                        rich[`c${i}`] = {
+                            width: 22,
+                            height: 30,
+                            borderRadius: 3,
+                            backgroundColor: { image: g.cover },
+                        };
+                });
+                const finals = GAMES.map((g) => +g.pct.toFixed(1));
+                const item = (g, v) => ({
+                    value: v,
+                    itemStyle: {
+                        color:
+                            g.unl === g.total
+                                ? new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                      { offset: 0, color: "#ca8a04" },
+                                      { offset: 1, color: "#fef08a" },
+                                  ])
+                                : new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                      { offset: 0, color: "#0e7490" },
+                                      { offset: 1, color: CYAN },
+                                  ]),
+                        borderRadius: [0, 6, 6, 0],
+                        opacity: focus && g.name !== focus ? 0.2 : 1,
+                    },
+                });
+                const data = (vals) => GAMES.map((g, i) => item(g, vals[i]));
+
+                c.setOption(
+                    {
+                        ...base(),
+                        animationDuration: 0,
+                        animationDurationUpdate: 120,
+                        animationEasing: "linear",
+                        animationEasingUpdate: "linear",
+                        grid: { left: 8, right: 70, top: 8, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            trigger: "item",
+                            formatter: (p) => {
+                                const g = gameInfo(p.name);
+                                return `<b style="color:#fff">${escapeHtml(g.name)}</b><br>${g.unl}/${g.total} achievements<br>${fmt(g.gsUnl)} / ${fmt(g.gs)}G`;
+                            },
+                        },
+                        xAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
+                        yAxis: {
+                            type: "category",
+                            data: names,
+                            inverse: true,
+                            animationDuration: 300,
+                            animationDurationUpdate: 300,
+                            triggerEvent: true,
+                            axisLabel: {
+                                formatter: (n) => `{${key[n]}|${key[n] === "ph" ? "🎮" : "\u00a0"}}{n|${short(n, window.innerWidth < 640 ? 14 : 24).replace(/[{}|]/g, "")}}`,
+                                rich,
+                            },
+                        },
+                        series: [
+                            {
+                                type: "bar",
+                                realtimeSort: true,
+                                barWidth: "62%",
+                                data: data(animate && !REDUCED ? finals.map(() => 0) : finals),
+                                label: {
+                                    show: true,
+                                    position: "right",
+                                    valueAnimation: true,
+                                    color: "#e4e4e7",
+                                    fontWeight: 700,
+                                    formatter: (p) => `${Number(p.value).toFixed(0)}%${p.value >= 100 ? " 🏆" : ""}`,
+                                },
+                            },
+                        ],
+                    },
+                    true,
+                );
+
+                clearInterval(raceTimer);
+                if (!animate || REDUCED) return;
+                // Each game finishes at a different frame so the order shuffles
+                // on the way and settles into the real ranking.
+                const N = 40;
+                const speed = GAMES.map(() => 0.45 + Math.random() * 0.55);
+                let t = 0;
+                raceTimer = setInterval(() => {
+                    t++;
+                    const vals = finals.map((f, i) => {
+                        const x = Math.min(1, t / (N * speed[i]));
+                        return +(f * (1 - Math.pow(1 - x, 2))).toFixed(1);
+                    });
+                    c.setOption({ series: [{ data: data(vals) }] });
+                    if (t >= N) clearInterval(raceTimer);
+                }, 90);
+            }
+
+            // === 3. WALL ===========================================================
+            let tiles = [];
+            function renderWall() {
+                const wall = document.getElementById("wall");
+                const v = view();
+                wall.innerHTML = "";
+                tiles = v.map((a, i) => {
+                    const el = document.createElement("div");
+                    el.className = `tile pop${a.on ? " on" : ""}`;
+                    el.dataset.id = a.id;
+                    const k = 0.45 + 0.55 * Math.min(1, Math.sqrt(a.gs / 100));
+                    el.style.setProperty("--k", k.toFixed(2));
+                    el.style.setProperty("--c", GAME_COLOR[a.game].replace("62%)", "24%)"));
+                    el.style.setProperty("--dl", `${(Math.random() * 3).toFixed(2)}s`);
+                    el.style.setProperty("--pd", `${Math.min(i * 1.2, 1500).toFixed(0)}ms`);
+                    el.innerHTML = "<i></i>";
+                    el._a = a;
+                    return el;
+                });
+                orderWall(false);
+                document.getElementById("wallCount").textContent =
+                    `${tiles.filter((t) => t._a.on).length} gold of ${tiles.length}`;
+            }
+
+            function orderWall(animate) {
+                const wall = document.getElementById("wall");
+                const sorted = [...tiles];
+                if (wallSort === "gs") sorted.sort((a, b) => b._a.gs - a._a.gs || b._a.on - a._a.on);
+                else if (wallSort === "unlocked") sorted.sort((a, b) => b._a.on - a._a.on || b._a.gs - a._a.gs);
+                else if (wallSort === "shuffle") {
+                    for (let i = sorted.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
+                    }
+                } else sorted.sort((a, b) => a._a.id - b._a.id);
+
+                // FLIP: measure, reorder, then animate each tile from its old spot.
+                const first = animate && !REDUCED ? new Map(tiles.map((t) => [t, t.getBoundingClientRect()])) : null;
+                sorted.forEach((t) => wall.appendChild(t));
+                if (!first) return;
+                tiles.forEach((t) => {
+                    t.classList.remove("pop");
+                    const a = first.get(t);
+                    const b = t.getBoundingClientRect();
+                    t.style.transition = "none";
+                    t.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px)`;
+                });
+                requestAnimationFrame(() =>
+                    requestAnimationFrame(() =>
+                        tiles.forEach((t, i) => {
+                            t.style.transition = `transform 0.7s cubic-bezier(.2,.8,.2,1) ${Math.min(i * 0.25, 300)}ms`;
+                            t.style.transform = "";
+                        }),
+                    ),
+                );
+            }
+
+            function showTip(html, x, y) {
+                const tip = document.getElementById("tip");
+                tip.innerHTML = html;
+                tip.style.opacity = "1";
+                const w = tip.offsetWidth;
+                const h = tip.offsetHeight;
+                tip.style.left = `${Math.min(x + 14, window.innerWidth - w - 8)}px`;
+                tip.style.top = `${y + h + 20 > window.innerHeight ? y - h - 14 : y + 14}px`;
+            }
+            const hideTip = () => (document.getElementById("tip").style.opacity = "0");
+
+            // === 4. SUNBURST =======================================================
+            function renderSunburst() {
+                const games = aggregate(view());
+                const v = view();
+                const data = games.map((g) => {
+                    const mine = v.filter((a) => a.game === g.name);
+                    const side = (on) => {
+                        const list = mine.filter((a) => a.on === on);
+                        return {
+                            name: on ? "Unlocked" : "Locked",
+                            itemStyle: { color: on ? GOLD : "#1e293b" },
+                            children: GS_BUCKETS.map((b, bi) => {
+                                const val = list.filter((a) => a.bucket === bi).reduce((s, a) => s + a.gs, 0);
+                                return {
+                                    name: b.label,
+                                    value: val,
+                                    itemStyle: {
+                                        color: on
+                                            ? `rgba(250,204,21,${0.35 + bi * 0.08})`
+                                            : `rgba(100,116,139,${0.25 + bi * 0.07})`,
+                                    },
+                                };
+                            }).filter((x) => x.value > 0),
+                        };
+                    };
+                    return {
+                        name: g.name,
+                        itemStyle: { color: GAME_COLOR[g.name] },
+                        children: [side(true), side(false)].filter((s) => s.children.length),
+                    };
+                });
+                chart("sunburst").setOption(
+                    {
+                        ...base(),
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (p) =>
+                                `<b style="color:#fff">${p.treePathInfo.slice(1).map((x) => escapeHtml(x.name)).join(" › ")}</b><br>${fmt(p.value)}G`,
+                        },
+                        series: [
+                            {
+                                type: "sunburst",
+                                data,
+                                radius: [0, "95%"],
+                                sort: null,
+                                emphasis: { focus: "ancestor" },
+                                itemStyle: { borderColor: "#111", borderWidth: 1.5 },
+                                levels: [
+                                    {},
+                                    {
+                                        r0: "14%",
+                                        r: "52%",
+                                        label: { rotate: "radial", color: "#0a0a0a", fontWeight: 700, fontSize: 10, minAngle: 9, formatter: (p) => short(p.name, 16) },
+                                    },
+                                    { r0: "52%", r: "76%", label: { color: "#e4e4e7", fontSize: 10, minAngle: 12 } },
+                                    { r0: "76%", r: "92%", label: { show: false } },
+                                ],
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === 5. TREEMAP ========================================================
+            function renderTreemap() {
+                const games = aggregate(view());
+                const v = view();
+                const data = games.map((g) => ({
+                    name: g.name,
+                    itemStyle: { borderColor: GAME_COLOR[g.name] },
+                    children: v
+                        .filter((a) => a.game === g.name)
+                        .map((a) => ({
+                            name: a.name,
+                            value: Math.max(a.gs, 2),
+                            ach: a,
+                            itemStyle: { color: a.on ? GOLD : "#1f2937" },
+                            label: { color: a.on ? "#0a0a0a" : "#94a3b8" },
+                        })),
+                }));
+                chart("treemap").setOption(
+                    {
+                        ...base(),
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (p) => {
+                                if (p.data && p.data.ach) return achTip(p.data.ach);
+                                const g = gameInfo(p.name);
+                                return `<b style="color:#fff">${escapeHtml(p.name)}</b><br>${g.unl ?? 0}/${g.total ?? 0} unlocked`;
+                            },
+                        },
+                        series: [
+                            {
+                                type: "treemap",
+                                data,
+                                roam: false,
+                                width: "100%",
+                                height: "88%",
+                                top: 0,
+                                nodeClick: "zoomToNode",
+                                visibleMin: 200,
+                                breadcrumb: {
+                                    show: true,
+                                    bottom: 0,
+                                    itemStyle: { color: "#18181b", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e4e4e7" } },
+                                },
+                                label: { show: false },
+                                upperLabel: { show: true, height: 20, color: "#fff", fontWeight: 700, fontSize: 11 },
+                                levels: [
+                                    { itemStyle: { borderColor: "#0a0a0a", borderWidth: 0, gapWidth: 4 }, upperLabel: { show: false } },
+                                    { itemStyle: { borderWidth: 2, gapWidth: 1 } },
+                                    { itemStyle: { borderColor: "#0a0a0a", borderWidth: 1, gapWidth: 0 } },
+                                ],
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === 6. RADAR ==========================================================
+            function renderRadar() {
+                const v = view();
+                const on = v.filter((a) => a.on);
+                const share = (list, k) => pct(list.filter((a) => a.cat === k).length, list.length);
+                const cats = CATEGORIES.map((c) => c.key);
+                const offer = cats.map((k) => +share(v, k).toFixed(1));
+                const mine = cats.map((k) => +share(on, k).toFixed(1));
+                const max = Math.max(...offer, ...mine, 5) * 1.15;
+                chart("radar").setOption(
+                    {
+                        ...base(),
+                        legend: { bottom: 0, data: ["What the games ask for", "What Jake unlocks"] },
+                        tooltip: { ...TOOLTIP, trigger: "item" },
+                        radar: {
+                            radius: "66%",
+                            center: ["50%", "48%"],
+                            indicator: cats.map((k) => ({ name: k, max, color: CAT_COLOR[k] })),
+                            splitArea: { areaStyle: { color: ["rgba(255,255,255,0.015)", "rgba(255,255,255,0.03)"] } },
+                            splitLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } },
+                            axisLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } },
+                            axisName: { fontWeight: 700, fontSize: 12 },
+                        },
+                        series: [
+                            {
+                                type: "radar",
+                                data: [
+                                    {
+                                        name: "What the games ask for",
+                                        value: offer,
+                                        lineStyle: { color: CYAN, type: "dashed" },
+                                        itemStyle: { color: CYAN },
+                                        areaStyle: { color: "rgba(34,211,238,0.08)" },
+                                    },
+                                    {
+                                        name: "What Jake unlocks",
+                                        value: mine,
+                                        lineStyle: { color: GOLD, width: 3 },
+                                        itemStyle: { color: GOLD },
+                                        areaStyle: { color: "rgba(250,204,21,0.25)" },
+                                        symbolSize: 6,
+                                    },
+                                ],
+                                tooltip: {
+                                    formatter: (p) =>
+                                        `<b style="color:#fff">${p.name}</b><br>` +
+                                        cats.map((k, i) => `${k}: ${p.value[i]}%`).join("<br>"),
+                                },
+                            },
+                        ],
+                    },
+                    true,
+                );
+                const box = document.getElementById("radarInsight");
+                if (!on.length) {
+                    box.innerHTML = `<p class="text-zinc-500">No unlocks here yet, so there's no playstyle to read.</p>`;
+                    return;
+                }
+                const diffs = cats
+                    .filter((k) => k !== "Oddball")
+                    .map((k, i) => ({ k, d: mine[cats.indexOf(k)] - offer[cats.indexOf(k)] }))
+                    .sort((a, b) => b.d - a.d);
+                const hi = diffs[0];
+                const lo = diffs[diffs.length - 1];
+                box.innerHTML =
+                    `<p>💪 Leans into <b style="color:${CAT_COLOR[hi.k]}">${hi.k}</b>: ${mine[cats.indexOf(hi.k)]}% of unlocks, against ${offer[cats.indexOf(hi.k)]}% of what's on offer.</p>` +
+                    `<p>🙈 Avoids <b style="color:${CAT_COLOR[lo.k]}">${lo.k}</b>: ${mine[cats.indexOf(lo.k)]}% of unlocks, against ${offer[cats.indexOf(lo.k)]}% on offer.</p>`;
+            }
+
+            // === 7. SANKEY =========================================================
+            function renderSankey() {
+                const v = view();
+                const games = aggregate(v);
+                const links = new Map();
+                const add = (s, t, val) => {
+                    const k = `${s}→${t}`;
+                    links.set(k, (links.get(k) || 0) + val);
+                };
+                v.forEach((a) => {
+                    add(a.game, a.cat, a.gs);
+                    add(a.cat, a.on ? "Unlocked" : "Locked", a.gs);
+                });
+                const usedCats = CATEGORIES.filter((c) => v.some((a) => a.cat === c.key && a.gs > 0));
+                const nodes = [
+                    ...games.map((g) => ({ name: g.name, itemStyle: { color: GAME_COLOR[g.name] } })),
+                    ...usedCats.map((c) => ({ name: c.key, itemStyle: { color: c.color } })),
+                    { name: "Unlocked", itemStyle: { color: GOLD } },
+                    { name: "Locked", itemStyle: { color: "#475569" } },
+                ];
+                chart("sankey").setOption(
+                    {
+                        ...base(),
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (p) =>
+                                p.dataType === "edge"
+                                    ? `${escapeHtml(p.data.source)} → ${escapeHtml(p.data.target)}<br><b>${fmt(p.data.value)}G</b>`
+                                    : `<b style="color:#fff">${escapeHtml(p.name)}</b><br>${fmt(p.value)}G`,
+                        },
+                        series: [
+                            {
+                                type: "sankey",
+                                left: 4,
+                                right: 90,
+                                top: 8,
+                                bottom: 8,
+                                nodeGap: 6,
+                                nodeWidth: 14,
+                                emphasis: { focus: "adjacency" },
+                                data: nodes,
+                                links: [...links]
+                                    .filter(([, val]) => val > 0)
+                                    .map(([k, value]) => {
+                                        const [source, target] = k.split("→");
+                                        return { source, target, value };
+                                    }),
+                                lineStyle: { color: "gradient", opacity: 0.32, curveness: 0.5 },
+                                label: { color: "#e4e4e7", fontSize: 11, formatter: (p) => short(p.name, 26) },
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === 8. HISTOGRAM + ROSE ==============================================
+            function renderHist() {
+                const v = view();
+                const values = [...new Set(v.map((a) => a.gs))].sort((a, b) => a - b);
+                const count = (on) => values.map((g) => v.filter((a) => a.gs === g && a.on === on).length);
+                chart("hist").setOption(
+                    {
+                        ...base(),
+                        legend: { top: 0, right: 0 },
+                        tooltip: { ...TOOLTIP, trigger: "axis", axisPointer: { type: "shadow" } },
+                        grid: { left: 8, right: 8, top: 36, bottom: 8, containLabel: true },
+                        xAxis: { type: "category", data: values.map((g) => `${g}G`) },
+                        yAxis: { type: "value", name: "achievements", nameTextStyle: { color: "#71717a" } },
+                        series: [
+                            {
+                                name: "Unlocked",
+                                type: "bar",
+                                stack: "s",
+                                data: count(true),
+                                itemStyle: { color: GOLD },
+                                animationDelay: (i) => i * 40,
+                            },
+                            {
+                                name: "Locked",
+                                type: "bar",
+                                stack: "s",
+                                data: count(false),
+                                itemStyle: { color: LOCKED, borderRadius: [4, 4, 0, 0] },
+                                animationDelay: (i) => i * 40 + 200,
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            function renderRose() {
+                const data = GAMES.filter((g) => g.gsUnl > 0)
+                    .sort((a, b) => b.gsUnl - a.gsUnl)
+                    .map((g) => ({
+                        name: g.name,
+                        value: g.gsUnl,
+                        itemStyle: {
+                            color: GAME_COLOR[g.name],
+                            opacity: focus && g.name !== focus ? 0.2 : 1,
+                            borderRadius: 6,
+                            borderColor: "#111",
+                            borderWidth: 2,
+                        },
+                    }));
+                chart("rose").setOption(
+                    {
+                        ...base(),
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (p) => {
+                                const g = gameInfo(p.name);
+                                return `<b style="color:#fff">${escapeHtml(p.name)}</b><br>${fmt(g.gsUnl)} / ${fmt(g.gs)}G banked (${p.percent}% of all earned G)`;
+                            },
+                        },
+                        series: [
+                            {
+                                type: "pie",
+                                roseType: "area",
+                                radius: ["12%", "72%"],
+                                center: ["50%", "52%"],
+                                data,
+                                label: { color: "#d4d4d8", fontSize: 11, formatter: (p) => `${short(p.name, 18)}\n{g|${fmt(p.value)}G}`, rich: { g: { color: GOLD, fontWeight: 700, fontSize: 11 } } },
+                                labelLine: { lineStyle: { color: "#52525b" }, length: 8, length2: 8 },
+                                animationType: "scale",
+                                animationEasing: "elasticOut",
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === 9. WORD CLOUD =====================================================
+            const STOP = new Set(
+                "the a an and or of to in on at for with without your you all any each every by from as is be into than then that this it its get got have has one two three four five six seven eight nine ten times time are was were not but out up over under while after before during more most least using use used can will per off yourself their them they his her him she he who which what when where how only same total least through being been least other another least also least just".split(
+                    " ",
+                ),
+            );
+            function renderCloud() {
+                const v = view();
+                const words = new Map();
+                v.forEach((a) => {
+                    const seen = new Set(
+                        (a.desc.toLowerCase().match(/[a-z][a-z'-]+/g) || [])
+                            .map((w) => w.replace(/'s$/, "").replace(/^-|-$/g, ""))
+                            .filter((w) => w.length > 2 && !STOP.has(w)),
+                    );
+                    seen.forEach((w) => {
+                        const e = words.get(w) || { n: 0, on: 0 };
+                        e.n++;
+                        if (a.on) e.on++;
+                        words.set(w, e);
+                    });
+                });
+                const top = [...words].sort((a, b) => b[1].n - a[1].n).slice(0, 130);
+                const color = (e) => {
+                    const r = e.on / e.n;
+                    if (r >= 0.3) return GOLD;
+                    if (r > 0) return "#fde68a";
+                    return ["#67e8f9", "#22d3ee", "#a1a1aa", "#64748b", "#38bdf8"][Math.floor(Math.random() * 5)];
+                };
+                chart("cloud").setOption(
+                    {
+                        ...base(),
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (p) => `<b style="color:#fff">“${escapeHtml(p.name)}”</b><br>in ${p.data.n} descriptions, ${p.data.on} unlocked`,
+                        },
+                        series: [
+                            {
+                                type: "wordCloud",
+                                shape: "circle",
+                                left: "center",
+                                top: "center",
+                                width: "100%",
+                                height: "100%",
+                                sizeRange: [11, 58],
+                                rotationRange: [-45, 45],
+                                rotationStep: 45,
+                                gridSize: 6,
+                                drawOutOfBound: false,
+                                layoutAnimation: !REDUCED,
+                                textStyle: { fontFamily: "Inter, sans-serif", fontWeight: 700 },
+                                emphasis: { textStyle: { shadowBlur: 12, shadowColor: "rgba(250,204,21,0.8)" } },
+                                data: top.map(([w, e]) => ({
+                                    name: w,
+                                    value: e.n,
+                                    n: e.n,
+                                    on: e.on,
+                                    textStyle: { color: color(e) },
+                                })),
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === 10. VALUE SCATTER =================================================
+            function renderScatter() {
+                const priced = GAMES.filter((g) => g.price);
+                const head = document.getElementById("valueHeadline");
+                if (!priced.length) {
+                    head.innerHTML = `<span class="text-zinc-500">Couldn't match these games to prices in MASTER.</span>`;
+                    chart("scatter").clear();
+                    return;
+                }
+                const best = [...priced].sort((a, b) => b.gsUnl / b.price - a.gsUnl / a.price)[0];
+                const untapped = [...priced].sort((a, b) => b.gs - b.gsUnl - (a.gs - a.gsUnl))[0];
+                const missing = GAMES.length - priced.length;
+                head.innerHTML =
+                    `<div class="flex flex-wrap gap-3">` +
+                    `<div class="rounded-lg bg-gold/10 border border-gold/30 px-3 py-2"><span class="text-zinc-400">Best value:</span> <b class="text-gold">${escapeHtml(best.name)}</b>, ${(best.gsUnl / best.price).toFixed(0)}G per £</div>` +
+                    `<div class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2"><span class="text-zinc-400">Most untapped:</span> <b class="text-accent">${escapeHtml(untapped.name)}</b>, ${fmt(untapped.gs - untapped.gsUnl)}G still waiting</div>` +
+                    `</div>` +
+                    (missing ? `<div class="text-xs text-zinc-600 mt-2">${missing} game${missing > 1 ? "s" : ""} had no price in MASTER and aren't plotted.</div>` : "");
+                chart("scatter").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 24, top: 36, bottom: 28, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (p) => {
+                                const g = gameInfo(p.data.name);
+                                return `<b style="color:#fff">${escapeHtml(g.name)}</b><br>Paid £${g.price.toFixed(2)}${g.date ? ` on ${escapeHtml(g.date)}` : ""}<br>${fmt(g.gsUnl)} / ${fmt(g.gs)}G<br><b style="color:${GOLD}">${(g.gsUnl / g.price).toFixed(1)}G per £</b>`;
+                            },
+                        },
+                        // Prices run from about £1 to £50, so a log axis stops the cheap games piling up.
+                        xAxis: { type: "log", logBase: 2, min: 1, name: "Paid (£, log)", nameLocation: "middle", nameGap: 28, nameTextStyle: { color: "#71717a" }, axisLabel: { formatter: (v) => `£${v}` }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } }, axisLine: { lineStyle: { color: "#3f3f46" } } },
+                        yAxis: { type: "value", name: "G earned", nameTextStyle: { color: "#71717a" }, max: (e) => Math.ceil((e.max * 1.15) / 100) * 100 },
+                        series: [
+                            {
+                                type: "scatter",
+                                data: priced.map((g) => ({
+                                    name: g.name,
+                                    value: [Math.max(g.price, 1), g.gsUnl],
+                                    symbolSize: Math.sqrt(g.gs) * 1.3,
+                                    itemStyle: {
+                                        color: GAME_COLOR[g.name],
+                                        opacity: focus && g.name !== focus ? 0.15 : 0.85,
+                                        borderColor: g.unl === g.total ? GOLD : "rgba(255,255,255,0.3)",
+                                        borderWidth: g.unl === g.total ? 3 : 1,
+                                        shadowBlur: 12,
+                                        shadowColor: GAME_COLOR[g.name],
+                                    },
+                                })),
+                                label: { show: true, position: "top", color: "#a1a1aa", fontSize: 10, formatter: (p) => short(p.name, 16) },
+                                labelLayout: { hideOverlap: true },
+                                animationDelay: (i) => i * 60,
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === 11. SKYLINE =======================================================
+            function renderSkyline() {
+                if (!window["echarts-gl"]) {
+                    document.getElementById("skylineCard").style.display = "none";
+                    return;
+                }
+                const names = GAMES.map((g) => g.name);
+                const cell = (on) => {
+                    const out = [];
+                    names.forEach((n, xi) =>
+                        GS_BUCKETS.forEach((b, yi) => {
+                            const c = ACH.filter((a) => a.game === n && a.bucket === yi && a.on === on).length;
+                            if (c) out.push([xi, yi, c]);
+                        }),
+                    );
+                    return out;
+                };
+                const axisText = { color: "#a1a1aa", fontSize: 10 };
+                // WebGL can be missing (old GPU, locked-down browser); lose the
+                // card rather than the page.
+                try {
+                chart("skyline").setOption({
+                    tooltip: {
+                        ...TOOLTIP,
+                        formatter: (p) => `<b style="color:#fff">${escapeHtml(names[p.value[0]])}</b><br>${GS_BUCKETS[p.value[1]].label} · ${p.seriesName}: ${p.value[2]}`,
+                    },
+                    xAxis3D: { type: "category", data: names.map((n) => short(n, 12)), axisLabel: { ...axisText, interval: 0 }, name: "" },
+                    yAxis3D: { type: "category", data: GS_BUCKETS.map((b) => b.label), axisLabel: axisText, name: "" },
+                    zAxis3D: { type: "value", axisLabel: axisText, name: "" },
+                    grid3D: {
+                        boxWidth: 220,
+                        boxDepth: 90,
+                        boxHeight: 70,
+                        axisLine: { lineStyle: { color: "#3f3f46" } },
+                        axisPointer: { lineStyle: { color: GOLD } },
+                        splitLine: { lineStyle: { color: "rgba(255,255,255,0.06)" } },
+                        environment: "none",
+                        viewControl: {
+                            autoRotate: !REDUCED,
+                            autoRotateSpeed: 6,
+                            distance: 210,
+                            alpha: 22,
+                            beta: 35,
+                        },
+                        light: {
+                            main: { intensity: 1.3, shadow: true, alpha: 40, beta: 30 },
+                            ambient: { intensity: 0.35 },
+                        },
+                    },
+                    series: [
+                        { name: "Locked", type: "bar3D", stack: "st", data: cell(false), shading: "lambert", itemStyle: { color: "#475569" }, bevelSize: 0.3 },
+                        { name: "Unlocked", type: "bar3D", stack: "st", data: cell(true), shading: "lambert", itemStyle: { color: GOLD }, bevelSize: 0.3, emphasis: { itemStyle: { color: "#fef08a" } } },
+                    ],
+                });
+                } catch (e) {
+                    console.warn("3D skyline unavailable", e);
+                    document.getElementById("skylineCard").style.display = "none";
+                }
+            }
+
+            // === 12. TO-DO =========================================================
+            const EASY = /tutorial|prologue|\bfirst\b|\bstart|\bbegin|welcome|\bcreate|customi[sz]e|\bchange\b|\bequip|\bbuy\b|purchase|\bwatch|\bread\b|\bopen\b|\bjoin|\btry\b|play (a|one|your)\b|(chapter|episode|act|mission|level) (1|one|i)\b/i;
+            const HARD = /\ball\b|\bevery\b|\b[1-9]\d{1,}\b|hard|insane|veteran|legendary|online|ranked|nightmare|without/i;
+            function renderTodo() {
+                const v = view();
+                const games = aggregate(v)
+                    .filter((g) => g.unl > 0 && g.unl < g.total)
+                    .sort((a, b) => a.total - a.unl - (b.total - b.unl) || b.pct - a.pct)
+                    .slice(0, 8);
+                document.getElementById("closest").innerHTML = games.length
+                    ? games
+                          .map(
+                              (g) => `<button class="w-full text-left group" data-game="${escapeHtml(g.name)}">
+                        <div class="flex justify-between text-sm gap-3"><span class="text-zinc-200 group-hover:text-white font-semibold truncate">${escapeHtml(g.name)}</span>
+                        <span class="text-zinc-500 shrink-0"><b class="text-white">${g.total - g.unl}</b> left · <b class="text-gold">${fmt(g.gs - g.gsUnl)}G</b> to go</span></div>
+                        <div class="bar-track mt-1.5"><div class="bar-fill" style="width:${g.pct}%"></div></div></button>`,
+                          )
+                          .join("")
+                    : `<p class="text-sm text-zinc-500">Nothing is part-way done here. It's either at 100% or not started yet.</p>`;
+
+                const wins = v
+                    .filter((a) => !a.on && EASY.test(`${a.name} ${a.desc}`) && !HARD.test(`${a.name} ${a.desc}`))
+                    .sort((a, b) => b.gs - a.gs)
+                    .slice(0, 10);
+                document.getElementById("quickWins").innerHTML = wins.length
+                    ? wins
+                          .map(
+                              (a) => `<div class="flex items-start gap-3 rounded-lg bg-white/[0.02] border border-white/5 px-3 py-2">
+                        <span class="text-gold font-bold text-sm shrink-0 w-10 text-right">${a.gs}G</span>
+                        <div class="min-w-0"><div class="text-sm text-white font-semibold">${escapeHtml(a.name)} <span class="text-zinc-500 font-normal">· ${escapeHtml(a.game)}</span></div>
+                        <div class="text-xs text-zinc-500">${escapeHtml(a.desc)}</div></div></div>`,
+                          )
+                          .join("")
+                    : `<p class="text-sm text-zinc-500">No obviously easy achievements are left here.</p>`;
+
+                const left = v.filter((a) => !a.on).length;
+                const day = (n) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + n);
+                    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+                };
+                document.getElementById("projection").innerHTML = left
+                    ? `📅 <b class="text-white">${fmt(left)}</b> achievements left. At <b class="text-white">1 a day</b>, that's 100% on <b class="text-gold">${day(left)}</b>. At <b class="text-white">1 a week</b>, it's <b class="text-gold">${day(left * 7)}</b>, about ${(left / 52).toFixed(0)} years from now. 🫠`
+                    : `🎉 All done here. Absolute legend.`;
+            }
+
+            // === 13. FACTS =========================================================
+            function renderFacts() {
+                const v = view();
+                if (!v.length) return;
+                const on = v.filter((a) => a.on);
+                const off = v.filter((a) => !a.on);
+                const games = aggregate(v);
+                const byGs = (l) => [...l].sort((a, b) => b.gs - a.gs)[0];
+                const longest = [...v].sort((a, b) => b.desc.length - a.desc.length)[0];
+                const shortest = [...v].sort((a, b) => a.name.length - b.name.length)[0];
+                const zero = v.filter((a) => a.gs === 0);
+                const killers = v.filter((a) => /\bkill|takedown|headshot|defeat/i.test(a.desc));
+                const bodyCount = killers.reduce((s, a) => {
+                    const m = a.desc.match(/\b(\d[\d,]*)\b/);
+                    return s + (m ? parseInt(m[1].replace(/,/g, ""), 10) : 1);
+                }, 0);
+                const gsCounts = {};
+                v.forEach((a) => (gsCounts[a.gs] = (gsCounts[a.gs] || 0) + 1));
+                const commonGs = Object.entries(gsCounts).sort((a, b) => b[1] - a[1])[0];
+                const untouched = games.filter((g) => g.unl === 0);
+                const remainingGs = off.reduce((s, a) => s + a.gs, 0);
+                const facts = [
+                    on.length && ["💎", "Biggest unlock", `${byGs(on).gs}G`, `${byGs(on).name} (${byGs(on).game})`],
+                    off.length && ["🎯", "Juiciest locked", `${byGs(off).gs}G`, `${byGs(off).name} (${byGs(off).game}): ${byGs(off).desc}`],
+                    ["💀", "Body count demanded", fmt(bodyCount), `${killers.length} achievements want kills, takedowns or headshots. This adds up the numbers they ask for.`],
+                    ["📜", "Wordiest description", `${longest.desc.length} chars`, `${longest.name}: “${longest.desc}”`],
+                    ["🔤", "Shortest name", `“${shortest.name}”`, shortest.game],
+                    ["🥚", "Worth nothing", `${zero.length} × 0G`, zero.length ? zero.slice(0, 3).map((a) => a.name).join(", ") + (zero.length > 3 ? "…" : "") : "Every achievement here is worth something"],
+                    ["🎰", "Most common value", `${commonGs[0]}G`, `${commonGs[1]} achievements are worth exactly ${commonGs[0]}G`],
+                    ["🪦", "Untouched games", String(untouched.length), untouched.length ? untouched.map((g) => g.name).join(", ") : "Every game has at least one unlock"],
+                    ["🧮", "G still on the table", `${fmt(remainingGs)}G`, `That's ${(remainingGs / 1000).toFixed(1)} full 1000G games' worth`],
+                ].filter(Boolean);
+                document.getElementById("facts").innerHTML = facts
+                    .map(
+                        ([emoji, label, big, small]) => `<div class="card !p-4 hover:border-gold/30 transition-colors">
+                        <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-zinc-500"><span class="text-lg">${emoji}</span>${escapeHtml(label)}</div>
+                        <div class="text-2xl font-extrabold text-white mt-2 break-words">${escapeHtml(big)}</div>
+                        <div class="text-xs text-zinc-500 mt-1 line-clamp-3">${escapeHtml(small)}</div></div>`,
+                    )
+                    .join("");
+            }
+
+            // === 14. BROWSER =======================================================
+            function renderBrowser() {
+                const q = document.getElementById("search").value.trim().toLowerCase();
+                const wordRe = wordFilter ? new RegExp(`\\b${wordFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i") : null;
+                const { k, dir } = browserSort;
+                const list = view()
+                    .filter((a) => browserStatus === "all" || (browserStatus === "on") === a.on)
+                    .filter((a) => !q || `${a.name} ${a.desc} ${a.game} ${a.cat}`.toLowerCase().includes(q))
+                    .filter((a) => !wordRe || wordRe.test(a.desc))
+                    .sort((a, b) => {
+                        const x = a[k];
+                        const y = b[k];
+                        const c = typeof x === "string" ? x.localeCompare(y) : x - y;
+                        return c * dir || a.id - b.id;
+                    });
+                document.getElementById("browserCount").innerHTML =
+                    `${fmt(list.length)} shown` +
+                    (wordFilter ? ` · word: <button id="clearWord" class="text-gold underline">“${escapeHtml(wordFilter)}” ✕</button>` : "");
+                document.getElementById("browserBody").innerHTML = list
+                    .map(
+                        (a) => `<tr class="border-t border-white/5 hover:bg-white/[0.02]">
+                        <td class="py-2 px-2 text-center">${a.on ? "🏆" : '<span class="text-zinc-700">🔒</span>'}</td>
+                        <td class="py-2 px-2"><div class="font-semibold ${a.on ? "text-gold" : "text-zinc-200"}">${escapeHtml(a.name)}</div><div class="text-xs text-zinc-500">${escapeHtml(a.desc)}</div></td>
+                        <td class="py-2 px-2 text-zinc-400 whitespace-nowrap">${escapeHtml(a.game)}</td>
+                        <td class="py-2 px-2"><span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="color:${CAT_COLOR[a.cat]};background:${CAT_COLOR[a.cat]}1f">${a.cat}</span></td>
+                        <td class="py-2 px-2 text-right font-bold ${a.on ? "text-gold" : "text-zinc-400"}">${a.gs}</td></tr>`,
+                    )
+                    .join("");
+                document.querySelectorAll("th.sortable").forEach((th) => {
+                    th.style.color = th.dataset.k === k ? "#67e8f9" : "";
+                });
+            }
+
+            // === RENDER ============================================================
+            function renderAll(first) {
+                renderHero();
+                renderRace(first);
+                renderWall();
+                renderSunburst();
+                renderTreemap();
+                renderRadar();
+                renderSankey();
+                renderHist();
+                renderRose();
+                renderCloud();
+                renderScatter();
+                if (first) renderSkyline();
+                renderTodo();
+                renderFacts();
+                renderBrowser();
+            }
+
+            function wireEvents() {
+                const focusFrom = (p) => {
+                    if (p.componentType === "yAxis") return setFocus(p.value);
+                    if (GAME_COLOR[p.name]) setFocus(p.name);
+                };
+                chart("race").on("click", focusFrom);
+                chart("rose").on("click", focusFrom);
+                chart("scatter").on("click", (p) => setFocus(p.data.name));
+                chart("sankey").on("click", (p) => p.dataType === "node" && GAME_COLOR[p.name] && setFocus(p.name));
+                chart("cloud").on("click", (p) => {
+                    wordFilter = p.name;
+                    renderBrowser();
+                    document.getElementById("browserCard").scrollIntoView({ behavior: "smooth" });
+                });
+
+                document.getElementById("focusSelect").addEventListener("change", (e) => setFocus(e.target.value || null));
+                document.getElementById("focusPill").addEventListener("click", () => setFocus(null));
+                document.getElementById("replayRace").addEventListener("click", () => renderRace(true));
+
+                document.getElementById("wallSort").addEventListener("click", (e) => {
+                    const b = e.target.closest("button");
+                    if (!b) return;
+                    wallSort = b.dataset.s;
+                    document.querySelectorAll("#wallSort button").forEach((x) => x.classList.toggle("on", x === b));
+                    orderWall(true);
+                });
+                const wall = document.getElementById("wall");
+                wall.addEventListener("mousemove", (e) => {
+                    const t = e.target.closest(".tile");
+                    if (t) showTip(achTip(t._a), e.clientX, e.clientY);
+                    else hideTip();
+                });
+                wall.addEventListener("mouseleave", hideTip);
+                wall.addEventListener("click", (e) => {
+                    const t = e.target.closest(".tile");
+                    if (t) {
+                        hideTip();
+                        setFocus(t._a.game);
+                    }
+                });
+
+                document.getElementById("closest").addEventListener("click", (e) => {
+                    const b = e.target.closest("[data-game]");
+                    if (b) setFocus(b.dataset.game);
+                });
+
+                document.getElementById("search").addEventListener("input", renderBrowser);
+                document.getElementById("statusSeg").addEventListener("click", (e) => {
+                    const b = e.target.closest("button");
+                    if (!b) return;
+                    browserStatus = b.dataset.v;
+                    document.querySelectorAll("#statusSeg button").forEach((x) => x.classList.toggle("on", x === b));
+                    renderBrowser();
+                });
+                document.querySelectorAll("th.sortable").forEach((th) =>
+                    th.addEventListener("click", () => {
+                        const k = th.dataset.k;
+                        browserSort = { k, dir: browserSort.k === k ? -browserSort.dir : k === "gs" || k === "on" ? -1 : 1 };
+                        renderBrowser();
+                    }),
+                );
+                document.getElementById("browserCount").addEventListener("click", (e) => {
+                    if (e.target.id === "clearWord") {
+                        wordFilter = null;
+                        renderBrowser();
+                    }
+                });
+
+                let rt;
+                window.addEventListener("resize", () => {
+                    clearTimeout(rt);
+                    rt = setTimeout(() => Object.values(charts).forEach((c) => c.resize()), 120);
+                });
+            }
+
+            (async () => {
+                try {
+                    await init();
+                    document.getElementById("loading").remove();
+                    renderAll(true);
+                    wireEvents();
+                    // Tailwind's CDN build styles the grid after first paint, so charts
+                    // measured during init can be sized for the wrong column width.
+                    const resizeAll = () => Object.values(charts).forEach((c) => c.resize());
+                    requestAnimationFrame(resizeAll);
+                    setTimeout(resizeAll, 600);
+                    document.fonts?.ready.then(resizeAll);
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById("loadingText").innerHTML =
+                        `<span class="text-red-400">Couldn't load achievements: ${escapeHtml(err.message)}</span><br><a href="index.html" class="text-accent underline">Back to the collection</a>`;
+                    document.querySelector("#loading .spinner")?.remove();
+                }
+            })();
+        </script>
+    </body>
+</html>

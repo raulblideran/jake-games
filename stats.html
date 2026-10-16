@@ -1,0 +1,2566 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Collection Stats</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            accent: "#22d3ee",
+                            "accent-dim": "#0891b2",
+                            ink: "#0a0a0a",
+                            surface: "#111111",
+                            gold: "#facc15",
+                            profit: "#4ade80",
+                            loss: "#f87171",
+                        },
+                        fontFamily: {
+                            sans: [
+                                "Inter",
+                                "ui-sans-serif",
+                                "system-ui",
+                                "-apple-system",
+                                "Segoe UI",
+                                "Roboto",
+                                "sans-serif",
+                            ],
+                        },
+                        animation: {
+                            fadeInUp: "fadeInUp 0.35s ease",
+                        },
+                        keyframes: {
+                            fadeInUp: {
+                                "0%": {
+                                    opacity: "0",
+                                    transform: "translateY(12px)",
+                                },
+                                "100%": {
+                                    opacity: "1",
+                                    transform: "translateY(0)",
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+        <style>
+            html {
+                background: #0a0a0a;
+            }
+            body {
+                background: #0a0a0a;
+                font-feature-settings: "ss01", "cv11";
+                letter-spacing: -0.005em;
+                overflow-x: hidden;
+            }
+            .card {
+                background: #111111;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 16px;
+                padding: 20px;
+                min-width: 0;
+            }
+            .card h2 {
+                font-size: 18px;
+                font-weight: 700;
+                color: #fff;
+                letter-spacing: -0.01em;
+            }
+            .card .sub {
+                font-size: 13px;
+                color: #71717a;
+                margin-top: 2px;
+            }
+            .kicker {
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.2em;
+                color: #22d3ee;
+                font-weight: 600;
+            }
+            .section-title {
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.2em;
+                color: #52525b;
+                font-weight: 700;
+                padding-top: 12px;
+            }
+            .accent-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 9px 14px;
+                border: 1px solid rgba(34, 211, 238, 0.35);
+                background: rgba(34, 211, 238, 0.08);
+                color: #67e8f9;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                white-space: nowrap;
+            }
+            .accent-btn:hover {
+                background: rgba(34, 211, 238, 0.15);
+                color: #fff;
+            }
+            .accent-btn:disabled {
+                opacity: 0.5;
+                cursor: default;
+            }
+            select.field,
+            input.field {
+                background: #0a0a0a;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 10px;
+                padding: 8px 12px;
+                font-size: 13px;
+                color: #e4e4e7;
+                outline: none;
+                max-width: 100%;
+            }
+            select.field:focus,
+            input.field:focus {
+                border-color: rgba(34, 211, 238, 0.6);
+            }
+            .tile {
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                background: rgba(255, 255, 255, 0.02);
+                padding: 12px 14px;
+            }
+            .tile .k {
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: #71717a;
+            }
+            .tile .v {
+                font-size: 22px;
+                font-weight: 800;
+                color: #fff;
+                margin-top: 4px;
+                font-variant-numeric: tabular-nums;
+            }
+            .bar-track {
+                height: 6px;
+                background: rgba(255, 255, 255, 0.06);
+                border-radius: 999px;
+                overflow: hidden;
+            }
+            .bar-fill {
+                height: 100%;
+                border-radius: 999px;
+                background: linear-gradient(90deg, #22d3ee, #facc15);
+                transition: width 0.4s ease;
+            }
+            .scroll-thin::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            .scroll-thin::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.12);
+                border-radius: 999px;
+            }
+            th.sortable {
+                cursor: pointer;
+                user-select: none;
+            }
+            th.sortable:hover {
+                color: #fff;
+            }
+            .spinner {
+                width: 40px;
+                height: 40px;
+                border-radius: 999px;
+                border: 3px solid rgba(74, 222, 128, 0.2);
+                border-top-color: #4ade80;
+                animation: spin 0.8s linear infinite;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            .money {
+                font-variant-numeric: tabular-nums;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                *,
+                *::before,
+                *::after {
+                    animation: none !important;
+                    transition: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body class="min-h-screen bg-ink text-zinc-100 font-sans antialiased">
+        <nav class="sticky top-0 z-40 bg-ink/85 backdrop-blur border-b border-white/5">
+            <div class="px-4 md:px-10 py-3 flex items-center gap-3 flex-wrap">
+                <a href="index.html" class="accent-btn">← Collection</a>
+                <a href="achievements.html" class="accent-btn">🏆 Achievements</a>
+                <select id="focusSelect" class="field" aria-label="Focus on a console">
+                    <option value="">All consoles</option>
+                </select>
+                <button
+                    id="focusPill"
+                    class="hidden items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-profit/15 text-profit border border-profit/40 hover:bg-profit/25"
+                    title="Clear focus"
+                >
+                    <span id="focusPillText"></span><span aria-hidden="true">✕</span>
+                </button>
+                <div class="flex items-center gap-3 ml-auto min-w-0">
+                    <div class="min-w-[140px]">
+                        <div id="cexStatus" class="text-[11px] text-zinc-500 truncate">CeX: waiting…</div>
+                        <div class="bar-track mt-1"><div id="cexBar" class="bar-fill" style="width: 0%"></div></div>
+                    </div>
+                    <button id="cexRefresh" class="accent-btn" title="Re-fetch every CeX price, ignoring the cache">↻ CeX</button>
+                </div>
+            </div>
+        </nav>
+
+        <div id="loading" class="fixed inset-0 z-50 bg-ink flex flex-col items-center justify-center gap-4">
+            <div class="spinner"></div>
+            <div id="loadingText" class="text-sm text-zinc-400">Counting the money…</div>
+        </div>
+
+        <main class="px-4 md:px-10 py-8 md:py-10 space-y-6">
+            <!-- HERO -->
+            <header class="animate-fadeInUp">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-2 h-2 rounded-full bg-profit shadow-[0_0_12px_rgba(74,222,128,0.7)]"></div>
+                    <span class="text-xs uppercase tracking-[0.2em] text-zinc-500 font-medium">Collection · Stats</span>
+                </div>
+                <h1 id="heroTitle" class="text-4xl md:text-5xl font-bold tracking-tight text-white">The Numbers</h1>
+                <p id="heroSub" class="text-zinc-500 mt-2 text-sm"></p>
+            </header>
+
+            <!-- LEDGER -->
+            <section class="card" id="ledgerCard">
+                <h2>📒 The Ledger</h2>
+                <p class="sub">Every game with every number. Click a column to sort.</p>
+                <div class="flex items-center gap-3 flex-wrap mt-4">
+                    <input id="search" class="field w-full sm:w-72" placeholder="Search game, console, notes…" />
+                    <span id="ledgerCount" class="text-xs text-zinc-500"></span>
+                </div>
+                <div class="mt-4 overflow-x-auto scroll-thin max-h-[640px] overflow-y-auto">
+                    <table class="w-full text-sm min-w-[860px]">
+                        <thead class="sticky top-0 bg-surface text-zinc-500 text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="sortable text-left py-2 px-2" data-k="game">Game</th>
+                                <th class="sortable text-left py-2 px-2" data-k="console">Console</th>
+                                <th class="sortable text-right py-2 px-2" data-k="paid">Paid</th>
+                                <th class="sortable text-right py-2 px-2" data-k="value">CeX</th>
+                                <th class="sortable text-right py-2 px-2" data-k="gain">Gain</th>
+                                <th class="sortable text-right py-2 px-2" data-k="roi">ROI</th>
+                                <th class="sortable text-right py-2 px-2" data-k="first">CeX launch</th>
+                                <th class="sortable text-right py-2 px-2" data-k="rating">★</th>
+                                <th class="sortable text-right py-2 px-2" data-k="stock">Stock</th>
+                                <th class="sortable text-right py-2 px-2" data-k="time">Bought</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 items-center">
+                    <div>
+                        <div class="kicker mb-2">Worth at CeX retail</div>
+                        <div class="flex items-end gap-4 flex-wrap">
+                            <div id="heroValue" class="money text-6xl md:text-8xl font-extrabold text-profit drop-shadow-[0_0_24px_rgba(74,222,128,0.3)]">£0</div>
+                            <div id="heroGain" class="text-xl md:text-2xl font-bold pb-2 money"></div>
+                        </div>
+                        <div id="heroLine" class="text-sm text-zinc-400 mt-3"></div>
+                    </div>
+                    <div id="heroTiles" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+                </div>
+            </section>
+
+            <!-- MONEY -->
+            <div class="section-title">💰 Follow the money</div>
+            <div class="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
+                <section class="card">
+                    <h2>🌊 The Value Waterfall</h2>
+                    <p class="sub">Starts at what Jake paid, adds or subtracts each console's profit, and ends at today's CeX value. Only games with a CeX price are counted. Click a console to focus it.</p>
+                    <div id="waterfall" class="h-[420px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🔻 The Trade-in Reality Check</h2>
+                    <p class="sub">CeX's shelf price compared with what Jake paid and what CeX would actually hand over at the counter.</p>
+                    <div id="funnel" class="h-[340px] mt-2"></div>
+                    <div id="funnelNote" class="text-sm text-zinc-400"></div>
+                </section>
+            </div>
+
+            <section class="card">
+                <h2>📈 Spend vs Worth, Over Time</h2>
+                <p class="sub">Running total of money spent against the current CeX value of everything bought up to that date. Drag the slider to travel back to 2007.</p>
+                <div id="timeline" class="h-[420px] mt-2"></div>
+            </section>
+
+            <div class="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-6 items-start">
+                <section class="card">
+                    <h2>📅 The Haul Calendar</h2>
+                    <p class="sub">Every purchase day, coloured by how much was spent. Hover a day to see what came home.</p>
+                    <div id="calendar" class="h-[180px] mt-2"></div>
+                    <div id="calendarYears" class="flex gap-2 flex-wrap mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🛒 Biggest Hauls</h2>
+                    <p class="sub">The days the shelf got heavier.</p>
+                    <div id="hauls" class="h-[300px] mt-2"></div>
+                </section>
+            </div>
+
+            <!-- WINNERS -->
+            <div class="section-title">📊 Winners, losers and bargains</div>
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section class="card">
+                    <h2>🎯 Paid vs Worth</h2>
+                    <p class="sub">Every game plotted by price paid against CeX value. Anything above the dashed line is in profit. Click the legend to hide a console.</p>
+                    <div id="roiScatter" class="h-[460px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🚀 Best Flips &amp; 💀 Worst Buys</h2>
+                    <p class="sub">The biggest gains and losses in pounds against what was paid.</p>
+                    <div id="gainers" class="h-[460px] mt-2"></div>
+                </section>
+            </div>
+
+            <section class="card">
+                <h2>🧱 Where the Value Lives</h2>
+                <p class="sub">Every game sized by CeX value and grouped by console. Green is in profit, red is underwater. Click a console to zoom in.</p>
+                <div id="treemap" class="h-[520px] mt-2"></div>
+            </section>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section class="card">
+                    <h2>⚖️ The Pareto Principle</h2>
+                    <p class="sub">Games sorted from most to least valuable, with the running share of the total value.</p>
+                    <div id="paretoNote" class="text-sm text-zinc-300 mt-2"></div>
+                    <div id="pareto" class="h-[380px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🪙 Jake's Magic Number</h2>
+                    <p class="sub">How much Jake usually pays. The tallest bar is the price he keeps coming back to.</p>
+                    <div id="priceHist" class="h-[420px] mt-2"></div>
+                </section>
+            </div>
+
+            <section class="card">
+                <h2>🔀 From Price Paid to Price Now</h2>
+                <p class="sub">How games flow from console to the price band they were bought at, then to the band CeX puts them in today.</p>
+                <div id="sankey" class="h-[560px] mt-2"></div>
+            </section>
+
+            <!-- CEX MARKET -->
+            <div class="section-title">🏪 The CeX market</div>
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section class="card">
+                    <h2>📉 The Depreciation Cliff</h2>
+                    <p class="sub">CeX's first-ever price for each game (red) against today's price (gold), for the 20 games that launched highest. The red bar is the value that has evaporated.</p>
+                    <div id="cliff" class="h-[560px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🧊 How Much Value Survived</h2>
+                    <p class="sub">Today's CeX price as a percentage of its first CeX price, across every game.</p>
+                    <div id="cliffNote" class="text-sm text-zinc-300 mt-2"></div>
+                    <div id="retained" class="h-[480px] mt-2"></div>
+                </section>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-[1fr_1.5fr] gap-6">
+                <section class="card">
+                    <h2>🧭 Price Momentum</h2>
+                    <p class="sub">Which way each game moved at its last CeX price change.</p>
+                    <div id="momentum" class="h-[300px] mt-2"></div>
+                    <div id="updates" class="h-[200px]"></div>
+                </section>
+                <section class="card">
+                    <h2>🎢 Biggest Movers</h2>
+                    <p class="sub">The largest CeX price changes since each game's previous price.</p>
+                    <div id="movers" class="h-[520px] mt-2"></div>
+                </section>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section class="card">
+                    <h2>⭐ Are Good Games Pricier?</h2>
+                    <p class="sub">CeX customer rating against current price. Bubble size is how many copies CeX has in stock, so smaller means rarer.</p>
+                    <div id="ratingNote" class="text-sm text-zinc-300 mt-2"></div>
+                    <div id="rating" class="h-[420px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🦄 Rare on CeX</h2>
+                    <p class="sub">Owned games that CeX has fewer than 10 copies of right now. These ones are hard to replace.</p>
+                    <div id="scarce" class="h-[460px] mt-2"></div>
+                </section>
+            </div>
+
+            <!-- CONSOLES -->
+            <div class="section-title">🎮 Console showdown</div>
+            <section class="card">
+                <h2>🕸️ Console DNA</h2>
+                <p class="sub">Parallel coordinates where every line is a console and every axis is a different stat. Hover a line to light it up.</p>
+                <div id="parallel" class="h-[460px] mt-2"></div>
+            </section>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section class="card">
+                    <h2>🌧️ Price Rainclouds</h2>
+                    <p class="sub">Box plots of CeX value per console, with every game scattered alongside.</p>
+                    <div id="boxplot" class="h-[440px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>🏙️ Haul Skyline (3D)</h2>
+                    <p class="sub">Games bought per console per month for the last 12 months with purchases. Drag to spin it.</p>
+                    <div id="skyline" class="h-[440px] mt-2"></div>
+                </section>
+            </div>
+
+            <!-- CONDITION -->
+            <div class="section-title">📦 Condition &amp; backlog</div>
+            <div class="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
+                <section class="card">
+                    <h2>📦 Box Condition by Console</h2>
+                    <p class="sub">Share of each console's games that are complete, missing an insert, missing a cover, or sealed.</p>
+                    <div id="condition" class="h-[420px] mt-2"></div>
+                </section>
+                <section class="card">
+                    <h2>💿 Editions</h2>
+                    <p class="sub">Everything fancier than a standard copy, with the standard count in the middle.</p>
+                    <div id="editions" class="h-[420px] mt-2"></div>
+                </section>
+            </div>
+
+            <section class="card">
+                <h2>🎮 The Backlog</h2>
+                <p class="sub">Completed versus not completed, per console.</p>
+                <div id="backlogNote" class="text-sm text-zinc-300 mt-2"></div>
+                <div id="backlog" class="h-[360px] mt-2"></div>
+            </section>
+
+            <!-- HARDWARE -->
+            <div class="section-title">🕹️ Hardware</div>
+            <section class="card">
+                <h2>🕹️ The Machines</h2>
+                <p class="sub">Each console's purchase price against Jake's estimated value, from the Console tab.</p>
+                <div id="hwNote" class="text-sm text-zinc-300 mt-2"></div>
+                <div id="hardware" class="h-[420px] mt-2"></div>
+                <div id="hwCards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mt-4"></div>
+            </section>
+
+            <section class="card" id="historyCard">
+                <h2>🕰️ Collection Value History</h2>
+                <p class="sub">Snapshots saved each time CeX prices are refreshed on the collection page in this browser.</p>
+                <div id="history" class="h-[340px] mt-2"></div>
+            </section>
+
+            <!-- FACTS -->
+            <section>
+                <div class="section-title mb-3">🤯 Fun facts</div>
+                <div id="facts" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+            </section>
+
+            <footer class="text-xs text-zinc-600 pt-4 pb-10" id="footer"></footer>
+        </main>
+
+        <script>
+            // === CONFIG ============================================================
+            const SHEET_PUB =
+                "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM8N_x95reV1Y4vKQZfAyOfmJ0HqhRfcwEuCyIQLyYcmZWSxGCqFv1zJVGi-Q2wviNNl0gGzhd1MxG/pub";
+            const TABS = { master: "1687075549", hardware: "1234472947" };
+            const tabUrl = (gid) => `${SHEET_PUB}?gid=${gid}&single=true&output=csv`;
+
+            const PRIMARY_PROXY = "https://cex-proxy.raul-blideran98.workers.dev";
+            const CORS_PROXIES = [
+                ...(PRIMARY_PROXY
+                    ? [
+                          {
+                              url: (url) => `${PRIMARY_PROXY}/?url=${encodeURIComponent(url)}`,
+                              timeout: 12000,
+                          },
+                      ]
+                    : []),
+                {
+                    url: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                    timeout: 15000,
+                },
+                {
+                    url: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                    timeout: 8000,
+                },
+            ];
+            const CSV_CACHE_DURATION = 5 * 60 * 1000;
+
+            // The stats page keeps its own CeX cache because it needs fields the
+            // collection page throws away (launch price, previous price, rating,
+            // stock). Prices it fetches are also written into the collection
+            // page's cache so neither page re-fetches what the other already has.
+            const CEX_KEY = "cexStats_v1";
+            const INDEX_CEX_KEY = "cexDetailCache_v1";
+            const HISTORY_KEY = "cexHistory_v1";
+            const CEX_TTL = 24 * 60 * 60 * 1000;
+            const CEX_CONCURRENCY = 2;
+            const CEX_RETRIES = 2;
+            const CEX_FAILURE_LIMIT = 8;
+
+            const GREEN = "#4ade80";
+            const RED = "#f87171";
+            const GOLD = "#facc15";
+            const CYAN = "#22d3ee";
+            const SLATE = "#475569";
+            const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+            const CONSOLE_COLORS = {
+                "Xbox 360": "#22c55e",
+                "Xbox One": "#a3e635",
+                "Xbox Series": "#10b981",
+                "PlayStation 1": "#cbd5e1",
+                "PlayStation 2": "#3b82f6",
+                "PlayStation 3": "#60a5fa",
+                "PlayStation 4": "#818cf8",
+                PSP: "#a78bfa",
+                Wii: "#f472b6",
+                "Nintendo DS": "#f87171",
+                "Gameboy Advance": "#fb923c",
+                PC: "#fbbf24",
+            };
+            const EXTRA_COLORS = ["#2dd4bf", "#e879f9", "#fda4af", "#93c5fd", "#bef264"];
+            const consoleColor = (c) => {
+                if (CONSOLE_COLORS[c]) return CONSOLE_COLORS[c];
+                let h = 0;
+                for (const ch of c) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+                return EXTRA_COLORS[h % EXTRA_COLORS.length];
+            };
+
+            // === FETCH =============================================================
+            let workingProxyIndex = 0;
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+            function fetchWithTimeout(url, timeoutMs) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), timeoutMs);
+                return fetch(url, { signal: controller.signal, cache: "no-store" }).finally(() =>
+                    clearTimeout(timer),
+                );
+            }
+
+            async function fetchWithProxy(url) {
+                for (let i = workingProxyIndex; i < CORS_PROXIES.length; i++) {
+                    const { url: proxyFn, timeout } = CORS_PROXIES[i];
+                    try {
+                        const resp = await fetchWithTimeout(proxyFn(url), timeout);
+                        if (resp.ok) {
+                            workingProxyIndex = i;
+                            return resp;
+                        }
+                    } catch (e) {
+                        console.warn(`Proxy ${i} failed`, e.message);
+                    }
+                }
+                return null;
+            }
+
+            function readJSON(key, fallback) {
+                try {
+                    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+                } catch {
+                    return fallback;
+                }
+            }
+            function writeJSON(key, value) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } catch {}
+            }
+
+            // The published CSV sends CORS headers, so try it directly before
+            // falling back to the proxy chain.
+            async function loadTab(gid) {
+                let cached = null;
+                try {
+                    const text = localStorage.getItem(`statsCSV_${gid}`);
+                    const ts = Number(localStorage.getItem(`statsCSVts_${gid}`));
+                    if (text) cached = { text, fresh: Date.now() - ts < CSV_CACHE_DURATION };
+                } catch {}
+                if (cached && cached.fresh) return cached.text;
+                const save = (text) => {
+                    try {
+                        localStorage.setItem(`statsCSV_${gid}`, text);
+                        localStorage.setItem(`statsCSVts_${gid}`, String(Date.now()));
+                    } catch {}
+                    return text;
+                };
+                const url = `${tabUrl(gid)}&_=${Date.now()}`;
+                try {
+                    const r = await fetchWithTimeout(url, 12000);
+                    if (r.ok) return save(await r.text());
+                } catch (e) {
+                    console.warn("Direct sheet fetch failed", e.message);
+                }
+                const r = await fetchWithProxy(url);
+                if (r) return save(await r.text());
+                if (cached) return cached.text;
+                throw new Error(`Could not load sheet tab ${gid}`);
+            }
+
+            // === CSV ===============================================================
+            function parseCSVLine(line, delimiter = ",") {
+                const values = [];
+                let current = "";
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    const nx = line[i + 1];
+                    if (ch === '"') {
+                        if (inQuotes && nx === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (ch === delimiter && !inQuotes) {
+                        values.push(current);
+                        current = "";
+                    } else {
+                        current += ch;
+                    }
+                }
+                values.push(current);
+                return values;
+            }
+
+            // Splits CSV into rows, respecting quoted fields that contain newlines.
+            function splitCsvRows(text) {
+                const rows = [];
+                let cur = "";
+                let inQuotes = false;
+                for (let i = 0; i < text.length; i++) {
+                    const ch = text[i];
+                    if (ch === '"') {
+                        inQuotes = !inQuotes;
+                        cur += ch;
+                    } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+                        if (ch === "\r" && text[i + 1] === "\n") i++;
+                        if (cur.trim() !== "") rows.push(cur);
+                        cur = "";
+                    } else {
+                        cur += ch;
+                    }
+                }
+                if (cur.trim() !== "") rows.push(cur);
+                return rows;
+            }
+
+            function tableFrom(text, isHeader) {
+                const lines = splitCsvRows(text).map((l) => parseCSVLine(l));
+                const idx = lines
+                    .slice(0, 6)
+                    .findIndex((cells) => isHeader(cells.map((c) => c.replace(/\s+/g, " ").trim())));
+                if (idx === -1) return null;
+                const headers = lines[idx].map((c) => c.replace(/\s+/g, " ").trim());
+                return { headers, rows: lines.slice(idx + 1) };
+            }
+            const colIndex = (headers, re) => headers.findIndex((h) => re.test(h));
+
+            // === HELPERS ===========================================================
+            function escapeHtml(s) {
+                return String(s ?? "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+            }
+            const fmt = (n) => Number(n).toLocaleString("en-GB");
+            const gbp = (n, dp = 2) =>
+                `${n < 0 ? "−" : ""}£${Math.abs(n).toLocaleString("en-GB", {
+                    minimumFractionDigits: dp,
+                    maximumFractionDigits: dp,
+                })}`;
+            const signedGbp = (n, dp = 2) => `${n >= 0 ? "+" : "−"}${gbp(Math.abs(n), dp)}`;
+            const short = (s, n = 22) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+            const sum = (list, f) => list.reduce((s, x) => s + (f(x) || 0), 0);
+            const round2 = (n) => Math.round(n * 100) / 100;
+
+            function parsePrice(str) {
+                const n = parseFloat(String(str ?? "").replace(/[^0-9.]/g, ""));
+                return Number.isFinite(n) ? n : null;
+            }
+            function triState(v) {
+                const s = String(v ?? "").trim().toUpperCase();
+                if (s === "TRUE" || s === "Y" || s === "YES") return true;
+                if (s === "FALSE" || s === "N" || s === "NO") return false;
+                return null;
+            }
+            function parseUkDate(str) {
+                const m = String(str ?? "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+            }
+            const isoDay = (d) =>
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+            const monthLabel = (k) => {
+                const [y, m] = k.split("-");
+                return new Date(+y, +m - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
+            };
+            const prettyDate = (d) =>
+                d ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+            function normalizeConsole(c) {
+                if (!c) return "Unknown";
+                return c.trim().replace(/playstation/i, "PlayStation");
+            }
+            function quantile(sorted, p) {
+                if (!sorted.length) return 0;
+                const i = (sorted.length - 1) * p;
+                const lo = Math.floor(i);
+                const hi = Math.ceil(i);
+                return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+            }
+            function pearson(xs, ys) {
+                const n = xs.length;
+                if (n < 3) return 0;
+                const mx = xs.reduce((a, b) => a + b, 0) / n;
+                const my = ys.reduce((a, b) => a + b, 0) / n;
+                let num = 0, dx = 0, dy = 0;
+                for (let i = 0; i < n; i++) {
+                    num += (xs[i] - mx) * (ys[i] - my);
+                    dx += (xs[i] - mx) ** 2;
+                    dy += (ys[i] - my) ** 2;
+                }
+                return dx && dy ? num / Math.sqrt(dx * dy) : 0;
+            }
+            // Green for profit, red for loss, grey around break-even.
+            function gainColor(gain) {
+                const t = Math.max(-1, Math.min(1, gain / 15));
+                const mix = (a, b, k) => Math.round(a + (b - a) * k);
+                const [r, g, b] = t >= 0 ? [mix(63, 34, t), mix(63, 197, t), mix(70, 94, t)] : [mix(63, 220, -t), mix(63, 38, -t), mix(70, 38, -t)];
+                return `rgb(${r},${g},${b})`;
+            }
+
+            // === CEX ===============================================================
+            let cex = readJSON(CEX_KEY, {});
+            let indexCex = readJSON(INDEX_CEX_KEY, {});
+            let cexRunning = false;
+
+            function skusFrom(linkStr) {
+                return String(linkStr ?? "")
+                    .split(/[,\s]+/)
+                    .filter((t) => /^https?:\/\/[^/]*(webuy|cex)\./i.test(t))
+                    .map((t) => (t.match(/[?&]id=([^&]+)/) || [])[1])
+                    .filter(Boolean);
+            }
+
+            // Full record from this page's cache, or the price-only one the
+            // collection page left behind.
+            function cexRec(sku) {
+                if (cex[sku]) return cex[sku];
+                const i = indexCex[sku];
+                if (i) return { sell: i.sell, cash: i.cash, voucher: i.voucher, partial: true, ts: i.ts };
+                return null;
+            }
+
+            async function fetchCexDetail(sku) {
+                for (let attempt = 0; attempt <= CEX_RETRIES; attempt++) {
+                    try {
+                        const resp = await fetchWithProxy(`https://wss2.cex.uk.webuy.io/v3/boxes/${sku}/detail`);
+                        if (resp) {
+                            const json = await resp.json();
+                            const d = json?.response?.data?.boxDetails?.[0];
+                            if (d) {
+                                const rec = {
+                                    sell: Number(d.sellPrice) || 0,
+                                    cash: Number(d.cashPrice) || 0,
+                                    voucher: Number(d.exchangePrice) || 0,
+                                    first: Number(d.firstPrice) || null,
+                                    prev: Number(d.previousPrice) || null,
+                                    updated: d.lastPriceUpdatedDate || null,
+                                    rating: Number(d.boxRating) || null,
+                                    stock: Number.isFinite(Number(d.ecomQuantityOnHand)) ? Number(d.ecomQuantityOnHand) : null,
+                                    name: d.boxName || "",
+                                    image: d.imageUrls?.large || null,
+                                    ts: Date.now(),
+                                };
+                                cex[sku] = rec;
+                                indexCex[sku] = {
+                                    sell: rec.sell,
+                                    cash: rec.cash,
+                                    voucher: rec.voucher,
+                                    boxName: rec.name,
+                                    image: rec.image,
+                                    ts: rec.ts,
+                                };
+                                return true;
+                            }
+                        }
+                    } catch (e) {
+                        // Rate-limited responses come back as HTML and fail .json().
+                    }
+                    if (attempt < CEX_RETRIES) await sleep(1000 * Math.pow(3, attempt));
+                }
+                return false;
+            }
+
+            function setCexStatus(done, total, text) {
+                document.getElementById("cexStatus").textContent = text;
+                document.getElementById("cexBar").style.width = `${total ? (done / total) * 100 : 100}%`;
+            }
+
+            function cexSummary() {
+                const all = [...new Set(ROWS.flatMap((r) => r.skus))];
+                const full = all.filter((s) => cex[s]).length;
+                const any = all.filter((s) => cexRec(s)).length;
+                return { all, full, any };
+            }
+
+            async function loadCex(force = false) {
+                if (cexRunning) return;
+                const { all } = cexSummary();
+                const todo = all.filter((s) => force || !cex[s] || Date.now() - cex[s].ts > CEX_TTL);
+                if (!todo.length) {
+                    const { full } = cexSummary();
+                    setCexStatus(1, 1, `CeX: ${full}/${all.length} games priced`);
+                    return;
+                }
+                cexRunning = true;
+                document.getElementById("cexRefresh").disabled = true;
+                let done = 0;
+                let failures = 0;
+                let lastRender = Date.now();
+                let cursor = 0;
+                const persist = () => {
+                    writeJSON(CEX_KEY, cex);
+                    writeJSON(INDEX_CEX_KEY, indexCex);
+                };
+                const worker = async () => {
+                    while (cursor < todo.length && failures < CEX_FAILURE_LIMIT) {
+                        const sku = todo[cursor++];
+                        const ok = await fetchCexDetail(sku);
+                        failures = ok ? 0 : failures + 1;
+                        done++;
+                        setCexStatus(done, todo.length, `CeX: fetching ${done}/${todo.length}…`);
+                        if (done % 10 === 0) persist();
+                        // Repaint as data lands, but not so often the page stutters.
+                        if (Date.now() - lastRender > 6000) {
+                            lastRender = Date.now();
+                            rebuildCex();
+                            renderAll(false);
+                        }
+                    }
+                };
+                await Promise.all(Array.from({ length: CEX_CONCURRENCY }, worker));
+                persist();
+                cexRunning = false;
+                document.getElementById("cexRefresh").disabled = false;
+                const { full } = cexSummary();
+                setCexStatus(
+                    1,
+                    1,
+                    failures >= CEX_FAILURE_LIMIT
+                        ? `CeX stopped responding. ${full}/${all.length} priced, try again later`
+                        : `CeX: ${full}/${all.length} games priced`,
+                );
+                rebuildCex();
+                renderAll(false);
+            }
+
+            // === DATA ==============================================================
+            let ROWS = [];
+            let HARDWARE = [];
+            let focus = null;
+            let ledgerSort = { k: "value", dir: -1 };
+            let calYear = null;
+            const charts = {};
+
+            const view = () => (focus ? ROWS.filter((r) => r.console === focus) : ROWS);
+            const priced = (list) => list.filter((r) => r.value !== null);
+            const consolesOf = (list) => {
+                const by = {};
+                list.forEach((r) => (by[r.console] = (by[r.console] || 0) + 1));
+                return Object.keys(by).sort((a, b) => by[b] - by[a]);
+            };
+
+            function parseMaster(text) {
+                const t = tableFrom(text, (c) => c.some((h) => /^game$/i.test(h)) && c.some((h) => /console/i.test(h)));
+                if (!t) throw new Error("Could not find the MASTER header row");
+                const h = t.headers;
+                const ci = {
+                    console: colIndex(h, /console/i),
+                    game: colIndex(h, /^game$/i),
+                    cover: colIndex(h, /cover\s*art/i),
+                    insert: colIndex(h, /^insert/i),
+                    sealed: colIndex(h, /^sealed/i),
+                    completed: colIndex(h, /complete/i),
+                    edition: colIndex(h, /^edition/i),
+                    notes: colIndex(h, /^notes?$/i),
+                    date: colIndex(h, /date\s*purchas/i),
+                    paid: colIndex(h, /(purchase|paid)\s*price|price\s*purchased/i),
+                    current: colIndex(h, /current\s*price/i),
+                    links: colIndex(h, /cex|listing/i),
+                };
+                const cell = (r, k) => (ci[k] >= 0 ? (r[ci[k]] ?? "").trim() : "");
+                return t.rows
+                    .filter((r) => cell(r, "game"))
+                    .filter((r) => cell(r, "date").toUpperCase() !== "TBC")
+                    .map((r, i) => {
+                        const date = parseUkDate(cell(r, "date"));
+                        return {
+                            id: i,
+                            game: cell(r, "game"),
+                            console: normalizeConsole(cell(r, "console")),
+                            cover: triState(cell(r, "cover")),
+                            insert: triState(cell(r, "insert")),
+                            sealed: triState(cell(r, "sealed")) === true,
+                            completed: triState(cell(r, "completed")) === true,
+                            edition: cell(r, "edition") || "Standard",
+                            notes: cell(r, "notes"),
+                            date,
+                            time: date ? date.getTime() : 0,
+                            paid: parsePrice(cell(r, "paid")) ?? 0,
+                            manual: parsePrice(cell(r, "current")),
+                            skus: skusFrom(cell(r, "links")),
+                        };
+                    });
+            }
+
+            function parseHardware(text) {
+                const t = tableFrom(text, (c) => c.includes("Console") && c.some((h) => /estimated/i.test(h)));
+                if (!t) return [];
+                const h = t.headers;
+                const ci = {
+                    console: colIndex(h, /^console$/i),
+                    version: colIndex(h, /version/i),
+                    model: colIndex(h, /model/i),
+                    condition: colIndex(h, /condition/i),
+                    date: colIndex(h, /date/i),
+                    paid: colIndex(h, /purchase\s*price/i),
+                    est: colIndex(h, /estimated/i),
+                    notes: colIndex(h, /notes/i),
+                };
+                const cell = (r, k) => (ci[k] >= 0 ? (r[ci[k]] ?? "").trim() : "");
+                return t.rows
+                    .filter((r) => cell(r, "console"))
+                    .map((r) => ({
+                        console: cell(r, "console"),
+                        version: cell(r, "version"),
+                        model: cell(r, "model"),
+                        condition: cell(r, "condition"),
+                        date: parseUkDate(cell(r, "date")),
+                        paid: parsePrice(cell(r, "paid")) ?? 0,
+                        est: parsePrice(cell(r, "est")) ?? 0,
+                        notes: cell(r, "notes"),
+                    }));
+            }
+
+            // Folds CeX data into each row. A row can list several SKUs (bundles,
+            // multi-disc sets); prices add up, rating averages, stock takes the
+            // scarcest.
+            function rebuildCex() {
+                ROWS.forEach((r) => {
+                    const recs = r.skus.map(cexRec).filter(Boolean);
+                    if (!recs.length) {
+                        r.cex = null;
+                        r.value = r.manual;
+                    } else {
+                        const full = recs.filter((x) => !x.partial);
+                        const all = (k) => full.length === recs.length && full.every((x) => x[k] != null);
+                        const ratings = full.map((x) => x.rating).filter((x) => x);
+                        r.cex = {
+                            sell: sum(recs, (x) => x.sell),
+                            cash: sum(recs, (x) => x.cash),
+                            voucher: sum(recs, (x) => x.voucher),
+                            first: all("first") ? sum(full, (x) => x.first) : null,
+                            prev: all("prev") ? sum(full, (x) => x.prev) : null,
+                            rating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null,
+                            stock: all("stock") ? Math.min(...full.map((x) => x.stock)) : null,
+                            updated: full.map((x) => x.updated).filter(Boolean).sort().pop() || null,
+                        };
+                        r.value = r.cex.sell;
+                    }
+                    r.gain = r.value !== null ? round2(r.value - r.paid) : null;
+                    r.roi = r.value !== null && r.paid > 0 ? (r.value / r.paid - 1) * 100 : null;
+                    r.first = r.cex?.first ?? null;
+                    r.rating = r.cex?.rating ?? null;
+                    r.stock = r.cex?.stock ?? null;
+                });
+            }
+
+            async function init() {
+                const [master, hw] = await Promise.allSettled([loadTab(TABS.master), loadTab(TABS.hardware)]);
+                if (master.status !== "fulfilled") throw master.reason;
+                ROWS = parseMaster(master.value);
+                if (!ROWS.length) throw new Error("MASTER has no game rows");
+                HARDWARE = hw.status === "fulfilled" ? parseHardware(hw.value) : [];
+                rebuildCex();
+
+                const sel = document.getElementById("focusSelect");
+                consolesOf(ROWS).forEach((c) => {
+                    const o = document.createElement("option");
+                    o.value = c;
+                    o.textContent = c;
+                    sel.appendChild(o);
+                });
+                const years = [...new Set(ROWS.filter((r) => r.date).map((r) => r.date.getFullYear()))].sort();
+                const byYear = (y) => ROWS.filter((r) => r.date && r.date.getFullYear() === y).length;
+                calYear = years.reduce((best, y) => (byYear(y) > byYear(best) ? y : best), years[years.length - 1]);
+                document.getElementById("footer").textContent =
+                    `${ROWS.length} games from MASTER and ${HARDWARE.length} machines from the Console tab. Values are CeX retail prices; games without a CeX listing use the sheet's Current Price.`;
+            }
+
+            // === ECHARTS ===========================================================
+            const TOOLTIP = {
+                backgroundColor: "rgba(17,17,17,0.96)",
+                borderColor: "rgba(255,255,255,0.12)",
+                textStyle: { color: "#e4e4e7", fontSize: 12 },
+                extraCssText: "border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:320px;white-space:normal;",
+            };
+            const AXIS = {
+                axisLine: { lineStyle: { color: "#3f3f46" } },
+                axisLabel: { color: "#a1a1aa" },
+                splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
+            };
+            echarts.registerTheme("stats", {
+                backgroundColor: "transparent",
+                textStyle: { fontFamily: "Inter, sans-serif", color: "#a1a1aa" },
+                color: [GREEN, CYAN, GOLD, RED, "#a78bfa", "#fb923c"],
+                tooltip: TOOLTIP,
+                legend: { textStyle: { color: "#a1a1aa" }, pageTextStyle: { color: "#a1a1aa" } },
+                categoryAxis: AXIS,
+                valueAxis: { ...AXIS, axisLabel: { color: "#71717a" } },
+                logAxis: { ...AXIS, axisLabel: { color: "#71717a" } },
+                timeAxis: { ...AXIS, axisLabel: { color: "#71717a" } },
+            });
+            function chart(id) {
+                if (!charts[id]) charts[id] = echarts.init(document.getElementById(id), "stats");
+                return charts[id];
+            }
+            const base = () => ({ animation: !REDUCED, tooltip: { ...TOOLTIP } });
+            const gameTip = (r) =>
+                `<div style="font-weight:700;color:#fff">${escapeHtml(r.game)}</div>` +
+                `<div style="color:${consoleColor(r.console)};font-weight:600;margin-bottom:4px">${escapeHtml(r.console)}${r.edition !== "Standard" ? ` · ${escapeHtml(r.edition)}` : ""}</div>` +
+                `Paid <b>${gbp(r.paid)}</b>${r.value !== null ? ` · Worth <b>${gbp(r.value)}</b>` : ""}` +
+                (r.gain !== null ? `<br><b style="color:${r.gain >= 0 ? GREEN : RED}">${signedGbp(r.gain)}</b>${r.roi !== null ? ` (${r.roi >= 0 ? "+" : ""}${r.roi.toFixed(0)}%)` : ""}` : "") +
+                (r.date ? `<br><span style="color:#71717a">Bought ${prettyDate(r.date)}</span>` : "");
+            function emptyChart(id, msg) {
+                chart(id).setOption(
+                    {
+                        title: { text: msg, left: "center", top: "middle", textStyle: { color: "#52525b", fontSize: 13, fontWeight: 500 } },
+                        series: [],
+                    },
+                    true,
+                );
+            }
+
+            // === FOCUS =============================================================
+            function setFocus(name) {
+                focus = name && name !== focus ? name : null;
+                document.getElementById("focusSelect").value = focus || "";
+                const pill = document.getElementById("focusPill");
+                pill.classList.toggle("hidden", !focus);
+                pill.classList.toggle("inline-flex", !!focus);
+                document.getElementById("focusPillText").textContent = focus ? `Focused: ${focus}` : "";
+                renderAll(false);
+            }
+
+            // === HERO ==============================================================
+            let heroShown = 0;
+            function countUp(el, to, fmtFn) {
+                const from = heroShown;
+                heroShown = to;
+                if (REDUCED) return (el.textContent = fmtFn(to));
+                const t0 = performance.now();
+                const step = (t) => {
+                    const k = Math.min(1, (t - t0) / 1400);
+                    el.textContent = fmtFn(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+                    if (k < 1) requestAnimationFrame(step);
+                };
+                requestAnimationFrame(step);
+            }
+
+            function renderHero() {
+                const v = view();
+                const p = priced(v);
+                const paid = sum(v, (r) => r.paid);
+                const value = sum(p, (r) => r.value);
+                const paidPriced = sum(p, (r) => r.paid);
+                const gain = value - paidPriced;
+                const roi = paidPriced ? (gain / paidPriced) * 100 : 0;
+                const cash = sum(v, (r) => r.cex?.cash);
+                const hwPaid = focus ? 0 : sum(HARDWARE, (h) => h.paid);
+                const hwEst = focus ? 0 : sum(HARDWARE, (h) => h.est);
+
+                document.getElementById("heroTitle").textContent = focus ? `${focus} by the numbers` : "The Numbers";
+                document.getElementById("heroSub").textContent = focus
+                    ? `${v.length} ${focus} games, every pound accounted for.`
+                    : `${v.length} games across ${consolesOf(v).length} consoles, plus ${HARDWARE.length} machines. Every pound accounted for.`;
+                countUp(document.getElementById("heroValue"), value, (n) => gbp(n, 0));
+                const g = document.getElementById("heroGain");
+                g.innerHTML = `<span style="color:${gain >= 0 ? GREEN : RED}">${gain >= 0 ? "▲" : "▼"} ${signedGbp(gain, 0)}</span> <span class="text-zinc-500 text-base">(${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%)</span>`;
+                document.getElementById("heroLine").innerHTML =
+                    `Paid <b class="text-white">${gbp(paidPriced, 0)}</b> for the ${p.length} games CeX can value.` +
+                    (p.length < v.length ? ` ${v.length - p.length} more have no price.` : "") +
+                    ` Selling the lot to CeX for cash would bring in <b class="text-white">${gbp(cash, 0)}</b>.`;
+
+                const free = v.filter((r) => r.paid === 0);
+                const tiles = [
+                    ["Total spent", gbp(paid, 0)],
+                    ["Games", fmt(v.length)],
+                    ["Avg paid", gbp(v.length ? paid / v.length : 0)],
+                    ["Avg worth", gbp(p.length ? value / p.length : 0)],
+                    ["Freebies", `${free.length} 🎁`],
+                    focus ? ["In profit", `${p.filter((r) => r.gain > 0).length} / ${p.length}`] : ["Games + hardware", gbp(value + hwEst, 0)],
+                ];
+                document.getElementById("heroTiles").innerHTML = tiles
+                    .map(([k, val]) => `<div class="tile"><div class="k">${k}</div><div class="v">${val}</div></div>`)
+                    .join("");
+            }
+
+            // === WATERFALL =========================================================
+            function renderWaterfall() {
+                const p = priced(view());
+                if (!p.length) return emptyChart("waterfall", "No CeX prices yet");
+                const consoles = consolesOf(p);
+                const gains = consoles
+                    .map((c) => ({ c, g: round2(sum(p.filter((r) => r.console === c), (r) => r.gain)) }))
+                    .sort((a, b) => b.g - a.g);
+                const paid = round2(sum(p, (r) => r.paid));
+                const cats = ["Paid", ...gains.map((x) => x.c), "Worth now"];
+                const baseArr = [0];
+                const up = ["-"];
+                const down = ["-"];
+                const totals = [paid];
+                let run = paid;
+                gains.forEach(({ g }) => {
+                    if (g >= 0) {
+                        baseArr.push(run);
+                        up.push(g);
+                        down.push("-");
+                        run += g;
+                    } else {
+                        run += g;
+                        baseArr.push(run);
+                        up.push("-");
+                        down.push(-g);
+                    }
+                    totals.push("-");
+                });
+                baseArr.push(0);
+                up.push("-");
+                down.push("-");
+                totals.push(round2(run));
+                chart("waterfall").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 8, top: 24, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            trigger: "axis",
+                            axisPointer: { type: "shadow" },
+                            formatter: (ps) => {
+                                const i = ps[0].dataIndex;
+                                if (i === 0) return `<b>Paid</b><br>${gbp(paid)}`;
+                                if (i === cats.length - 1) return `<b>Worth now</b><br>${gbp(run)}`;
+                                const { c, g } = gains[i - 1];
+                                const list = p.filter((r) => r.console === c);
+                                return `<b style="color:${consoleColor(c)}">${escapeHtml(c)}</b><br>${list.length} games<br>Paid ${gbp(sum(list, (r) => r.paid))} → worth ${gbp(sum(list, (r) => r.value))}<br><b style="color:${g >= 0 ? GREEN : RED}">${signedGbp(g)}</b>`;
+                            },
+                        },
+                        xAxis: { type: "category", data: cats, axisLabel: { color: "#a1a1aa", interval: 0, rotate: cats.length > 8 ? 35 : 0, formatter: (s) => short(s, 14) } },
+                        yAxis: { type: "value", axisLabel: { formatter: (v) => `£${fmt(v)}` } },
+                        series: [
+                            { type: "bar", stack: "w", data: baseArr, itemStyle: { color: "transparent" }, emphasis: { disabled: true }, tooltip: { show: false } },
+                            {
+                                type: "bar",
+                                stack: "w",
+                                data: totals.map((v, i) => (v === "-" ? v : { value: v, itemStyle: { color: i === 0 ? CYAN : GREEN, borderRadius: [6, 6, 0, 0] } })),
+                                label: { show: true, position: "top", color: "#e4e4e7", fontWeight: 700, formatter: (q) => gbp(q.value, 0) },
+                            },
+                            { type: "bar", stack: "w", data: up, itemStyle: { color: "rgba(74,222,128,0.75)", borderRadius: [4, 4, 0, 0] }, label: { show: true, position: "top", color: GREEN, fontSize: 11, formatter: (q) => `+${gbp(q.value, 0)}` } },
+                            { type: "bar", stack: "w", data: down, itemStyle: { color: "rgba(248,113,113,0.8)", borderRadius: [0, 0, 4, 4] }, label: { show: true, position: "bottom", color: RED, fontSize: 11, formatter: (q) => `−${gbp(q.value, 0)}` } },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === FUNNEL ============================================================
+            function renderFunnel() {
+                const v = view().filter((r) => r.cex);
+                if (!v.length) {
+                    document.getElementById("funnelNote").textContent = "";
+                    return emptyChart("funnel", "No CeX prices yet");
+                }
+                const sell = sum(v, (r) => r.cex.sell);
+                const voucher = sum(v, (r) => r.cex.voucher);
+                const cash = sum(v, (r) => r.cex.cash);
+                const paid = sum(v, (r) => r.paid);
+                chart("funnel").setOption(
+                    {
+                        ...base(),
+                        tooltip: { ...TOOLTIP, formatter: (q) => `<b>${q.name}</b><br>${gbp(q.value)}` },
+                        series: [
+                            {
+                                type: "funnel",
+                                left: "5%",
+                                width: "90%",
+                                top: 10,
+                                bottom: 10,
+                                sort: "descending",
+                                gap: 4,
+                                minSize: "18%",
+                                label: { show: true, position: "inside", color: "#0a0a0a", fontWeight: 800, lineHeight: 17, formatter: (q) => `${q.name}\n${gbp(q.value, 0)}` },
+                                itemStyle: { borderWidth: 0 },
+                                data: [
+                                    { name: "CeX shelf price", value: round2(sell), itemStyle: { color: GREEN } },
+                                    { name: "What Jake paid", value: round2(paid), itemStyle: { color: CYAN } },
+                                    { name: "CeX voucher offer", value: round2(voucher), itemStyle: { color: GOLD } },
+                                    { name: "CeX cash offer", value: round2(cash), itemStyle: { color: RED } },
+                                ],
+                            },
+                        ],
+                    },
+                    true,
+                );
+                document.getElementById("funnelNote").innerHTML =
+                    `Selling everything for cash would turn a <b class="text-profit">${gbp(sell - paid, 0)}</b> paper ${sell >= paid ? "profit" : "loss"} into a <b class="text-loss">${gbp(cash - paid, 0)}</b> real one. CeX keeps <b class="text-white">${((1 - cash / sell) * 100).toFixed(0)}%</b> of the shelf price. 🦈`;
+            }
+
+            // === TIMELINE ==========================================================
+            function renderTimeline() {
+                const v = view().filter((r) => r.date).sort((a, b) => a.time - b.time);
+                if (!v.length) return emptyChart("timeline", "No purchase dates");
+                const days = new Map();
+                v.forEach((r) => {
+                    const k = isoDay(r.date);
+                    if (!days.has(k)) days.set(k, { t: r.time, rows: [] });
+                    days.get(k).rows.push(r);
+                });
+                let spent = 0;
+                let worth = 0;
+                const spentLine = [];
+                const worthLine = [];
+                const dots = [];
+                [...days.values()].forEach(({ t, rows }) => {
+                    spent += sum(rows, (r) => r.paid);
+                    worth += sum(rows, (r) => r.value ?? r.paid);
+                    spentLine.push([t, round2(spent)]);
+                    worthLine.push([t, round2(worth)]);
+                    dots.push({ value: [t, round2(worth)], rows });
+                });
+                const now = Date.now();
+                spentLine.push([now, round2(spent)]);
+                worthLine.push([now, round2(worth)]);
+                // Most of the collection arrived recently; open on the last 18 months.
+                const first = v[0].time;
+                const startT = Math.max(first, now - 548 * 864e5);
+                const startPct = ((startT - first) / (now - first)) * 100;
+                chart("timeline").setOption(
+                    {
+                        ...base(),
+                        legend: { top: 0, right: 0, data: ["Worth (CeX)", "Spent"] },
+                        grid: { left: 8, right: 16, top: 36, bottom: 60, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            trigger: "axis",
+                            formatter: (ps) => {
+                                const t = ps[0].value[0];
+                                const w = ps.find((x) => x.seriesName === "Worth (CeX)");
+                                const s = ps.find((x) => x.seriesName === "Spent");
+                                const day = dots.find((d) => d.value[0] === t);
+                                return (
+                                    `<b>${prettyDate(new Date(t))}</b><br>` +
+                                    (s ? `Spent so far: <b>${gbp(s.value[1])}</b><br>` : "") +
+                                    (w ? `Worth so far: <b style="color:${GREEN}">${gbp(w.value[1])}</b>` : "") +
+                                    (day ? `<br><span style="color:#71717a">${day.rows.length} bought: ${day.rows.slice(0, 4).map((r) => escapeHtml(r.game)).join(", ")}${day.rows.length > 4 ? "…" : ""}</span>` : "")
+                                );
+                            },
+                        },
+                        xAxis: { type: "time" },
+                        yAxis: { type: "value", axisLabel: { formatter: (v) => `£${fmt(v)}` } },
+                        dataZoom: [
+                            { type: "inside", start: startPct, end: 100 },
+                            {
+                                type: "slider",
+                                start: startPct,
+                                end: 100,
+                                height: 22,
+                                bottom: 8,
+                                borderColor: "rgba(255,255,255,0.08)",
+                                fillerColor: "rgba(34,211,238,0.12)",
+                                handleStyle: { color: CYAN },
+                                textStyle: { color: "#71717a" },
+                                dataBackground: { lineStyle: { color: "#3f3f46" }, areaStyle: { color: "rgba(255,255,255,0.04)" } },
+                            },
+                        ],
+                        series: [
+                            {
+                                name: "Worth (CeX)",
+                                type: "line",
+                                step: "end",
+                                showSymbol: false,
+                                data: worthLine,
+                                lineStyle: { color: GREEN, width: 3 },
+                                itemStyle: { color: GREEN },
+                                areaStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: "rgba(74,222,128,0.35)" },
+                                        { offset: 1, color: "rgba(74,222,128,0)" },
+                                    ]),
+                                },
+                            },
+                            {
+                                name: "Spent",
+                                type: "line",
+                                step: "end",
+                                showSymbol: false,
+                                data: spentLine,
+                                lineStyle: { color: CYAN, width: 2, type: "dashed" },
+                                itemStyle: { color: CYAN },
+                            },
+                            {
+                                name: "Purchase days",
+                                type: "effectScatter",
+                                data: dots.map((d) => d.value),
+                                symbolSize: (val, q) => 6 + Math.sqrt(dots[q.dataIndex].rows.length) * 4,
+                                rippleEffect: { scale: 2.5, brushType: "stroke" },
+                                itemStyle: { color: GOLD },
+                                tooltip: { show: false },
+                                z: 3,
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === CALENDAR + HAULS ==================================================
+            function renderCalendar() {
+                const v = view().filter((r) => r.date);
+                const years = [...new Set(v.map((r) => r.date.getFullYear()))].sort();
+                if (!years.includes(calYear)) calYear = years[years.length - 1];
+                document.getElementById("calendarYears").innerHTML = years
+                    .map(
+                        (y) =>
+                            `<button data-y="${y}" class="px-3 py-1 rounded-full text-xs font-semibold border ${y === calYear ? "border-accent/60 text-accent bg-accent/10" : "border-white/10 text-zinc-400 hover:text-white"}">${y}</button>`,
+                    )
+                    .join("");
+                if (!years.length) return emptyChart("calendar", "No purchase dates");
+                const days = new Map();
+                v.filter((r) => r.date.getFullYear() === calYear).forEach((r) => {
+                    const k = isoDay(r.date);
+                    if (!days.has(k)) days.set(k, []);
+                    days.get(k).push(r);
+                });
+                const data = [...days].map(([k, rows]) => [k, round2(sum(rows, (r) => r.paid)), rows.length]);
+                const max = Math.max(10, ...data.map((d) => d[1]));
+                chart("calendar").setOption(
+                    {
+                        ...base(),
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (q) => {
+                                const rows = days.get(q.value[0]) || [];
+                                return `<b>${prettyDate(new Date(q.value[0]))}</b><br>${rows.length} game${rows.length === 1 ? "" : "s"} · <b>${gbp(q.value[1])}</b><br><span style="color:#a1a1aa">${rows.slice(0, 8).map((r) => escapeHtml(r.game)).join("<br>")}${rows.length > 8 ? "<br>…" : ""}</span>`;
+                            },
+                        },
+                        visualMap: {
+                            min: 0,
+                            max,
+                            show: false,
+                            inRange: { color: ["#164e63", "#22d3ee", "#4ade80", "#facc15"] },
+                        },
+                        calendar: {
+                            range: String(calYear),
+                            top: 28,
+                            left: 30,
+                            right: 8,
+                            cellSize: ["auto", 16],
+                            itemStyle: { color: "rgba(255,255,255,0.03)", borderColor: "#111", borderWidth: 3 },
+                            splitLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
+                            dayLabel: { color: "#52525b", fontSize: 9, firstDay: 1, nameMap: ["S", "M", "T", "W", "T", "F", "S"] },
+                            monthLabel: { color: "#a1a1aa", fontSize: 11 },
+                            yearLabel: { show: false },
+                        },
+                        series: [
+                            {
+                                type: "heatmap",
+                                coordinateSystem: "calendar",
+                                data: data.map((d) => [d[0], d[1], d[2]]),
+                                itemStyle: { borderRadius: 3 },
+                            },
+                        ],
+                    },
+                    true,
+                );
+
+                const all = new Map();
+                view()
+                    .filter((r) => r.date)
+                    .forEach((r) => {
+                        const k = isoDay(r.date);
+                        if (!all.has(k)) all.set(k, []);
+                        all.get(k).push(r);
+                    });
+                const top = [...all].sort((a, b) => b[1].length - a[1].length || sum(b[1], (r) => r.paid) - sum(a[1], (r) => r.paid)).slice(0, 8).reverse();
+                chart("hauls").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 110, top: 8, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (q) => {
+                                const rows = top[q.dataIndex][1];
+                                return `<b>${prettyDate(new Date(top[q.dataIndex][0]))}</b><br>${rows.slice(0, 10).map((r) => escapeHtml(r.game)).join("<br>")}${rows.length > 10 ? `<br>+${rows.length - 10} more` : ""}`;
+                            },
+                        },
+                        xAxis: { type: "value", show: false },
+                        yAxis: { type: "category", data: top.map(([k]) => prettyDate(new Date(k))), axisTick: { show: false } },
+                        series: [
+                            {
+                                type: "bar",
+                                data: top.map(([, rows], i) => ({
+                                    value: rows.length,
+                                    itemStyle: {
+                                        color: i === top.length - 1
+                                            ? new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: "#ca8a04" }, { offset: 1, color: "#fef08a" }])
+                                            : new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: "#0e7490" }, { offset: 1, color: CYAN }]),
+                                        borderRadius: [0, 6, 6, 0],
+                                    },
+                                })),
+                                label: {
+                                    show: true,
+                                    position: "right",
+                                    color: "#e4e4e7",
+                                    formatter: (q) => `${q.value} games · ${gbp(sum(top[q.dataIndex][1], (r) => r.paid), 0)}${q.dataIndex === top.length - 1 ? " 👑" : ""}`,
+                                },
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === ROI SCATTER =======================================================
+            function renderRoiScatter() {
+                const p = priced(view());
+                if (!p.length) return emptyChart("roiScatter", "No CeX prices yet");
+                const consoles = consolesOf(p);
+                const max = Math.ceil(Math.max(...p.map((r) => Math.max(r.paid, r.value))) / 10) * 10;
+                chart("roiScatter").setOption(
+                    {
+                        ...base(),
+                        legend: { type: "scroll", top: 0, data: consoles },
+                        grid: { left: 8, right: 16, top: 64, bottom: 8, containLabel: true },
+                        tooltip: { ...TOOLTIP, formatter: (q) => (q.data?.row ? gameTip(q.data.row) : "Break-even") },
+                        xAxis: { type: "value", name: "Paid", nameLocation: "middle", nameGap: 26, max, axisLabel: { formatter: "£{value}" } },
+                        yAxis: { type: "value", name: "Worth", max, axisLabel: { formatter: "£{value}" } },
+                        series: [
+                            {
+                                name: "Break-even",
+                                type: "line",
+                                data: [[0, 0], [max, max]],
+                                symbol: "none",
+                                lineStyle: { color: "#52525b", type: "dashed" },
+                                silent: true,
+                                areaStyle: { color: "rgba(248,113,113,0.04)", origin: "start" },
+                                markArea: undefined,
+                            },
+                            ...consoles.map((c) => ({
+                                name: c,
+                                type: "scatter",
+                                data: p
+                                    .filter((r) => r.console === c)
+                                    .map((r) => ({ value: [r.paid, r.value], row: r })),
+                                symbolSize: (val) => 8 + Math.min(18, Math.abs(val[1] - val[0])),
+                                itemStyle: { color: consoleColor(c), opacity: 0.8, borderColor: "rgba(0,0,0,0.4)" },
+                                emphasis: { focus: "series", itemStyle: { opacity: 1, shadowBlur: 12, shadowColor: consoleColor(c) } },
+                            })),
+                        ],
+                        graphic: [
+                            { type: "text", left: "14%", top: 76, style: { text: "📈 Profit zone", fill: "rgba(74,222,128,0.6)", font: "600 12px Inter" } },
+                            { type: "text", right: 40, bottom: 50, style: { text: "📉 Underwater", fill: "rgba(248,113,113,0.6)", font: "600 12px Inter" } },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            function renderGainers() {
+                const p = priced(view()).filter((r) => r.gain !== null);
+                if (!p.length) return emptyChart("gainers", "No CeX prices yet");
+                const sorted = [...p].sort((a, b) => b.gain - a.gain);
+                const n = Math.min(10, Math.floor(sorted.length / 2) || 1);
+                const top = sorted.slice(0, n);
+                const bottom = sorted.slice(-n).filter((r) => !top.includes(r) && r.gain < 0);
+                const list = [...bottom.sort((a, b) => a.gain - b.gain), ...top.reverse()];
+                chart("gainers").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 60, top: 8, bottom: 8, containLabel: true },
+                        tooltip: { ...TOOLTIP, formatter: (q) => gameTip(list[q.dataIndex]) },
+                        xAxis: { type: "value", axisLabel: { formatter: (v) => signedGbp(v, 0) } },
+                        yAxis: {
+                            type: "category",
+                            data: list.map((r) => short(r.game, 26)),
+                            axisTick: { show: false },
+                            axisLabel: { color: "#d4d4d8", fontSize: 11 },
+                        },
+                        series: [
+                            {
+                                type: "bar",
+                                data: list.map((r) => ({
+                                    value: r.gain,
+                                    itemStyle: {
+                                        color: r.gain >= 0 ? new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: "#166534" }, { offset: 1, color: GREEN }]) : new echarts.graphic.LinearGradient(1, 0, 0, 0, [{ offset: 0, color: "#7f1d1d" }, { offset: 1, color: RED }]),
+                                        borderRadius: r.gain >= 0 ? [0, 6, 6, 0] : [6, 0, 0, 6],
+                                    },
+                                })),
+                                label: { show: true, position: "right", color: "#e4e4e7", fontWeight: 700, formatter: (q) => signedGbp(q.value, 0) },
+                                animationDelay: (i) => i * 50,
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === TREEMAP ===========================================================
+            function renderTreemap() {
+                const p = priced(view()).filter((r) => r.value > 0);
+                if (!p.length) return emptyChart("treemap", "No CeX prices yet");
+                const data = consolesOf(p).map((c) => {
+                    const list = p.filter((r) => r.console === c);
+                    return {
+                        name: c,
+                        isConsole: true,
+                        itemStyle: { borderColor: consoleColor(c) },
+                        children: list.map((r) => ({
+                            name: r.game,
+                            value: r.value,
+                            row: r,
+                            itemStyle: { color: gainColor(r.gain) },
+                        })),
+                    };
+                });
+                chart("treemap").setOption(
+                    {
+                        ...base(),
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (q) => {
+                                if (q.data?.row) return gameTip(q.data.row);
+                                const list = p.filter((r) => r.console === q.name);
+                                if (!list.length) return "";
+                                return `<b style="color:${consoleColor(q.name)}">${escapeHtml(q.name)}</b><br>${list.length} games · worth ${gbp(sum(list, (r) => r.value))}<br>paid ${gbp(sum(list, (r) => r.paid))}`;
+                            },
+                        },
+                        series: [
+                            {
+                                type: "treemap",
+                                data,
+                                width: "100%",
+                                height: "90%",
+                                top: 0,
+                                roam: false,
+                                nodeClick: "zoomToNode",
+                                breadcrumb: { show: true, bottom: 0, itemStyle: { color: "#18181b", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e4e4e7" } } },
+                                label: { show: true, fontSize: 10, lineHeight: 13, color: "#fff", overflow: "truncate", formatter: (q) => `${q.name}\n${gbp(q.value, 0)}` },
+                                upperLabel: { show: true, height: 22, color: "#fff", fontWeight: 700, formatter: (q) => `${q.name} · ${gbp(q.value, 0)}` },
+                                levels: [
+                                    { itemStyle: { borderColor: "#0a0a0a", borderWidth: 0, gapWidth: 4 }, upperLabel: { show: false } },
+                                    { itemStyle: { borderWidth: 3, gapWidth: 1 } },
+                                    { itemStyle: { borderColor: "#0a0a0a", borderWidth: 1, gapWidth: 0 } },
+                                ],
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === PARETO + PRICE HISTOGRAM ==========================================
+            function renderPareto() {
+                const p = priced(view())
+                    .filter((r) => r.value > 0)
+                    .sort((a, b) => b.value - a.value);
+                const note = document.getElementById("paretoNote");
+                if (!p.length) {
+                    note.textContent = "";
+                    return emptyChart("pareto", "No CeX prices yet");
+                }
+                const total = sum(p, (r) => r.value);
+                let run = 0;
+                const cum = p.map((r) => +((run += r.value) / total * 100).toFixed(1));
+                const half = cum.findIndex((c) => c >= 50) + 1;
+                const eighty = cum.findIndex((c) => c >= 80) + 1;
+                note.innerHTML = `🔑 The top <b class="text-gold">${half}</b> games (${((half / p.length) * 100).toFixed(0)}% of the shelf) hold <b class="text-white">half</b> the value. It takes <b class="text-gold">${eighty}</b> games to reach 80%.`;
+                chart("pareto").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 8, top: 24, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            trigger: "axis",
+                            formatter: (ps) => {
+                                const i = ps[0].dataIndex;
+                                return `#${i + 1} <b>${escapeHtml(p[i].game)}</b><br>${gbp(p[i].value)}<br>Running share: <b>${cum[i]}%</b>`;
+                            },
+                        },
+                        xAxis: { type: "category", data: p.map((r, i) => i + 1), axisLabel: { interval: Math.ceil(p.length / 10) } },
+                        yAxis: [
+                            { type: "value", axisLabel: { formatter: "£{value}" } },
+                            { type: "value", max: 100, axisLabel: { formatter: "{value}%" }, splitLine: { show: false } },
+                        ],
+                        series: [
+                            {
+                                type: "bar",
+                                data: p.map((r) => ({ value: r.value, itemStyle: { color: consoleColor(r.console) } })),
+                                barCategoryGap: "10%",
+                            },
+                            {
+                                type: "line",
+                                yAxisIndex: 1,
+                                data: cum,
+                                showSymbol: false,
+                                smooth: true,
+                                lineStyle: { color: GOLD, width: 3 },
+                                markLine: {
+                                    symbol: "none",
+                                    silent: true,
+                                    lineStyle: { color: "rgba(250,204,21,0.4)", type: "dashed" },
+                                    label: { color: GOLD, position: "insideStartTop", formatter: "{c}%" },
+                                    data: [{ yAxis: 50 }, { yAxis: 80 }],
+                                },
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            const PRICE_BANDS = [
+                { label: "Free", test: (p) => p === 0 },
+                { label: "<£1", test: (p) => p > 0 && p < 1 },
+                { label: "£1", test: (p) => p >= 1 && p < 2 },
+                { label: "£2", test: (p) => p >= 2 && p < 3 },
+                { label: "£3", test: (p) => p >= 3 && p < 4 },
+                { label: "£4", test: (p) => p >= 4 && p < 5 },
+                { label: "£5", test: (p) => p >= 5 && p < 6 },
+                { label: "£6–8", test: (p) => p >= 6 && p < 9 },
+                { label: "£9–12", test: (p) => p >= 9 && p < 13 },
+                { label: "£13–20", test: (p) => p >= 13 && p <= 20 },
+                { label: "£20+", test: (p) => p > 20 },
+            ];
+            function renderPriceHist() {
+                const v = view();
+                const counts = PRICE_BANDS.map((b) => v.filter((r) => b.test(r.paid)).length);
+                const paidOnly = counts.slice(1);
+                const peak = paidOnly.indexOf(Math.max(...paidOnly)) + 1;
+                chart("priceHist").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (q) => {
+                                const list = v.filter((r) => PRICE_BANDS[q.dataIndex].test(r.paid));
+                                return `<b>${q.name}</b>: ${list.length} games<br><span style="color:#a1a1aa">${list.slice(0, 6).map((r) => escapeHtml(r.game)).join("<br>")}${list.length > 6 ? "<br>…" : ""}</span>`;
+                            },
+                        },
+                        xAxis: { type: "category", data: PRICE_BANDS.map((b) => b.label), axisLabel: { interval: 0, color: "#a1a1aa" } },
+                        yAxis: { type: "value" },
+                        series: [
+                            {
+                                type: "bar",
+                                data: counts.map((c, i) => ({
+                                    value: c,
+                                    itemStyle: {
+                                        color: i === peak ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "#fef08a" }, { offset: 1, color: "#ca8a04" }]) : i === 0 ? "#a78bfa" : new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: CYAN }, { offset: 1, color: "#0e7490" }]),
+                                        borderRadius: [6, 6, 0, 0],
+                                        shadowBlur: i === peak ? 20 : 0,
+                                        shadowColor: "rgba(250,204,21,0.6)",
+                                    },
+                                })),
+                                label: { show: true, position: "top", color: "#e4e4e7", fontWeight: 700, formatter: (q) => (q.dataIndex === peak ? `${q.value} ✨` : q.value || "") },
+                                animationDelay: (i) => i * 60,
+                            },
+                        ],
+                        graphic: counts[peak]
+                            ? [{ type: "text", right: 12, top: 4, style: { text: `Magic number: ${PRICE_BANDS[peak].label}`, fill: GOLD, font: "700 13px Inter" } }]
+                            : [],
+                    },
+                    true,
+                );
+            }
+
+            // === SANKEY ============================================================
+            const VALUE_BANDS = [
+                { label: "£0–2", test: (p) => p <= 2 },
+                { label: "£2–5", test: (p) => p > 2 && p <= 5 },
+                { label: "£5–10", test: (p) => p > 5 && p <= 10 },
+                { label: "£10–20", test: (p) => p > 10 && p <= 20 },
+                { label: "£20+", test: (p) => p > 20 },
+            ];
+            const PAID_BANDS = [{ label: "Free", test: (p) => p === 0 }, ...VALUE_BANDS.map((b, i) => (i === 0 ? { label: "£0.01–2", test: (p) => p > 0 && p <= 2 } : b))];
+            function renderSankey() {
+                const p = priced(view());
+                if (!p.length) return emptyChart("sankey", "No CeX prices yet");
+                const links = new Map();
+                const add = (s, t) => links.set(`${s}→${t}`, (links.get(`${s}→${t}`) || 0) + 1);
+                p.forEach((r) => {
+                    const pb = `Paid ${PAID_BANDS.find((b) => b.test(r.paid)).label}`;
+                    const vb = `Worth ${VALUE_BANDS.find((b) => b.test(r.value)).label}`;
+                    add(r.console, pb);
+                    add(pb, vb);
+                });
+                const used = new Set([...links.keys()].flatMap((k) => k.split("→")));
+                const bandColor = (i, n) => `hsl(${190 - (i / Math.max(1, n - 1)) * 140}, 75%, 58%)`;
+                const nodes = [
+                    ...consolesOf(p).map((c) => ({ name: c, itemStyle: { color: consoleColor(c) } })),
+                    ...PAID_BANDS.map((b, i) => ({ name: `Paid ${b.label}`, itemStyle: { color: bandColor(i, PAID_BANDS.length) } })),
+                    ...VALUE_BANDS.map((b, i) => ({ name: `Worth ${b.label}`, itemStyle: { color: bandColor(i + 1, PAID_BANDS.length) } })),
+                ].filter((n) => used.has(n.name));
+                chart("sankey").setOption(
+                    {
+                        ...base(),
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (q) =>
+                                q.dataType === "edge"
+                                    ? `${escapeHtml(q.data.source)} → ${escapeHtml(q.data.target)}<br><b>${q.data.value} games</b>`
+                                    : `<b>${escapeHtml(q.name)}</b><br>${q.value} games`,
+                        },
+                        series: [
+                            {
+                                type: "sankey",
+                                left: 4,
+                                right: 100,
+                                top: 8,
+                                bottom: 8,
+                                nodeGap: 8,
+                                nodeWidth: 14,
+                                emphasis: { focus: "adjacency" },
+                                data: nodes,
+                                links: [...links].map(([k, value]) => {
+                                    const [source, target] = k.split("→");
+                                    return { source, target, value };
+                                }),
+                                lineStyle: { color: "gradient", opacity: 0.35, curveness: 0.5 },
+                                label: { color: "#e4e4e7", fontSize: 12 },
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === DEPRECIATION ======================================================
+            function renderCliff() {
+                const list = view()
+                    .filter((r) => r.first && r.cex)
+                    .sort((a, b) => b.first - a.first)
+                    .slice(0, 20)
+                    .reverse();
+                if (!list.length) return emptyChart("cliff", "Waiting for full CeX data…");
+                const names = list.map((r) => short(r.game, 24));
+                chart("cliff").setOption(
+                    {
+                        ...base(),
+                        legend: { top: 0, data: ["Launch price", "Today"] },
+                        grid: { left: 8, right: 30, top: 32, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            trigger: "axis",
+                            axisPointer: { type: "shadow" },
+                            formatter: (ps) => {
+                                const r = list[ps[0].dataIndex];
+                                const kept = (r.cex.sell / r.first) * 100;
+                                return `<b>${escapeHtml(r.game)}</b><br>CeX launch: <b style="color:${RED}">${gbp(r.first)}</b><br>Today: <b style="color:${GOLD}">${gbp(r.cex.sell)}</b><br>Kept ${kept.toFixed(0)}% of its value`;
+                            },
+                        },
+                        xAxis: { type: "value", axisLabel: { formatter: "£{value}" } },
+                        yAxis: { type: "category", data: names, axisTick: { show: false }, axisLabel: { color: "#d4d4d8", fontSize: 11 } },
+                        series: [
+                            { type: "bar", stack: "c", data: list.map((r) => r.cex.sell), itemStyle: { color: "transparent" }, silent: true },
+                            {
+                                type: "bar",
+                                stack: "c",
+                                data: list.map((r) => Math.max(0, r.first - r.cex.sell)),
+                                barWidth: 8,
+                                itemStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                        { offset: 0, color: "rgba(250,204,21,0.5)" },
+                                        { offset: 1, color: "rgba(248,113,113,0.85)" },
+                                    ]),
+                                    borderRadius: 4,
+                                },
+                            },
+                            { name: "Launch price", type: "scatter", data: list.map((r, i) => [r.first, i]), symbolSize: 14, itemStyle: { color: RED, shadowBlur: 10, shadowColor: RED }, z: 3 },
+                            { name: "Today", type: "scatter", data: list.map((r, i) => [r.cex.sell, i]), symbolSize: 14, itemStyle: { color: GOLD, shadowBlur: 10, shadowColor: GOLD }, z: 4 },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            function renderRetained() {
+                const list = view().filter((r) => r.first && r.cex);
+                const note = document.getElementById("cliffNote");
+                if (!list.length) {
+                    note.textContent = "";
+                    return emptyChart("retained", "Waiting for full CeX data…");
+                }
+                const pcts = list.map((r) => Math.min(150, (r.cex.sell / r.first) * 100));
+                const bins = Array.from({ length: 11 }, (_, i) => i * 10);
+                const counts = bins.map((b, i) => pcts.filter((x) => (i === 10 ? x >= 100 : x >= b && x < b + 10)).length);
+                const launch = sum(list, (r) => r.first);
+                const now = sum(list, (r) => r.cex.sell);
+                note.innerHTML = `💸 These games once cost <b class="text-loss">${gbp(launch, 0)}</b> at CeX. Today they're <b class="text-gold">${gbp(now, 0)}</b>, so <b class="text-white">${((1 - now / launch) * 100).toFixed(0)}%</b> of the value has gone. ${counts[10] ? `${counts[10]} game${counts[10] > 1 ? "s are" : " is"} worth more than at launch. 🚀` : ""}`;
+                chart("retained").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
+                        tooltip: { ...TOOLTIP, formatter: (q) => `${q.name}: <b>${q.value}</b> games` },
+                        xAxis: { type: "category", data: bins.map((b, i) => (i === 10 ? "100%+" : `${b}–${b + 10}%`)), axisLabel: { interval: 0, rotate: 40, color: "#a1a1aa" } },
+                        yAxis: { type: "value" },
+                        series: [
+                            {
+                                type: "bar",
+                                data: counts.map((c, i) => ({
+                                    value: c,
+                                    itemStyle: { color: `hsl(${(i / 10) * 120}, 75%, 55%)`, borderRadius: [6, 6, 0, 0] },
+                                })),
+                                label: { show: true, position: "top", color: "#e4e4e7", formatter: (q) => q.value || "" },
+                                animationDelay: (i) => i * 60,
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === MOMENTUM ==========================================================
+            function renderMomentum() {
+                const list = view().filter((r) => r.cex && r.cex.prev);
+                if (!list.length) {
+                    emptyChart("updates", "");
+                    return emptyChart("momentum", "Waiting for full CeX data…");
+                }
+                const up = list.filter((r) => r.cex.sell > r.cex.prev);
+                const down = list.filter((r) => r.cex.sell < r.cex.prev);
+                const flat = list.length - up.length - down.length;
+                chart("momentum").setOption(
+                    {
+                        ...base(),
+                        tooltip: { ...TOOLTIP, formatter: (q) => `${q.name}: <b>${q.value}</b> games (${q.percent}%)` },
+                        series: [
+                            {
+                                type: "pie",
+                                radius: ["55%", "80%"],
+                                center: ["50%", "52%"],
+                                padAngle: 3,
+                                itemStyle: { borderRadius: 8 },
+                                label: { show: true, color: "#e4e4e7", lineHeight: 16, formatter: "{b}\n{c}" },
+                                data: [
+                                    { name: "📈 Up", value: up.length, itemStyle: { color: GREEN } },
+                                    { name: "📉 Down", value: down.length, itemStyle: { color: RED } },
+                                    { name: "➖ Same", value: flat, itemStyle: { color: SLATE } },
+                                ].filter((d) => d.value),
+                            },
+                        ],
+                        graphic: [
+                            {
+                                type: "text",
+                                left: "center",
+                                top: "middle",
+                                style: { text: up.length >= down.length ? "Bullish 🐂" : "Bearish 🐻", fill: up.length >= down.length ? GREEN : RED, font: "800 18px Inter", textAlign: "center" },
+                            },
+                        ],
+                    },
+                    true,
+                );
+                const months = {};
+                list.filter((r) => r.cex.updated).forEach((r) => {
+                    const k = r.cex.updated.slice(0, 7);
+                    months[k] = (months[k] || 0) + 1;
+                });
+                const keys = Object.keys(months).sort();
+                chart("updates").setOption(
+                    {
+                        ...base(),
+                        title: { text: "When CeX last changed each price", left: 0, top: 0, textStyle: { color: "#71717a", fontSize: 12, fontWeight: 500 } },
+                        grid: { left: 8, right: 8, top: 30, bottom: 8, containLabel: true },
+                        tooltip: { ...TOOLTIP, trigger: "axis" },
+                        xAxis: { type: "category", data: keys.map(monthLabel), axisLabel: { color: "#71717a", fontSize: 10 } },
+                        yAxis: { type: "value", splitNumber: 3 },
+                        series: [{ type: "bar", data: keys.map((k) => months[k]), itemStyle: { color: "#a78bfa", borderRadius: [4, 4, 0, 0] } }],
+                    },
+                    true,
+                );
+            }
+
+            function renderMovers() {
+                const list = view()
+                    .filter((r) => r.cex && r.cex.prev && r.cex.sell !== r.cex.prev)
+                    .map((r) => ({ r, d: round2(r.cex.sell - r.cex.prev) }))
+                    .sort((a, b) => a.d - b.d);
+                if (!list.length) return emptyChart("movers", "Waiting for full CeX data…");
+                const pick = [...list.slice(0, 8).filter((x) => x.d < 0), ...list.slice(-8).filter((x) => x.d > 0)];
+                const uniq = [...new Map(pick.map((x) => [x.r.id, x])).values()];
+                chart("movers").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 60, top: 8, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (q) => {
+                                const { r, d } = uniq[q.dataIndex];
+                                return `<b>${escapeHtml(r.game)}</b><br>${gbp(r.cex.prev)} → <b>${gbp(r.cex.sell)}</b> (<span style="color:${d >= 0 ? GREEN : RED}">${signedGbp(d)}</span>)${r.cex.updated ? `<br><span style="color:#71717a">Changed ${escapeHtml(r.cex.updated.slice(0, 10))}</span>` : ""}`;
+                            },
+                        },
+                        xAxis: { type: "value", axisLabel: { formatter: (v) => signedGbp(v, 0) } },
+                        yAxis: { type: "category", data: uniq.map((x) => short(x.r.game, 26)), axisTick: { show: false }, axisLabel: { color: "#d4d4d8", fontSize: 11 } },
+                        series: [
+                            {
+                                type: "bar",
+                                data: uniq.map(({ d }) => ({ value: d, itemStyle: { color: d >= 0 ? GREEN : RED, borderRadius: d >= 0 ? [0, 6, 6, 0] : [6, 0, 0, 6] } })),
+                                label: { show: true, position: "right", color: "#e4e4e7", fontWeight: 700, formatter: (q) => signedGbp(q.value, 0) },
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === RATING + SCARCITY =================================================
+            function renderRating() {
+                const list = view().filter((r) => r.rating && r.cex);
+                const note = document.getElementById("ratingNote");
+                if (list.length < 3) {
+                    note.textContent = "";
+                    return emptyChart("rating", "Waiting for full CeX data…");
+                }
+                const xs = list.map((r) => r.rating);
+                const ys = list.map((r) => r.cex.sell);
+                const r = pearson(xs, ys);
+                const mx = xs.reduce((a, b) => a + b, 0) / xs.length;
+                const my = ys.reduce((a, b) => a + b, 0) / ys.length;
+                const slope = sum(xs.map((x, i) => (x - mx) * (ys[i] - my)), (x) => x) / sum(xs, (x) => (x - mx) ** 2);
+                const lo = Math.min(...xs);
+                const hi = Math.max(...xs);
+                const verdict = Math.abs(r) < 0.1 ? "No link at all. Price ignores quality 🤷" : r > 0 ? (r > 0.3 ? "Yes, better-rated games cost more" : "A little: better-rated games cost slightly more") : "No, if anything better-rated games are cheaper";
+                note.innerHTML = `Correlation <b class="text-gold">r = ${r.toFixed(2)}</b>. ${verdict}.`;
+                chart("rating").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 16, top: 16, bottom: 8, containLabel: true },
+                        tooltip: { ...TOOLTIP, formatter: (q) => (q.data?.row ? `${gameTip(q.data.row)}<br>★ ${q.data.row.rating.toFixed(1)} · ${q.data.row.stock ?? "?"} in stock` : "Trend") },
+                        xAxis: { type: "value", name: "CeX rating ★", nameLocation: "middle", nameGap: 26, min: Math.floor(lo * 2) / 2, max: 5 },
+                        yAxis: { type: "value", name: "Price", min: 0, axisLabel: { formatter: "£{value}" } },
+                        series: [
+                            {
+                                type: "scatter",
+                                data: list.map((row) => ({
+                                    value: [row.rating, row.cex.sell],
+                                    row,
+                                    symbolSize: 6 + (30 - Math.min(30, row.stock ?? 30)) * 0.8,
+                                    itemStyle: { color: consoleColor(row.console), opacity: 0.75 },
+                                })),
+                            },
+                            {
+                                type: "line",
+                                data: [
+                                    [lo, Math.max(0, my + slope * (lo - mx))],
+                                    [hi, Math.max(0, my + slope * (hi - mx))],
+                                ],
+                                symbol: "none",
+                                lineStyle: { color: GOLD, width: 2, type: "dashed" },
+                                silent: true,
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            function renderScarce() {
+                const list = view()
+                    .filter((r) => r.stock !== null && r.stock < 10)
+                    .sort((a, b) => a.stock - b.stock || (b.value ?? 0) - (a.value ?? 0))
+                    .slice(0, 15)
+                    .reverse();
+                if (!list.length) return emptyChart("scarce", cexRunning ? "Waiting for full CeX data…" : "Nothing rare here. CeX has 10+ of everything 😌");
+                chart("scarce").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 80, top: 8, bottom: 8, containLabel: true },
+                        tooltip: { ...TOOLTIP, formatter: (q) => `${gameTip(list[q.dataIndex])}<br>🦄 ${list[q.dataIndex].stock} left at CeX` },
+                        xAxis: { type: "value", max: 10, name: "copies at CeX", nameLocation: "middle", nameGap: 26 },
+                        yAxis: { type: "category", data: list.map((r) => short(r.game, 26)), axisTick: { show: false }, axisLabel: { color: "#d4d4d8", fontSize: 11 } },
+                        series: [
+                            {
+                                type: "pictorialBar",
+                                symbol: "roundRect",
+                                symbolRepeat: true,
+                                symbolSize: [10, 14],
+                                symbolMargin: 3,
+                                symbolClip: true,
+                                data: list.map((r) => ({ value: r.stock, itemStyle: { color: r.stock === 0 ? RED : r.stock <= 3 ? "#e879f9" : "#a78bfa" } })),
+                                label: { show: true, position: "right", color: "#e4e4e7", offset: [8, 0], formatter: (q) => `${q.value === 0 ? "SOLD OUT" : q.value} · ${gbp(list[q.dataIndex].value ?? 0, 0)}` },
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === CONSOLE DNA =======================================================
+            function consoleStats(list) {
+                return consolesOf(list).map((c) => {
+                    const rows = list.filter((r) => r.console === c);
+                    const p = priced(rows);
+                    const paid = sum(rows, (r) => r.paid);
+                    const pPaid = sum(p, (r) => r.paid);
+                    const val = sum(p, (r) => r.value);
+                    const ratings = rows.map((r) => r.rating).filter(Boolean);
+                    return {
+                        c,
+                        n: rows.length,
+                        paid: round2(paid),
+                        value: round2(val),
+                        avg: round2(rows.length ? paid / rows.length : 0),
+                        gain: round2(val - pPaid),
+                        roi: pPaid ? Math.round((val / pPaid - 1) * 100) : 0,
+                        cib: Math.round((rows.filter((r) => r.cover !== false && r.insert !== false).length / rows.length) * 100),
+                        done: Math.round((rows.filter((r) => r.completed).length / rows.length) * 100),
+                        rating: ratings.length ? +(ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2) : null,
+                    };
+                });
+            }
+
+            function renderParallel() {
+                const stats = consoleStats(ROWS);
+                const dims = [
+                    ["Games", "n"],
+                    ["Spent £", "paid"],
+                    ["Worth £", "value"],
+                    ["Avg paid £", "avg"],
+                    ["Gain £", "gain"],
+                    ["ROI %", "roi"],
+                    ["Complete in box %", "cib"],
+                    ["Completed %", "done"],
+                ];
+                const consoles = stats.map((s) => s.c);
+                chart("parallel").setOption(
+                    {
+                        ...base(),
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (q) => {
+                                const s = stats[q.dataIndex];
+                                return `<b style="color:${consoleColor(s.c)}">${escapeHtml(s.c)}</b><br>` + dims.map(([n, k]) => `${n}: <b>${s[k] ?? "—"}</b>`).join("<br>");
+                            },
+                        },
+                        parallel: { left: 110, right: 60, top: 40, bottom: 20, parallelAxisDefault: { nameTextStyle: { color: "#a1a1aa", fontSize: 11 }, axisLine: { lineStyle: { color: "#3f3f46" } }, axisLabel: { color: "#71717a", fontSize: 10 }, splitLine: { show: false } } },
+                        parallelAxis: [
+                            { dim: 0, name: "Console", type: "category", data: consoles, axisLabel: { color: "#d4d4d8", fontSize: 11 } },
+                            ...dims.map(([name], i) => ({ dim: i + 1, name })),
+                        ],
+                        series: [
+                            {
+                                type: "parallel",
+                                smooth: true,
+                                lineStyle: { width: 3, opacity: 0.55 },
+                                emphasis: { lineStyle: { width: 5, opacity: 1 } },
+                                inactiveOpacity: 0.05,
+                                data: stats.map((s) => ({
+                                    value: [s.c, ...dims.map(([, k]) => s[k] ?? 0)],
+                                    lineStyle: { color: consoleColor(s.c), opacity: focus && s.c !== focus ? 0.08 : 0.6, width: focus === s.c ? 5 : 3 },
+                                })),
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            function renderBoxplot() {
+                const p = priced(ROWS).filter((r) => r.value > 0);
+                const consoles = consolesOf(p).filter((c) => p.filter((r) => r.console === c).length >= 3);
+                if (!consoles.length) return emptyChart("boxplot", "No CeX prices yet");
+                const boxes = consoles.map((c) => {
+                    const vals = p.filter((r) => r.console === c).map((r) => r.value).sort((a, b) => a - b);
+                    return [vals[0], quantile(vals, 0.25), quantile(vals, 0.5), quantile(vals, 0.75), vals[vals.length - 1]].map(round2);
+                });
+                const dots = [];
+                consoles.forEach((c, i) =>
+                    p.filter((r) => r.console === c).forEach((r) => dots.push({ value: [i + (Math.random() - 0.5) * 0.5, r.value], row: r })),
+                );
+                chart("boxplot").setOption(
+                    {
+                        ...base(),
+                        grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            formatter: (q) =>
+                                q.data?.row
+                                    ? gameTip(q.data.row)
+                                    : `<b>${escapeHtml(consoles[q.dataIndex])}</b><br>Max ${gbp(q.value[5])}<br>Upper quartile ${gbp(q.value[4])}<br>Median <b>${gbp(q.value[3])}</b><br>Lower quartile ${gbp(q.value[2])}<br>Min ${gbp(q.value[1])}`,
+                        },
+                        xAxis: [
+                            { type: "category", data: consoles, axisLabel: { color: "#a1a1aa", interval: 0, rotate: 30, formatter: (s) => short(s, 14) } },
+                            { type: "value", min: -0.5, max: consoles.length - 0.5, show: false },
+                        ],
+                        yAxis: { type: "log", logBase: 2, min: 1, axisLabel: { formatter: "£{value}" } },
+                        series: [
+                            {
+                                type: "boxplot",
+                                data: boxes.map((b, i) => ({
+                                    value: b,
+                                    itemStyle: { color: "rgba(255,255,255,0.04)", borderColor: consoleColor(consoles[i]), borderWidth: 2 },
+                                })),
+                                boxWidth: ["30%", "60%"],
+                            },
+                            {
+                                type: "scatter",
+                                xAxisIndex: 1,
+                                data: dots.map((d) => ({ ...d, itemStyle: { color: consoleColor(d.row.console), opacity: focus && d.row.console !== focus ? 0.1 : 0.7 } })),
+                                symbolSize: 6,
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === SKYLINE ===========================================================
+            function renderSkyline() {
+                if (!window["echarts-gl"]) {
+                    document.getElementById("skyline").closest(".card").style.display = "none";
+                    return;
+                }
+                const v = view().filter((r) => r.date);
+                const months = [...new Set(v.map((r) => monthKey(r.date)))].sort().slice(-12);
+                const consoles = consolesOf(v);
+                const data = [];
+                consoles.forEach((c, xi) =>
+                    months.forEach((m, yi) => {
+                        const rows = v.filter((r) => r.console === c && monthKey(r.date) === m);
+                        if (rows.length) data.push({ value: [xi, yi, rows.length], spent: sum(rows, (r) => r.paid), itemStyle: { color: consoleColor(c) } });
+                    }),
+                );
+                const axisText = { color: "#a1a1aa", fontSize: 10 };
+                try {
+                    chart("skyline").setOption(
+                        {
+                            tooltip: {
+                                ...TOOLTIP,
+                                formatter: (q) => `<b style="color:${consoleColor(consoles[q.value[0]])}">${escapeHtml(consoles[q.value[0]])}</b><br>${monthLabel(months[q.value[1]])}: <b>${q.value[2]}</b> games · ${gbp(q.data.spent ?? 0, 0)}`,
+                            },
+                            xAxis3D: { type: "category", data: consoles.map((c) => short(c, 12)), axisLabel: { ...axisText, interval: 0 }, name: "" },
+                            yAxis3D: { type: "category", data: months.map(monthLabel), axisLabel: axisText, name: "" },
+                            zAxis3D: { type: "value", axisLabel: axisText, name: "" },
+                            grid3D: {
+                                boxWidth: 160,
+                                boxDepth: 110,
+                                boxHeight: 70,
+                                axisLine: { lineStyle: { color: "#3f3f46" } },
+                                axisPointer: { lineStyle: { color: GOLD } },
+                                splitLine: { lineStyle: { color: "rgba(255,255,255,0.06)" } },
+                                environment: "none",
+                                viewControl: { autoRotate: !REDUCED, autoRotateSpeed: 6, distance: 230, alpha: 24, beta: 40 },
+                                light: { main: { intensity: 1.3, shadow: true, alpha: 40, beta: 30 }, ambient: { intensity: 0.35 } },
+                            },
+                            series: [{ type: "bar3D", data, shading: "lambert", bevelSize: 0.3 }],
+                        },
+                        true,
+                    );
+                } catch (e) {
+                    console.warn("3D skyline unavailable", e);
+                    document.getElementById("skyline").closest(".card").style.display = "none";
+                }
+            }
+
+            // === CONDITION / EDITIONS / BACKLOG ===================================
+            function conditionOf(r) {
+                if (r.sealed) return "Sealed";
+                if (r.cover === false) return "No cover";
+                if (r.insert === false) return "No insert";
+                return "Complete";
+            }
+            const CONDITIONS = [
+                ["Sealed", "#e879f9"],
+                ["Complete", GREEN],
+                ["No insert", GOLD],
+                ["No cover", RED],
+            ];
+            function renderCondition() {
+                const v = view();
+                const consoles = consolesOf(v).reverse();
+                chart("condition").setOption(
+                    {
+                        ...base(),
+                        legend: { top: 0 },
+                        grid: { left: 8, right: 16, top: 36, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            trigger: "axis",
+                            axisPointer: { type: "shadow" },
+                            formatter: (ps) => {
+                                const c = consoles[ps[0].dataIndex];
+                                const rows = v.filter((r) => r.console === c);
+                                return `<b style="color:${consoleColor(c)}">${escapeHtml(c)}</b> (${rows.length})<br>` + ps.map((p) => `${p.marker}${p.seriesName}: ${rows.filter((r) => conditionOf(r) === p.seriesName).length} (${p.value}%)`).join("<br>");
+                            },
+                        },
+                        xAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
+                        yAxis: { type: "category", data: consoles, axisTick: { show: false }, axisLabel: { color: "#d4d4d8" } },
+                        series: CONDITIONS.map(([name, color]) => ({
+                            name,
+                            type: "bar",
+                            stack: "c",
+                            barWidth: "60%",
+                            itemStyle: { color },
+                            data: consoles.map((c) => {
+                                const rows = v.filter((r) => r.console === c);
+                                return +((rows.filter((r) => conditionOf(r) === name).length / rows.length) * 100).toFixed(1);
+                            }),
+                        })),
+                    },
+                    true,
+                );
+            }
+
+            function renderEditions() {
+                const v = view();
+                const by = {};
+                v.forEach((r) => (by[r.edition] = (by[r.edition] || 0) + 1));
+                const standard = by.Standard || 0;
+                delete by.Standard;
+                const data = Object.entries(by).sort((a, b) => b[1] - a[1]);
+                const palette = [GOLD, "#e879f9", CYAN, GREEN, "#fb923c", RED, "#a78bfa", "#2dd4bf"];
+                chart("editions").setOption(
+                    {
+                        ...base(),
+                        tooltip: { ...TOOLTIP, formatter: (q) => `${escapeHtml(q.name)}: <b>${q.value}</b> (${q.percent}%)` },
+                        series: [
+                            {
+                                type: "pie",
+                                roseType: "radius",
+                                radius: ["18%", "72%"],
+                                center: ["50%", "50%"],
+                                itemStyle: { borderRadius: 6, borderColor: "#111", borderWidth: 2 },
+                                label: { color: "#d4d4d8", lineHeight: 15, formatter: "{b}\n{c}" },
+                                labelLine: { lineStyle: { color: "#52525b" } },
+                                data: data.map(([name, value], i) => ({ name, value, itemStyle: { color: palette[i % palette.length] } })),
+                                animationType: "scale",
+                                animationEasing: "elasticOut",
+                            },
+                        ],
+                        graphic: [
+                            {
+                                type: "text",
+                                left: "center",
+                                top: "middle",
+                                style: { text: `${standard}\nstandard`, fill: "#71717a", font: "700 13px Inter", textAlign: "center", lineHeight: 16 },
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            function renderBacklog() {
+                const v = view();
+                const consoles = consolesOf(v);
+                const done = v.filter((r) => r.completed).length;
+                const left = v.length - done;
+                const finish = new Date();
+                finish.setDate(finish.getDate() + left * 7);
+                document.getElementById("backlogNote").innerHTML =
+                    `🎮 <b class="text-gold">${done}</b> completed and <b class="text-white">${left}</b> not yet. At one game a week, the backlog clears on <b class="text-gold">${prettyDate(finish)}</b>. Good luck. 🫡`;
+                chart("backlog").setOption(
+                    {
+                        ...base(),
+                        legend: { top: 0 },
+                        grid: { left: 8, right: 8, top: 36, bottom: 8, containLabel: true },
+                        tooltip: { ...TOOLTIP, trigger: "axis", axisPointer: { type: "shadow" } },
+                        xAxis: { type: "category", data: consoles, axisLabel: { interval: 0, rotate: consoles.length > 6 ? 30 : 0, color: "#a1a1aa", formatter: (s) => short(s, 14) } },
+                        yAxis: { type: "value" },
+                        series: [
+                            {
+                                name: "Completed",
+                                type: "bar",
+                                stack: "b",
+                                data: consoles.map((c) => v.filter((r) => r.console === c && r.completed).length),
+                                itemStyle: { color: GOLD },
+                            },
+                            {
+                                name: "Not completed",
+                                type: "bar",
+                                stack: "b",
+                                data: consoles.map((c) => v.filter((r) => r.console === c && !r.completed).length),
+                                itemStyle: { color: SLATE, borderRadius: [6, 6, 0, 0] },
+                            },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === HARDWARE ==========================================================
+            function renderHardware() {
+                const hw = HARDWARE;
+                if (!hw.length) {
+                    document.getElementById("hwNote").textContent = "Couldn't load the Console tab.";
+                    return emptyChart("hardware", "No hardware data");
+                }
+                const paid = sum(hw, (h) => h.paid);
+                const est = sum(hw, (h) => h.est);
+                const free = hw.filter((h) => h.paid === 0);
+                document.getElementById("hwNote").innerHTML =
+                    `Paid <b class="text-white">${gbp(paid, 0)}</b> for machines now worth about <b class="text-profit">${gbp(est, 0)}</b> (<b style="color:${est >= paid ? GREEN : RED}">${signedGbp(est - paid, 0)}</b>).` +
+                    (free.length ? ` ${free.length} were gifts 🎁` : "");
+                const label = (h) => `${h.console}${h.version && h.version !== "Original" ? ` ${h.version}` : ""}`;
+                chart("hardware").setOption(
+                    {
+                        ...base(),
+                        legend: { top: 0, data: ["Paid", "Estimated value"] },
+                        grid: { left: 8, right: 8, top: 36, bottom: 8, containLabel: true },
+                        tooltip: {
+                            ...TOOLTIP,
+                            trigger: "axis",
+                            axisPointer: { type: "shadow" },
+                            formatter: (ps) => {
+                                const h = hw[ps[0].dataIndex];
+                                return `<b>${escapeHtml(label(h))}</b>${h.model ? ` <span style="color:#71717a">${escapeHtml(h.model)}</span>` : ""}<br>${escapeHtml(h.condition)} · bought ${prettyDate(h.date)}<br>Paid ${gbp(h.paid)} → est. <b>${gbp(h.est)}</b><br><b style="color:${h.est >= h.paid ? GREEN : RED}">${signedGbp(h.est - h.paid)}</b>`;
+                            },
+                        },
+                        xAxis: { type: "category", data: hw.map((h) => label(h)), axisLabel: { interval: 0, rotate: 25, color: "#a1a1aa", formatter: (s) => short(s, 18) } },
+                        yAxis: { type: "value", axisLabel: { formatter: "£{value}" } },
+                        series: [
+                            { name: "Paid", type: "bar", data: hw.map((h) => h.paid), itemStyle: { color: CYAN, borderRadius: [6, 6, 0, 0] } },
+                            {
+                                name: "Estimated value",
+                                type: "bar",
+                                data: hw.map((h) => h.est),
+                                itemStyle: { color: GREEN, borderRadius: [6, 6, 0, 0] },
+                                label: { show: true, position: "top", color: "#e4e4e7", fontSize: 11, formatter: (q) => signedGbp(hw[q.dataIndex].est - hw[q.dataIndex].paid, 0) },
+                            },
+                        ],
+                    },
+                    true,
+                );
+                document.getElementById("hwCards").innerHTML = [...hw]
+                    .sort((a, b) => (a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0))
+                    .map(
+                        (h) => `<div class="tile">
+                            <div class="flex justify-between gap-2"><div class="text-white font-semibold">${escapeHtml(label(h))}</div><div class="text-xs text-zinc-500 shrink-0">${prettyDate(h.date)}</div></div>
+                            <div class="text-xs text-zinc-500 mt-0.5">${escapeHtml(h.condition)}${h.model ? ` · ${escapeHtml(h.model)}` : ""}</div>
+                            ${h.notes ? `<div class="text-xs text-zinc-400 mt-2">${escapeHtml(h.notes)}</div>` : ""}</div>`,
+                    )
+                    .join("");
+            }
+
+            function renderHistory() {
+                const hist = readJSON(HISTORY_KEY, []);
+                const card = document.getElementById("historyCard");
+                if (focus || !Array.isArray(hist) || hist.length < 2) {
+                    card.style.display = focus ? "none" : "";
+                    if (!focus) emptyChart("history", "Not enough snapshots yet. Refresh CeX prices on the collection page a few times, at least an hour apart.");
+                    return;
+                }
+                card.style.display = "";
+                chart("history").setOption(
+                    {
+                        ...base(),
+                        legend: { top: 0, right: 0 },
+                        grid: { left: 8, right: 16, top: 36, bottom: 8, containLabel: true },
+                        tooltip: { ...TOOLTIP, trigger: "axis" },
+                        xAxis: { type: "time" },
+                        yAxis: { type: "value", scale: true, axisLabel: { formatter: (v) => `£${fmt(v)}` } },
+                        series: [
+                            { name: "Value", type: "line", smooth: true, data: hist.map((h) => [h.ts, h.value]), lineStyle: { color: GREEN, width: 3 }, itemStyle: { color: GREEN }, areaStyle: { color: "rgba(74,222,128,0.12)" } },
+                            { name: "Paid", type: "line", step: "end", data: hist.map((h) => [h.ts, h.paid]), lineStyle: { color: CYAN, type: "dashed" }, itemStyle: { color: CYAN } },
+                        ],
+                    },
+                    true,
+                );
+            }
+
+            // === FACTS =============================================================
+            function renderFacts() {
+                const v = view();
+                const p = priced(v).filter((r) => r.gain !== null);
+                const byGain = [...p].sort((a, b) => b.gain - a.gain);
+                const dear = [...v].sort((a, b) => b.paid - a.paid)[0];
+                const free = v.filter((r) => r.paid === 0);
+                const freeWorth = sum(free, (r) => r.value);
+                const dated = v.filter((r) => r.date).sort((a, b) => a.time - b.time);
+                const days = {};
+                dated.forEach((r) => (days[isoDay(r.date)] = (days[isoDay(r.date)] || 0) + 1));
+                const bigDay = Object.entries(days).sort((a, b) => b[1] - a[1])[0];
+                const rated = v.filter((r) => r.rating).sort((a, b) => b.rating - a.rating);
+                const sealed = v.filter((r) => r.sealed);
+                const paid = sum(v, (r) => r.paid);
+                const months = {};
+                dated.forEach((r) => (months[monthKey(r.date)] = (months[monthKey(r.date)] || 0) + r.paid));
+                const bigMonth = Object.entries(months).sort((a, b) => b[1] - a[1])[0];
+                const span = dated.length ? (Date.now() - dated[0].time) / 864e5 : 0;
+                const facts = [
+                    byGain[0] && byGain[0].gain > 0 && ["🚀", "Best flip", signedGbp(byGain[0].gain), `${byGain[0].game}: paid ${gbp(byGain[0].paid)}, now ${gbp(byGain[0].value)}`],
+                    byGain.length && byGain[byGain.length - 1].gain < 0 && ["💀", "Worst buy", signedGbp(byGain[byGain.length - 1].gain), `${byGain[byGain.length - 1].game}: paid ${gbp(byGain[byGain.length - 1].paid)}, now ${gbp(byGain[byGain.length - 1].value)}`],
+                    dear && ["💳", "Biggest splurge", gbp(dear.paid), `${dear.game} (${dear.console})`],
+                    ["🎁", "Freebies", `${free.length} games`, `Cost nothing, worth ${gbp(freeWorth, 0)} at CeX`],
+                    bigDay && ["🛒", "The Great Haul", `${bigDay[1]} games`, `All on ${prettyDate(new Date(bigDay[0]))}`],
+                    bigMonth && ["📆", "Spendiest month", gbp(bigMonth[1], 0), monthLabel(bigMonth[0])],
+                    dated[0] && ["🧓", "Longest owned", dated[0].game, `Since ${prettyDate(dated[0].date)}, ${Math.floor((Date.now() - dated[0].time) / 864e5 / 365.25)} years ago`],
+                    rated[0] && ["⭐", "CeX's favourite", `★ ${rated[0].rating.toFixed(1)}`, rated[0].game],
+                    ["🍺", "In pints", `${fmt(Math.round(paid / 5.5))} pints`, `${gbp(paid, 0)} at £5.50 a pint`],
+                    sealed.length && ["📦", "Sealed hoard", `${sealed.length} sealed`, `Worth ${gbp(sum(sealed, (r) => r.value), 0)} and never opened`],
+                    span > 0 && ["⏱️", "Collecting rate", `${(v.length / (span / 7)).toFixed(2)}/week`, `Since the first purchase in ${dated[0].date.getFullYear()}`],
+                    p.length && ["📈", "In profit", `${p.filter((r) => r.gain > 0).length} of ${p.length}`, `${p.filter((r) => r.gain < 0).length} underwater, ${p.filter((r) => r.gain === 0).length} exactly break-even`],
+                ].filter(Boolean);
+                document.getElementById("facts").innerHTML = facts
+                    .map(
+                        ([emoji, label, big, small]) => `<div class="card !p-4 hover:border-profit/30 transition-colors">
+                        <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-zinc-500"><span class="text-lg">${emoji}</span>${escapeHtml(label)}</div>
+                        <div class="text-2xl font-extrabold text-white mt-2 break-words">${escapeHtml(big)}</div>
+                        <div class="text-xs text-zinc-500 mt-1 line-clamp-3">${escapeHtml(small)}</div></div>`,
+                    )
+                    .join("");
+            }
+
+            // === LEDGER ============================================================
+            function renderLedger() {
+                const q = document.getElementById("search").value.trim().toLowerCase();
+                const { k, dir } = ledgerSort;
+                const list = view()
+                    .filter((r) => !q || `${r.game} ${r.console} ${r.notes} ${r.edition}`.toLowerCase().includes(q))
+                    .sort((a, b) => {
+                        const x = a[k];
+                        const y = b[k];
+                        if (x == null && y == null) return a.id - b.id;
+                        if (x == null) return 1;
+                        if (y == null) return -1;
+                        const c = typeof x === "string" ? x.localeCompare(y) : x - y;
+                        return c * dir || a.id - b.id;
+                    });
+                document.getElementById("ledgerCount").textContent = `${list.length} shown`;
+                const money = (n) => (n == null ? '<span class="text-zinc-700">—</span>' : gbp(n));
+                document.getElementById("ledgerBody").innerHTML = list
+                    .map(
+                        (r) => `<tr class="border-t border-white/5 hover:bg-white/[0.02]">
+                        <td class="py-2 px-2"><div class="font-semibold text-zinc-100">${escapeHtml(r.game)}</div>${r.edition !== "Standard" || r.sealed ? `<div class="text-xs text-zinc-500">${escapeHtml(r.edition)}${r.sealed ? " · sealed" : ""}</div>` : ""}</td>
+                        <td class="py-2 px-2 whitespace-nowrap"><span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="color:${consoleColor(r.console)};background:${consoleColor(r.console)}1f">${escapeHtml(r.console)}</span></td>
+                        <td class="py-2 px-2 text-right money">${money(r.paid)}</td>
+                        <td class="py-2 px-2 text-right money text-white">${money(r.value)}</td>
+                        <td class="py-2 px-2 text-right money font-bold" style="color:${r.gain == null ? "#52525b" : r.gain >= 0 ? GREEN : RED}">${r.gain == null ? "—" : signedGbp(r.gain)}</td>
+                        <td class="py-2 px-2 text-right money text-zinc-400">${r.roi == null ? "—" : `${r.roi >= 0 ? "+" : ""}${r.roi.toFixed(0)}%`}</td>
+                        <td class="py-2 px-2 text-right money text-zinc-500">${money(r.first)}</td>
+                        <td class="py-2 px-2 text-right text-zinc-400">${r.rating ? r.rating.toFixed(1) : "—"}</td>
+                        <td class="py-2 px-2 text-right ${r.stock !== null && r.stock < 10 ? "text-fuchsia-400 font-bold" : "text-zinc-500"}">${r.stock ?? "—"}</td>
+                        <td class="py-2 px-2 text-right text-zinc-500 whitespace-nowrap">${r.date ? prettyDate(r.date) : "—"}</td></tr>`,
+                    )
+                    .join("");
+                document.querySelectorAll("th.sortable").forEach((th) => (th.style.color = th.dataset.k === k ? "#67e8f9" : ""));
+            }
+
+            // === RENDER ============================================================
+            function renderAll(first) {
+                const steps = [
+                    renderHero, renderWaterfall, renderFunnel, renderTimeline, renderCalendar, renderRoiScatter,
+                    renderGainers, renderTreemap, renderPareto, renderPriceHist, renderSankey, renderCliff,
+                    renderRetained, renderMomentum, renderMovers, renderRating, renderScarce, renderParallel,
+                    renderBoxplot, renderCondition, renderEditions, renderBacklog, renderHardware, renderHistory,
+                    renderFacts, renderLedger,
+                ];
+                if (first || focus !== lastSkylineFocus) {
+                    lastSkylineFocus = focus;
+                    steps.push(renderSkyline);
+                }
+                // One broken chart shouldn't take the rest of the page with it.
+                steps.forEach((fn) => {
+                    try {
+                        fn();
+                    } catch (e) {
+                        console.error(fn.name, e);
+                    }
+                });
+            }
+            let lastSkylineFocus;
+
+            function wireEvents() {
+                const consoleClick = (name) => name && consolesOf(ROWS).includes(name) && setFocus(name);
+                chart("waterfall").on("click", (q) => consoleClick(q.name));
+                chart("treemap").on("click", (q) => q.data?.isConsole && !focus && consoleClick(q.name));
+                chart("sankey").on("click", (q) => q.dataType === "node" && consoleClick(q.name));
+                chart("condition").on("click", (q) => consoleClick(q.name));
+                chart("backlog").on("click", (q) => consoleClick(q.name));
+                chart("parallel").on("click", (q) => consoleClick(q.data?.value?.[0]));
+
+                document.getElementById("focusSelect").addEventListener("change", (e) => setFocus(e.target.value || null));
+                document.getElementById("focusPill").addEventListener("click", () => setFocus(null));
+                document.getElementById("cexRefresh").addEventListener("click", () => loadCex(true));
+                document.getElementById("calendarYears").addEventListener("click", (e) => {
+                    const b = e.target.closest("[data-y]");
+                    if (!b) return;
+                    calYear = +b.dataset.y;
+                    renderCalendar();
+                });
+                document.getElementById("search").addEventListener("input", renderLedger);
+                document.querySelectorAll("th.sortable").forEach((th) =>
+                    th.addEventListener("click", () => {
+                        const k = th.dataset.k;
+                        const numeric = !["game", "console"].includes(k);
+                        ledgerSort = { k, dir: ledgerSort.k === k ? -ledgerSort.dir : numeric ? -1 : 1 };
+                        renderLedger();
+                    }),
+                );
+                let rt;
+                window.addEventListener("resize", () => {
+                    clearTimeout(rt);
+                    rt = setTimeout(() => Object.values(charts).forEach((c) => c.resize()), 120);
+                });
+            }
+
+            (async () => {
+                try {
+                    await init();
+                    document.getElementById("loading").remove();
+                    renderAll(true);
+                    wireEvents();
+                    // Tailwind's CDN build styles the grid after first paint, so charts
+                    // measured during init can be sized for the wrong column width.
+                    const resizeAll = () => Object.values(charts).forEach((c) => c.resize());
+                    requestAnimationFrame(resizeAll);
+                    setTimeout(resizeAll, 600);
+                    document.fonts?.ready.then(resizeAll);
+                    loadCex(false);
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById("loadingText").innerHTML =
+                        `<span class="text-red-400">Couldn't load the collection: ${escapeHtml(err.message)}</span><br><a href="index.html" class="text-accent underline">Back to the collection</a>`;
+                    document.querySelector("#loading .spinner")?.remove();
+                }
+            })();
+        </script>
+    </body>
+</html>
