@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Operation Collection</title>
+        <link rel="icon" href="favicon.ico" sizes="48x48" />
+        <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+        <script src="theme-palette.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            accent: "#ff8a00",
+                            "accent-dim": "#b35f00",
+                            ink: "#07090a",
+                            surface: "#11150f",
+                            zinc: ramp("#eef0e6", "#06070a"),
+                            emerald: ramp("#e6ffcc", "#1a3d05"),
+                        },
+                        animation: {
+                            fadeIn: "fadeIn 0.2s ease",
+                            fadeInUp: "fadeInUp 0.3s ease",
+                            slideUp: "slideUp 0.25s ease",
+                        },
+                        keyframes: {
+                            fadeIn: { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
+                            fadeInUp: {
+                                "0%": { opacity: "0", transform: "translateY(10px)" },
+                                "100%": { opacity: "1", transform: "translateY(0)" },
+                            },
+                            slideUp: {
+                                "0%": { opacity: "0", transform: "scaleY(0.02)" },
+                                "60%": { opacity: "1", transform: "scaleY(1.02)" },
+                                "100%": { opacity: "1", transform: "scaleY(1)" },
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="collection-base.css" />
+        <link rel="stylesheet" href="theme-kit.css" />
+        <style>
+            :root {
+                --accent: #ff8a00;
+                --accent-rgb: 255, 138, 0;
+                --accent-dim: #b35f00;
+                --accent-soft: #ffb050;
+                --accent-ink: #1a0d00;
+                --surface: #11150f;
+                --ink: #07090a;
+                --hud: #c8ff5a;
+                --hud-rgb: 200, 255, 90;
+                --line: rgba(200, 255, 90, 0.18);
+                --tnav-bg: rgba(5, 7, 5, 0.92);
+                --tnav-border: rgba(255, 138, 0, 0.35);
+                --tnav-fg: #c9cfbf;
+                --tnav-active-bg: #ff8a00;
+                --tnav-active-fg: #140a00;
+                --tnav-radius: 0;
+                --tnav-font: "Rajdhani", sans-serif;
+                --crosshair: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Cg stroke='%23c8ff5a' stroke-width='2'%3E%3Cpath d='M16 3v8M16 21v8M3 16h8M21 16h8'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%23ff8a00'/%3E%3C/svg%3E") 16 16, crosshair;
+            }
+            html { background: #050605; }
+            body {
+                font-family: "Rajdhani", sans-serif;
+                font-weight: 500;
+                color: #dfe3d6;
+                cursor: var(--crosshair);
+                min-height: 100vh;
+                background:
+                    radial-gradient(ellipse at 50% 0%, rgba(255, 138, 0, 0.08), transparent 55%),
+                    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.75)),
+                    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cg fill='none' stroke='%23c8ff5a' stroke-opacity='0.07' stroke-width='1.2'%3E%3Cpath d='M-50 120 C80 60 160 180 300 110 S520 40 650 140'/%3E%3Cpath d='M-50 160 C90 100 170 230 300 150 S520 90 650 190'/%3E%3Cpath d='M-50 205 C100 150 180 280 300 195 S520 140 650 240'/%3E%3Cpath d='M-50 330 C60 380 200 290 320 360 S540 420 650 330'/%3E%3Cpath d='M-50 370 C60 430 210 330 320 400 S540 470 650 370'/%3E%3Cpath d='M-50 420 C70 480 220 380 320 450 S540 520 650 420'/%3E%3Cellipse cx='450' cy='520' rx='60' ry='30'/%3E%3Cellipse cx='450' cy='520' rx='95' ry='52'/%3E%3Cellipse cx='120' cy='40' rx='50' ry='22'/%3E%3C/g%3E%3C/svg%3E"),
+                    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 80px 80px,
+                    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 80px 80px,
+                    #0a0c09;
+                background-attachment: fixed;
+            }
+            button, a, input, .lc, .chip { cursor: var(--crosshair) !important; }
+            .scan {
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                z-index: 590;
+                background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+            }
+            .scan::after {
+                content: "";
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 160px;
+                background: linear-gradient(transparent, rgba(var(--hud-rgb), 0.05), transparent);
+                animation: sweepDown 7s linear infinite;
+            }
+            @keyframes sweepDown { from { top: -160px; } to { top: 100%; } }
+            .wrap { position: relative; z-index: 2; max-width: 1760px; margin: 0 auto; padding: 26px 18px 120px; }
+            @media (min-width: 768px) { .wrap { padding: 32px 44px 140px; } }
+
+            .mono { font-family: "Share Tech Mono", monospace; }
+            .hud-box {
+                position: relative;
+                background: linear-gradient(180deg, rgba(20, 26, 18, 0.85), rgba(10, 13, 9, 0.9));
+                border: 1px solid rgba(var(--hud-rgb), 0.16);
+                padding: 18px 20px;
+            }
+            .hud-box::before, .hud-box::after {
+                content: "";
+                position: absolute;
+                width: 16px;
+                height: 16px;
+                border: 2px solid var(--accent);
+                pointer-events: none;
+            }
+            .hud-box::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+            .hud-box::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+            .hud-label {
+                font-family: "Share Tech Mono", monospace;
+                font-size: 11px;
+                letter-spacing: 0.25em;
+                color: var(--hud);
+                text-transform: uppercase;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 12px;
+            }
+            .hud-label::before { content: ""; width: 8px; height: 8px; background: var(--accent); animation: blink 1.2s steps(2) infinite; }
+            .hud-label::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(var(--hud-rgb), 0.35), transparent); }
+            @keyframes blink { 50% { opacity: 0.2; } }
+
+            /* ---- Briefing header ---------------------------------------- */
+            .brief { display: grid; grid-template-columns: 1fr; gap: 22px; align-items: center; }
+            @media (min-width: 1024px) { .brief { grid-template-columns: 1fr 240px; } }
+            .classified {
+                font-family: "Share Tech Mono", monospace;
+                font-size: 13px;
+                color: var(--hud);
+                min-height: 1.4em;
+                white-space: pre-wrap;
+            }
+            .classified .cur { display: inline-block; width: 9px; height: 15px; background: var(--hud); vertical-align: -2px; animation: blink 0.8s steps(2) infinite; }
+            .op-title {
+                font-family: "Black Ops One", cursive;
+                font-size: clamp(38px, 6.6vw, 98px);
+                line-height: 0.95;
+                margin: 12px 0 6px;
+                color: #f1f3ea;
+                text-shadow: 0 0 30px rgba(255, 138, 0, 0.25), 3px 3px 0 rgba(0, 0, 0, 0.6);
+            }
+            .op-title span { color: var(--accent); }
+            .op-sub { font-size: 18px; color: #9aa38c; letter-spacing: 0.08em; text-transform: uppercase; }
+            .op-links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+            .tac-btn {
+                font-family: "Rajdhani", sans-serif;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                font-size: 13px;
+                padding: 8px 16px;
+                color: #e8ebe0;
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+                transition: all 0.12s ease;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .tac-btn:hover, .kit-sfx.on { background: var(--accent); color: #140a00; border-color: var(--accent); }
+            #radar { width: 240px; height: 240px; margin: 0 auto; display: block; }
+            .radar-wrap { position: relative; }
+            .radar-wrap .mono { position: absolute; bottom: -4px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--hud); letter-spacing: 0.2em; }
+
+            /* Rank / XP */
+            .rank { display: flex; align-items: center; gap: 18px; margin-top: 24px; flex-wrap: wrap; }
+            .insignia { width: 64px; height: 64px; flex-shrink: 0; filter: drop-shadow(0 0 10px rgba(255, 138, 0, 0.5)); }
+            .rank-name { font-family: "Black Ops One", cursive; font-size: 24px; color: #fff; line-height: 1; }
+            .rank-lvl { font-family: "Share Tech Mono", monospace; color: var(--accent); font-size: 14px; }
+            .xp { flex: 1; min-width: 220px; }
+            .xp-bar { height: 10px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); position: relative; overflow: hidden; }
+            .xp-fill { height: 100%; background: repeating-linear-gradient(90deg, var(--accent) 0 14px, #ffb050 14px 16px); box-shadow: 0 0 14px var(--accent); transition: width 1.2s cubic-bezier(0.2, 1, 0.3, 1); }
+            .xp-meta { display: flex; justify-content: space-between; font-family: "Share Tech Mono", monospace; font-size: 12px; color: #9aa38c; margin-top: 4px; }
+
+            /* ---- Combat record (stats) ---------------------------------- */
+            #stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; }
+            .rec { padding: 14px 16px; }
+            .rec-label { font-family: "Share Tech Mono", monospace; font-size: 11px; letter-spacing: 0.2em; color: #8d9680; }
+            .rec-value { font-family: "Black Ops One", cursive; font-size: 26px; white-space: nowrap; line-height: 1.1; margin-top: 4px; color: #fff; }
+            .rec-value.or { color: var(--accent); }
+            .rec-value.gr { color: var(--hud); }
+            .rec-value.rd { color: #ff4d4d; }
+            .rec-sub { font-size: 13px; color: #8d9680; }
+
+            .kit-total-label { font-family: "Share Tech Mono", monospace; font-size: 10px; letter-spacing: 0.18em; color: #8d9680; text-transform: uppercase; }
+            .kit-total-value { font-family: "Share Tech Mono", monospace; font-size: 22px; color: #fff; }
+            .kit-total[data-k="value"] .kit-total-value { color: var(--accent); }
+            .kit-total[data-k="cash"] .kit-total-value { color: var(--hud); }
+            .kit-total-value.is-up { color: var(--hud); }
+            .kit-total-value.is-down { color: #ff4d4d; }
+            .kit-status { font-family: "Share Tech Mono", monospace; color: #8d9680; }
+
+            /* ---- Controls ------------------------------------------------ */
+            .ghost-btn, .accent-btn, .seg button, .chip {
+                font-family: "Rajdhani", sans-serif;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                border-radius: 0;
+                font-size: 13px;
+            }
+            .ghost-btn { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.18); }
+            .ghost-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(255, 138, 0, 0.08); }
+            .accent-btn { background: var(--accent); color: #140a00; border-color: var(--accent); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+            .accent-btn:hover { background: #ffb050; color: #000; }
+            .seg { border-radius: 0; border-color: rgba(255, 255, 255, 0.18); }
+            .seg button.active { background: var(--accent); color: #140a00; }
+            .chip { border-radius: 0; padding: 5px 12px; }
+            .chip.active { background: var(--hud); border-color: var(--hud); color: #0a1400; }
+            .chip:hover { border-color: var(--hud); }
+            .kit-search input { background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(var(--hud-rgb), 0.3); color: var(--hud); font-family: "Share Tech Mono", monospace; font-size: 14px; }
+            .kit-search input::placeholder { color: rgba(var(--hud-rgb), 0.45); }
+            .kit-search input:focus { border-color: var(--hud); box-shadow: 0 0 18px rgba(var(--hud-rgb), 0.25); }
+            .kit-dropdown { background: #0e120c; border: 1px solid var(--accent); }
+            .kit-badge { background: var(--accent); color: #140a00; border-radius: 0; }
+            .kit-caret { color: var(--accent); }
+            .kit-panel:not(.collapsed) { padding-top: 18px; border-top: 1px dashed rgba(var(--hud-rgb), 0.25); }
+            .kit-summary { font-family: "Share Tech Mono", monospace; color: #8d9680; font-size: 12px; }
+            #filterGroups h3, #breakdownSection h3, #breakdownSection h4 { font-family: "Share Tech Mono", monospace; letter-spacing: 0.2em !important; }
+
+            /* ---- Loadout cards ------------------------------------------ */
+            .sec-h { font-family: "Black Ops One", cursive; font-size: 34px; margin: 40px 0 18px; display: flex; align-items: center; gap: 16px; }
+            .sec-h small { font-family: "Share Tech Mono", monospace; font-size: 13px; color: #8d9680; }
+            .sec-h::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, var(--accent), transparent); }
+            #cardsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+            .lc {
+                --rc: #8d9680;
+                position: relative;
+                background: linear-gradient(180deg, #161c13, #0b0e09);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-top: 3px solid var(--rc);
+                clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+                transition: transform 0.15s ease, box-shadow 0.15s ease;
+                animation: deploy 0.4s ease backwards;
+                display: flex;
+                flex-direction: column;
+            }
+            @keyframes deploy { from { opacity: 0; transform: translateX(-12px); filter: brightness(3); } }
+            .lc:hover { transform: translateY(-4px); box-shadow: 0 0 0 1px var(--rc), 0 0 30px color-mix(in srgb, var(--rc) 45%, transparent); }
+            .lc[data-r="0"] { --rc: #9aa38c; }
+            .lc[data-r="1"] { --rc: #4ade4a; }
+            .lc[data-r="2"] { --rc: #3b9bff; }
+            .lc[data-r="3"] { --rc: #b05cff; }
+            .lc[data-r="4"], .lc[data-r="5"] { --rc: #ff8a00; }
+            .lc-art { position: relative; aspect-ratio: 3 / 3.4; overflow: hidden; background: radial-gradient(circle, #1d2519, #0b0e09); }
+            .lc-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(0.75) contrast(1.1); transition: filter 0.2s ease, transform 0.4s ease; }
+            .lc:hover .lc-art img { filter: saturate(1.1) contrast(1.15); transform: scale(1.06); }
+            .lc-art::after {
+                /* rarity glow from below */
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(0deg, color-mix(in srgb, var(--rc) 40%, transparent), transparent 45%);
+                pointer-events: none;
+            }
+            .noart { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "Black Ops One", cursive; font-size: 42px; color: rgba(255, 255, 255, 0.1); }
+            .target { position: absolute; inset: 14%; z-index: 3; pointer-events: none; opacity: 0; transition: all 0.2s ease; transform: scale(1.4); }
+            .lc:hover .target { opacity: 1; transform: scale(1); }
+            .target i { position: absolute; width: 22px; height: 22px; border: 2px solid var(--hud); }
+            .target i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+            .target i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+            .target i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+            .target i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+            .target b { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; margin: -15px; border: 1px solid rgba(var(--hud-rgb), 0.8); border-radius: 50%; }
+            .target b::before, .target b::after { content: ""; position: absolute; background: var(--hud); }
+            .target b::before { left: 50%; top: -8px; bottom: -8px; width: 1px; }
+            .target b::after { top: 50%; left: -8px; right: -8px; height: 1px; }
+            .lc-tag {
+                position: absolute;
+                z-index: 4;
+                font-family: "Share Tech Mono", monospace;
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                padding: 2px 6px;
+                text-transform: uppercase;
+            }
+            .lc-tag.tl { top: 8px; left: 8px; background: rgba(0, 0, 0, 0.75); color: var(--rc); border: 1px solid var(--rc); }
+            .lc-tag.tr { top: 8px; right: 22px; background: var(--hud); color: #0a1400; }
+            .lc-tag.bl { bottom: 8px; left: 8px; right: 8px; background: rgba(0, 0, 0, 0.8); color: #e8ebe0; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .lc-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+            .lc-title { font-weight: 700; font-size: 17px; line-height: 1.05; text-transform: uppercase; min-height: 36px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+            .lc-class { font-family: "Share Tech Mono", monospace; font-size: 11px; color: #8d9680; letter-spacing: 0.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .sbar { display: grid; grid-template-columns: 54px 1fr; align-items: center; gap: 8px; font-family: "Share Tech Mono", monospace; font-size: 10px; color: #8d9680; letter-spacing: 0.1em; }
+            .sbar div { height: 5px; background: rgba(255, 255, 255, 0.08); position: relative; }
+            .sbar div span { position: absolute; inset: 0 auto 0 0; background: var(--rc); box-shadow: 0 0 8px var(--rc); }
+            .lc-foot { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+            .lc-rar { font-family: "Share Tech Mono", monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--rc); text-transform: uppercase; }
+            .lc-val { font-family: "Black Ops One", cursive; font-size: 20px; color: #fff; line-height: 1; text-align: right; }
+            .lc-val small { display: block; font-family: "Share Tech Mono", monospace; font-size: 10px; color: #8d9680; }
+            .cond { width: 18px; height: 18px; font-size: 9px; border-radius: 0; }
+            .lc.tbc .lc-art img { filter: grayscale(1) brightness(0.35); }
+            .lock {
+                position: absolute;
+                inset: 0;
+                z-index: 4;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                font-family: "Black Ops One", cursive;
+                color: #ffcf7a;
+                font-size: 18px;
+                text-shadow: 0 2px 6px #000;
+                background: repeating-linear-gradient(45deg, rgba(255, 138, 0, 0.08) 0 10px, transparent 10px 20px);
+            }
+            .lock span:first-child { font-size: 38px; }
+            .lc.sealed { border-top-color: #e2c25e; }
+            .lc.sealed::before {
+                /* gold diamond camo */
+                content: "";
+                position: absolute;
+                inset: 0;
+                z-index: 1;
+                pointer-events: none;
+                mix-blend-mode: overlay;
+                opacity: 0.5;
+                background:
+                    linear-gradient(135deg, #f5d774 25%, transparent 25%) -10px 0 / 20px 20px,
+                    linear-gradient(225deg, #b8912c 25%, transparent 25%) -10px 0 / 20px 20px,
+                    linear-gradient(315deg, #f5d774 25%, transparent 25%) 0 0 / 20px 20px,
+                    linear-gradient(45deg, #b8912c 25%, transparent 25%) 0 0 / 20px 20px;
+                animation: camo 3s linear infinite;
+            }
+            @keyframes camo { to { background-position: 10px 20px, 10px 20px, 20px 20px, 20px 20px; } }
+            .delta-up { color: var(--hud); }
+            .delta-down { color: #ff4d4d; }
+
+            /* Hitmarker + XP pop */
+            .hitm { position: fixed; z-index: 999; width: 34px; height: 34px; margin: -17px; pointer-events: none; animation: hitm 0.35s ease-out forwards; }
+            .hitm::before, .hitm::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 3px; margin: -1.5px -17px; background: linear-gradient(90deg, #fff 0 35%, transparent 35% 65%, #fff 65%); }
+            .hitm::before { transform: rotate(45deg); }
+            .hitm::after { transform: rotate(-45deg); }
+            @keyframes hitm { from { transform: scale(1.5); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
+            .xppop { position: fixed; z-index: 999; pointer-events: none; font-family: "Black Ops One", cursive; font-size: 22px; color: #ffe066; text-shadow: 0 0 10px rgba(255, 200, 0, 0.6), 2px 2px 0 #000; animation: xppop 1s ease-out forwards; }
+            @keyframes xppop { from { transform: translate(-50%, 0); opacity: 1; } to { transform: translate(-50%, -60px); opacity: 0; } }
+
+            /* ---- Table / wall / shelf ----------------------------------- */
+            #tableWrap { background: rgba(10, 13, 9, 0.92); border: 1px solid rgba(var(--hud-rgb), 0.16); }
+            .gtable { font-family: "Share Tech Mono", monospace; font-size: 12px; }
+            .gtable th { background: #0e120c; color: var(--hud); }
+            .gtable tbody tr:hover { background: rgba(255, 138, 0, 0.1); }
+            .wall-tile:hover { outline: 2px solid var(--hud); }
+            #shelfView { background: repeating-linear-gradient(to bottom, transparent 0, transparent 178px, #2d3327 178px, #4b5540 182px, #12160f 190px, transparent 190px, transparent 214px), #0b0e09; }
+
+            /* ---- Breakdown bits ----------------------------------------- */
+            .bar-track { border-radius: 0; }
+            .bar-fill, .vbar, .spark div { background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 0; }
+            .hm-cell { border-radius: 0; }
+            .hm-cell[data-n="1"] { background: #3d2600; }
+            .hm-cell[data-n="2"] { background: #7a4a00; }
+            .hm-cell[data-n="3"] { background: #c46e00; }
+            .hm-cell[data-n="4"] { background: #ff8a00; }
+
+            /* ---- Overlays & modal --------------------------------------- */
+            .ov { background: rgba(3, 5, 3, 0.92); }
+            .ov-panel.ov-card { background: #0e120c; border: 1px solid var(--accent); padding: 26px; }
+            .ov-title { font-family: "Black Ops One", cursive; font-size: 38px; }
+            .ov-sub, .ov-roll-console { font-family: "Share Tech Mono", monospace; color: #8d9680; }
+            .ov-kicker { font-family: "Share Tech Mono", monospace; font-size: 12px; letter-spacing: 0.3em; color: var(--accent); margin-bottom: 16px; text-transform: uppercase; }
+            .ov-roll-cover { border: 2px solid var(--accent); box-shadow: 0 0 60px rgba(255, 138, 0, 0.4); }
+            .ov-roll-title { font-family: "Black Ops One", cursive; font-size: 30px; }
+            .ov-arrow, .ov-x { color: var(--accent); }
+            #wrappedOverlay { background: radial-gradient(ellipse at center, #1a1f14, #000); }
+            #wrappedSlide .text-6xl, #wrappedSlide .text-7xl, #wrappedSlide .text-4xl { font-family: "Black Ops One", cursive; font-weight: 400; }
+            .trophy { border-radius: 0; background: #11150f; }
+            .trophy.unlocked { border-color: var(--accent); background: linear-gradient(150deg, rgba(255, 138, 0, 0.15), transparent 60%), #11150f; }
+            .kit-modal { background: rgba(3, 5, 3, 0.9); }
+            .kit-modal-box { background: linear-gradient(180deg, #141a11, #090c08); border: 1px solid rgba(var(--hud-rgb), 0.2); border-top: 3px solid var(--accent); }
+            #modalBody h2 { font-family: "Black Ops One", cursive; font-weight: 400 !important; text-transform: uppercase; }
+            .brief-h { font-family: "Share Tech Mono", monospace; font-size: 12px; letter-spacing: 0.25em; color: var(--hud); margin-bottom: 12px; border-bottom: 1px dashed rgba(var(--hud-rgb), 0.3); padding-bottom: 8px; }
+            .kit-modal-close, .kit-modal-nav { border-radius: 0; background: rgba(0, 0, 0, 0.7); border: 1px solid var(--accent); color: var(--accent); }
+            .kit-modal-close:hover, .kit-modal-nav:hover { background: var(--accent); color: #000; }
+            .kit-toast { font-family: "Share Tech Mono", monospace; background: #0e120c; border: 1px solid var(--hud); color: var(--hud); }
+            .kit-toast-error { border-color: #ff4d4d; color: #ff4d4d; }
+            .kit-loading { background: rgba(0, 0, 0, 0.88); }
+            .kit-loading-panel { font-family: "Share Tech Mono", monospace; color: var(--hud); letter-spacing: 0.2em; }
+            .load-bars { display: flex; gap: 4px; justify-content: center; margin-bottom: 14px; }
+            .load-bars i { width: 8px; height: 26px; background: var(--accent); animation: lb 0.9s ease-in-out infinite; }
+            .load-bars i:nth-child(2) { animation-delay: 0.1s; }
+            .load-bars i:nth-child(3) { animation-delay: 0.2s; }
+            .load-bars i:nth-child(4) { animation-delay: 0.3s; }
+            .load-bars i:nth-child(5) { animation-delay: 0.4s; }
+            @keyframes lb { 50% { transform: scaleY(0.3); opacity: 0.4; } }
+
+            /* Killstreak banner */
+            .kit-toasts { top: 90px; bottom: auto; }
+            .streak {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 10px 22px 10px 12px;
+                background: linear-gradient(90deg, rgba(0, 0, 0, 0.9), rgba(30, 20, 0, 0.9));
+                border-left: 4px solid var(--accent);
+                box-shadow: 0 0 40px rgba(255, 138, 0, 0.3);
+                color: #fff;
+            }
+            .streak-icon { font-size: 34px; }
+            .streak-top { font-family: "Share Tech Mono", monospace; font-size: 11px; letter-spacing: 0.25em; color: var(--accent); }
+            .streak-name { font-family: "Black Ops One", cursive; font-size: 24px; line-height: 1; }
+            .streak button { margin-left: 12px; }
+            .nuke { position: fixed; inset: 0; z-index: 2000; background: #fff; pointer-events: none; animation: nuke 2.6s ease-out forwards; }
+            @keyframes nuke { 0% { opacity: 0; } 8% { opacity: 1; } 40% { opacity: 1; background: #ffe9c2; } 100% { opacity: 0; background: #ff8a00; } }
+            .footer { margin-top: 60px; text-align: center; font-family: "Share Tech Mono", monospace; font-size: 11px; color: #5d6555; letter-spacing: 0.2em; }
+            @media (prefers-reduced-motion: reduce) { .scan::after, .lc.sealed::before { animation: none; } }
+            @media (max-width: 640px) { #cardsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .lc-title { font-size: 14px; } }
+        </style>
+    </head>
+    <body>
+        <div class="scan"></div>
+        <div class="wrap">
+            <header class="hud-box animate-fadeInUp">
+                <div class="brief">
+                    <div>
+                        <div class="classified" id="typer"></div>
+                        <h1 class="op-title">OPERATION:<br /><span>COLLECTION</span></h1>
+                        <div class="op-sub">Physical games · completeness · live CeX valuation</div>
+                        <div class="op-links">
+                            <a class="tac-btn" href="achievements.html">🏆 Achievements</a>
+                            <a class="tac-btn" href="stats.html">📈 Stats</a>
+                            <span id="sfxSlot"></span>
+                        </div>
+                        <div class="rank">
+                            <svg class="insignia" id="insignia" viewBox="0 0 64 64"></svg>
+                            <div>
+                                <div class="rank-name" id="rankName">RECRUIT</div>
+                                <div class="rank-lvl" id="rankLvl">LVL 1</div>
+                            </div>
+                            <div class="xp">
+                                <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0"></div></div>
+                                <div class="xp-meta"><span id="xpNow">0 XP</span><span id="xpNext">NEXT RANK</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="radar-wrap">
+                        <canvas id="radar" width="480" height="480"></canvas>
+                        <div class="mono">THEATRES OF OPERATION</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="hud-box" style="margin-top: 18px">
+                <div class="hud-label">Combat record</div>
+                <div id="stats"></div>
+            </section>
+
+            <section class="hud-box" style="margin-top: 18px">
+                <div class="hud-label">Intel // market value</div>
+                <div data-kit="value"></div>
+            </section>
+
+            <section class="hud-box" style="margin-top: 18px; position: sticky; top: 49px; z-index: 40">
+                <div data-kit="controls"></div>
+            </section>
+
+            <h2 class="sec-h">ARMORY <small id="armoryCount"></small></h2>
+            <div id="cardsGrid"></div>
+            <div id="tableWrap" class="hidden overflow-x-auto scroll-thin"></div>
+            <div id="wallView" class="hidden"></div>
+            <div id="shelfView" class="hidden"></div>
+            <div class="footer">// END OF TRANSMISSION //</div>
+        </div>
+
+        <script>
+            window.THEME = {
+                sfxDemo: "hit",
+                labels: {
+                    search: "> SEARCH INTEL: TITLE / PLATFORM / EDITION  [ / ]",
+                    grid: "Loadout",
+                    table: "Manifest",
+                    wall: "Recon",
+                    shelf: "Armory",
+                    refresh: "Resupply",
+                    breakdown: "After-action",
+                    filters: "Filters",
+                    clear: "Reset filters",
+                    roll: "🎯 Next mission",
+                    trophies: "🎖 Medals",
+                    wrapped: "📼 Debrief",
+                    guess: "💷 Intel test",
+                    health: "🩺 Medic",
+                    print: "🖨 Dossier",
+                    cex: "Request market intel",
+                    rollTitle: "Next mission",
+                    trophyTitle: "Medals & Commendations",
+                    healthTitle: "Field Medic Report",
+                    guessTitle: "Intel test: CeX price",
+                    close: "Dismiss",
+                    empty: "NO TARGETS MATCH. ADJUST FILTERS.",
+                },
+                loadingHTML: `<div class="load-bars"><i></i><i></i><i></i><i></i><i></i></div><div>ESTABLISHING UPLINK…</div>`,
+            };
+        </script>
+        <script src="theme-kit.js"></script>
+        <script src="collection-core.js"></script>
+        <script>
+            (function () {
+                kit.install();
+                document.getElementById("sfxSlot").outerHTML = kit.sfxButton("tac-btn");
+
+                // Collection skews cheap, so rarity steps up early: <£2, £2+, £5+, £10+, £20+.
+                const RARITY = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Legendary"];
+                const RANKS = ["Recruit", "Private", "Corporal", "Sergeant", "Staff Sgt", "Lieutenant", "Captain", "Major", "Colonel", "Commander"];
+
+                // ---- Typewriter briefing ---------------------------------------
+                const typer = document.getElementById("typer");
+                const now = new Date();
+                const stamp = `${String(now.getDate()).padStart(2, "0")}.${String(now.getMonth() + 1).padStart(2, "0")}.${now.getFullYear()} // ${now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}Z`;
+                const line = `[CLASSIFIED] ${stamp} // OPERATIVE: JAKE // STATUS: ACTIVE`;
+                let ti = 0;
+                const type = () => {
+                    typer.innerHTML = escapeHtml(line.slice(0, ti)) + '<span class="cur"></span>';
+                    if (ti++ < line.length) setTimeout(type, 22 + Math.random() * 30);
+                };
+                type();
+
+                // ---- Insignia: chevrons by rank ------------------------------------
+                const insignia = (n) => {
+                    let s = "";
+                    const chev = Math.min(3, n);
+                    for (let i = 0; i < chev; i++)
+                        s += `<path d="M10 ${40 - i * 10} L32 ${26 - i * 10} L54 ${40 - i * 10}" stroke="#ff8a00" stroke-width="6" fill="none" stroke-linejoin="miter"/>`;
+                    if (n > 3) {
+                        const stars = Math.min(3, n - 3);
+                        for (let i = 0; i < stars; i++) {
+                            const cx = 32 + (i - (stars - 1) / 2) * 16;
+                            s += `<polygon points="${[0, 1, 2, 3, 4].map((k) => { const a = -Math.PI / 2 + (k * 4 * Math.PI) / 5; return `${cx + Math.cos(a) * 7},${52 + Math.sin(a) * 7}`; }).join(" ")}" fill="#ffe066"/>`;
+                        }
+                    }
+                    return `<rect x="2" y="2" width="60" height="60" fill="none" stroke="rgba(200,255,90,.4)" stroke-width="2"/>${s}`;
+                };
+
+                // ---- Radar ----------------------------------------------------------
+                const radar = document.getElementById("radar");
+                const rctx = radar.getContext("2d");
+                let blips = [];
+                let sweep = 0;
+                const drawRadar = () => {
+                    const W = radar.width;
+                    const c = W / 2;
+                    rctx.clearRect(0, 0, W, W);
+                    rctx.save();
+                    rctx.beginPath();
+                    rctx.arc(c, c, c - 6, 0, Math.PI * 2);
+                    rctx.fillStyle = "rgba(8, 20, 6, 0.85)";
+                    rctx.fill();
+                    rctx.clip();
+                    rctx.strokeStyle = "rgba(200,255,90,0.25)";
+                    rctx.lineWidth = 2;
+                    for (let r = 1; r <= 4; r++) {
+                        rctx.beginPath();
+                        rctx.arc(c, c, ((c - 6) * r) / 4, 0, Math.PI * 2);
+                        rctx.stroke();
+                    }
+                    rctx.beginPath();
+                    rctx.moveTo(c, 0); rctx.lineTo(c, W);
+                    rctx.moveTo(0, c); rctx.lineTo(W, c);
+                    rctx.stroke();
+                    const g = rctx.createConicGradient ? rctx.createConicGradient(sweep - Math.PI / 2.2, c, c) : null;
+                    if (g) {
+                        g.addColorStop(0, "rgba(200,255,90,0)");
+                        g.addColorStop(0.12, "rgba(200,255,90,0.35)");
+                        g.addColorStop(0.125, "rgba(200,255,90,0)");
+                        rctx.fillStyle = g;
+                        rctx.fillRect(0, 0, W, W);
+                    }
+                    for (const b of blips) {
+                        let diff = (sweep - b.a) % (Math.PI * 2);
+                        if (diff < 0) diff += Math.PI * 2;
+                        const alpha = Math.max(0.15, 1 - diff / (Math.PI * 1.6));
+                        const x = c + Math.cos(b.a) * b.d * (c - 20);
+                        const y = c + Math.sin(b.a) * b.d * (c - 20);
+                        rctx.beginPath();
+                        rctx.fillStyle = `rgba(255,${b.big ? 80 : 138},0,${alpha})`;
+                        rctx.arc(x, y, b.r, 0, Math.PI * 2);
+                        rctx.fill();
+                        if (alpha > 0.6) {
+                            rctx.fillStyle = `rgba(220,255,160,${alpha})`;
+                            rctx.font = "20px Share Tech Mono";
+                            rctx.fillText(b.label, x + b.r + 4, y + 6);
+                        }
+                    }
+                    rctx.restore();
+                    sweep += 0.025;
+                    requestAnimationFrame(drawRadar);
+                };
+                drawRadar();
+
+                THEME.onData = () => {
+                    const counts = {};
+                    allData.filter((r) => !isTBC(r)).forEach((r) => {
+                        const n = normalizeConsole(r["Console Version"]);
+                        counts[n] = (counts[n] || 0) + 1;
+                    });
+                    const max = Math.max(1, ...Object.values(counts));
+                    blips = Object.entries(counts).map(([name, n]) => ({
+                        a: kit.hash(name) * Math.PI * 2,
+                        d: 0.25 + kit.hash(name + "d") * 0.7,
+                        r: 4 + (n / max) * 12,
+                        big: n === max,
+                        label: name.replace("PlayStation ", "PS").replace("Xbox ", "X").toUpperCase(),
+                    }));
+                };
+
+                // ---- Combat record ----------------------------------------------------
+                window.displayStats = function () {
+                    const s = kit.stats();
+                    const kd = s.paid > 0 ? s.value / s.paid : 0;
+                    const rec = (label, value, sub = "", cls = "") => `
+                        <div class="rec hud-box">
+                            <div class="rec-label">${label}</div>
+                            <div class="rec-value ${cls}">${value}</div>
+                            ${sub ? `<div class="rec-sub">${sub}</div>` : ""}
+                        </div>`;
+                    document.getElementById("stats").innerHTML =
+                        rec("ARSENAL", s.games, `${s.consoles} theatres`) +
+                        rec("K/D RATIO", kd.toFixed(2), "value ÷ spend", kd >= 1 ? "gr" : "rd") +
+                        rec("WAR CHEST", fmtMoney(s.value), `${s.priced}/${s.games} priced`, "or") +
+                        rec("SPENT", fmtMoney(s.paid)) +
+                        rec("NET GAIN", fmtSigned(s.gain), `${s.gainPct >= 0 ? "+" : "−"}${Math.abs(s.gainPct)}%`, s.gain >= 0 ? "gr" : "rd") +
+                        rec("MISSIONS WON", s.completed, `${s.completedPct}% complete`) +
+                        rec("ACCURACY", `${s.games ? Math.round((s.complete / s.games) * 100) : 0}%`, "complete in box") +
+                        rec("MINT CONDITION", s.sealed, "sealed", "or") +
+                        (s.toBuy > 0 ? rec("TARGETS", s.toBuy, "to acquire", "rd") : "");
+
+                    // XP: 100 per game, 250 per completion, 10 per £ of value.
+                    const xp = Math.round(s.games * 100 + s.completed * 250 + s.value * 10);
+                    const per = 4000;
+                    const lvl = Math.floor(xp / per) + 1;
+                    const rankIdx = Math.min(RANKS.length - 1, Math.floor((lvl - 1) / 2));
+                    document.getElementById("rankName").textContent = RANKS[rankIdx].toUpperCase();
+                    document.getElementById("rankLvl").textContent = `LVL ${lvl} · PRESTIGE ${Math.floor(lvl / 20)}`;
+                    document.getElementById("xpFill").style.width = `${((xp % per) / per) * 100}%`;
+                    document.getElementById("xpNow").textContent = `${xp.toLocaleString("en-GB")} XP`;
+                    document.getElementById("xpNext").textContent = `${(per - (xp % per)).toLocaleString("en-GB")} TO LVL ${lvl + 1}`;
+                    document.getElementById("insignia").innerHTML = insignia(rankIdx);
+                };
+
+                // ---- Loadout cards ----------------------------------------------------
+                window.displayCards = function (data) {
+                    const grid = document.getElementById("cardsGrid");
+                    document.getElementById("armoryCount").textContent = `// ${data.length} ITEMS`;
+                    if (!data.length) {
+                        grid.innerHTML = kit.empty();
+                        return;
+                    }
+                    const frag = document.createDocumentFragment();
+                    data.forEach((row, index) => {
+                        const c = kit.card(row);
+                        const el = document.createElement("div");
+                        el.className = `lc${c.tbc ? " tbc" : ""}${c.sealed ? " sealed" : ""}`;
+                        el.dataset.r = c.tier;
+                        el.style.animationDelay = `${Math.min(index * 0.012, 0.35)}s`;
+                        const bar = (label, pct) => `<div class="sbar"><span>${label}</span><div><span style="width:${Math.max(3, Math.min(100, pct))}%"></span></div></div>`;
+                        const roi = c.paid > 0 ? 50 + c.gainPct / 4 : c.value > 0 ? 100 : 50;
+                        const comp = (c.hasCoverArt !== false ? 34 : 0) + (c.hasInsert !== false ? 33 : 0) + (c.completed ? 33 : 0);
+                        el.innerHTML = `
+                            <div class="lc-art">
+                                ${c.cover ? kit.img(c.cover, "", c.title) : `<div class="noart">?</div>`}
+                                <div class="target"><i></i><i></i><i></i><i></i><b></b></div>
+                                <span class="lc-tag tl">${RARITY[c.tier]}</span>
+                                ${c.completed ? `<span class="lc-tag tr">✓ Complete</span>` : ""}
+                                ${c.edition !== "Standard" ? `<span class="lc-tag bl">${escapeHtml(c.edition)}</span>` : ""}
+                                ${c.tbc ? `<div class="lock"><span>🔒</span><span>LOCKED</span><span class="mono" style="font-size:11px;letter-spacing:.2em">NOT ACQUIRED</span></div>` : ""}
+                            </div>
+                            <div class="lc-body">
+                                <div class="lc-title">${escapeHtml(c.title)}</div>
+                                <div class="lc-class">CLASS: ${escapeHtml(c.consoleName.toUpperCase())}${c.dup ? ` · ${escapeHtml(c.date)}` : ""}</div>
+                                ${bar("VALUE", (c.value / 40) * 100)}
+                                ${bar("ROI", roi)}
+                                ${bar("INTACT", comp)}
+                                <div class="lc-foot">
+                                    <div>
+                                        <div class="lc-rar">${c.sealed ? "Mint · Sealed" : c.tbc ? "Target" : RARITY[c.tier]}</div>
+                                        ${c.tbc ? "" : `<div class="flex gap-1 mt-1">${c.pills}</div>`}
+                                    </div>
+                                    <div class="lc-val">${c.value > 0 ? fmtMoney(c.value) : "—"} ${c.delta}<small>${!c.tbc && c.paid > 0 ? `PAID ${fmtMoney(c.paid)}` : "&nbsp;"}</small></div>
+                                </div>
+                            </div>`;
+                        el.onclick = (e) => {
+                            hit(e.clientX, e.clientY, Math.max(50, Math.round(c.value * 10)));
+                            setTimeout(() => openModal(row, index), 120);
+                        };
+                        frag.appendChild(el);
+                        if (!c.cover) kit.coverFallback(el.querySelector(".lc-art"), c, "");
+                    });
+                    grid.innerHTML = "";
+                    grid.appendChild(frag);
+                };
+
+                const hit = (x, y, xp) => {
+                    const m = document.createElement("div");
+                    m.className = "hitm";
+                    m.style.left = `${x}px`;
+                    m.style.top = `${y}px`;
+                    document.body.appendChild(m);
+                    const p = document.createElement("div");
+                    p.className = "xppop";
+                    p.style.left = `${x}px`;
+                    p.style.top = `${y - 30}px`;
+                    p.textContent = `+${xp}`;
+                    document.body.appendChild(p);
+                    setTimeout(() => { m.remove(); p.remove(); }, 1000);
+                    kit.sfx("hit");
+                };
+
+                // ---- Killstreaks --------------------------------------------------------
+                const STREAKS = {
+                    3: ["📡", "UAV ONLINE", "Enemy collection revealed"],
+                    5: ["📦", "CARE PACKAGE", "Random game inbound", true],
+                    7: ["🚁", "CHOPPER GUNNER", "Air support ready"],
+                    11: ["☢", "TACTICAL NUKE", "Inbound…"],
+                };
+                let streak = 0;
+                THEME.onModal = (row) => {
+                    const body = document.getElementById("modalBody");
+                    const c = kit.card(row);
+                    body.insertAdjacentHTML("afterbegin", `<div class="brief-h">MISSION BRIEFING // ${escapeHtml(c.consoleName.toUpperCase())} // ${RARITY[c.tier].toUpperCase()}</div>`);
+                    streak++;
+                    const s = STREAKS[streak];
+                    if (!s) return;
+                    const el = kit.toast(
+                        `<div class="streak">
+                            <div class="streak-icon">${s[0]}</div>
+                            <div><div class="streak-top">${streak} KILLSTREAK</div><div class="streak-name">${s[1]}</div><div class="mono" style="font-size:12px;color:#8d9680">${s[2]}</div></div>
+                            ${s[3] ? `<button class="accent-btn" data-deploy>Deploy</button>` : ""}
+                        </div>`,
+                        "",
+                        5000,
+                    );
+                    const d = el.querySelector("[data-deploy]");
+                    if (d) d.onclick = () => { closeModal(); rollRandomGame(); };
+                    kit.sfx("pass");
+                    if (streak === 11) {
+                        const n = document.createElement("div");
+                        n.className = "nuke";
+                        document.body.appendChild(n);
+                        kit.sfx("wasted");
+                        setTimeout(() => n.remove(), 2700);
+                        streak = 0;
+                    }
+                };
+            })();
+        </script>
+        <script src="theme-nav.js"></script>
+    </body>
+</html>

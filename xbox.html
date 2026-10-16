@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Collection Dashboard</title>
+        <link rel="icon" href="favicon.ico" sizes="48x48" />
+        <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+        <script src="theme-palette.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            accent: "#7ed321",
+                            "accent-dim": "#107c10",
+                            ink: "#050805",
+                            surface: "#141a14",
+                            zinc: ramp("#f4f7f2", "#070a07"),
+                        },
+                        animation: {
+                            fadeIn: "fadeIn 0.25s ease",
+                            fadeInUp: "fadeInUp 0.35s ease",
+                            slideUp: "slideUp 0.35s cubic-bezier(.2,1.2,.4,1)",
+                        },
+                        keyframes: {
+                            fadeIn: { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
+                            fadeInUp: {
+                                "0%": { opacity: "0", transform: "translateY(12px)" },
+                                "100%": { opacity: "1", transform: "translateY(0)" },
+                            },
+                            slideUp: {
+                                "0%": { opacity: "0", transform: "scale(0.92)" },
+                                "100%": { opacity: "1", transform: "scale(1)" },
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="collection-base.css" />
+        <link rel="stylesheet" href="theme-kit.css" />
+        <style>
+            :root {
+                --accent: #7ed321;
+                --accent-rgb: 126, 211, 33;
+                --accent-dim: #107c10;
+                --accent-soft: #a8f05a;
+                --accent-ink: #062006;
+                --surface: #141a14;
+                --ink: #050805;
+                --green: #107c10;
+                --lime: #7ed321;
+                --glass: rgba(20, 28, 20, 0.72);
+                --tnav-bg: rgba(4, 10, 4, 0.85);
+                --tnav-border: rgba(126, 211, 33, 0.25);
+                --tnav-active-bg: #7ed321;
+                --tnav-active-fg: #062006;
+                --tnav-font: "Segoe UI", "Open Sans", sans-serif;
+            }
+            html { background: #030603; }
+            body {
+                font-family: "Segoe UI", "Open Sans", system-ui, sans-serif;
+                color: #eef5ea;
+                min-height: 100vh;
+                background: #030603;
+                overflow-x: hidden;
+            }
+            /* Animated energy backdrop */
+            .energy {
+                position: fixed;
+                inset: -20%;
+                z-index: 0;
+                pointer-events: none;
+                background:
+                    radial-gradient(ellipse 60% 40% at 50% 110%, rgba(126, 211, 33, 0.35), transparent 70%),
+                    radial-gradient(ellipse 40% 30% at 15% 20%, rgba(16, 124, 16, 0.35), transparent 70%),
+                    radial-gradient(ellipse 50% 35% at 85% 30%, rgba(60, 180, 30, 0.22), transparent 70%);
+                animation: drift 18s ease-in-out infinite alternate;
+            }
+            .ribbon-bg {
+                position: fixed;
+                left: -10%;
+                right: -10%;
+                height: 260px;
+                z-index: 0;
+                pointer-events: none;
+                border-radius: 50%;
+                filter: blur(30px);
+                opacity: 0.35;
+                background: linear-gradient(90deg, transparent, #7ed321 30%, #c8ff7a 50%, #107c10 70%, transparent);
+                animation: ribbon 14s ease-in-out infinite;
+            }
+            .ribbon-bg.r1 { top: 30%; transform: rotate(-8deg); }
+            .ribbon-bg.r2 { top: 65%; transform: rotate(6deg); animation-delay: -7s; opacity: 0.2; }
+            @keyframes drift { to { transform: translate(4%, -3%) scale(1.08); } }
+            @keyframes ribbon {
+                0%, 100% { transform: translateX(-8%) rotate(-8deg) scaleY(0.6); }
+                50% { transform: translateX(8%) rotate(-3deg) scaleY(1.1); }
+            }
+
+            .wrap { position: relative; z-index: 2; padding: 26px 20px 120px; max-width: 1800px; margin: 0 auto; }
+            @media (min-width: 768px) { .wrap { padding: 32px 48px 140px; } }
+
+            /* ---- Gamercard ---------------------------------------------- */
+            .topbar { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+            .gamercard {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                padding: 12px 22px 12px 12px;
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03));
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                border-radius: 14px;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            }
+            .avatar {
+                width: 72px;
+                height: 72px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 40px;
+                background: radial-gradient(circle at 30% 25%, #c8ff7a, #4caf1a 50%, #0c5a0c);
+                box-shadow: inset 0 -6px 14px rgba(0, 0, 0, 0.35), 0 0 30px rgba(126, 211, 33, 0.35);
+            }
+            .gt { font-size: 24px; font-weight: 700; line-height: 1.1; }
+            .gs { display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 600; color: #fff; margin-top: 2px; }
+            .gicon {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: 800;
+                color: #fff;
+                background: radial-gradient(circle at 35% 30%, #9bf05a, #107c10);
+            }
+            .rep { color: #f5d742; letter-spacing: 2px; font-size: 13px; }
+            .motto { font-size: 12px; color: #9fb59a; margin-top: 2px; }
+            .clock { margin-left: auto; text-align: right; }
+            .clock-time { font-size: 34px; font-weight: 300; line-height: 1; }
+            .clock-sub { font-size: 12px; color: #9fb59a; margin-top: 4px; }
+            .toplinks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; justify-content: flex-end; }
+            .pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 14px;
+                border-radius: 999px;
+                font-size: 13px;
+                font-weight: 600;
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                color: #eef5ea;
+                transition: all 0.15s ease;
+            }
+            .pill:hover, .kit-sfx.on { background: var(--lime); color: #062006; border-color: var(--lime); }
+            .kit-sfx { padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16); color: #eef5ea; }
+
+            /* ---- Pivot ---------------------------------------------------- */
+            .pivot {
+                display: flex;
+                gap: 34px;
+                margin: 34px 0 20px;
+                overflow-x: auto;
+                scrollbar-width: none;
+                white-space: nowrap;
+            }
+            .pivot a {
+                font-size: clamp(28px, 4.2vw, 58px);
+                font-weight: 300;
+                color: rgba(255, 255, 255, 0.28);
+                text-transform: lowercase;
+                letter-spacing: -0.02em;
+                transition: color 0.2s ease;
+                cursor: pointer;
+            }
+            .pivot a:hover { color: rgba(255, 255, 255, 0.6); }
+            .pivot a.on { color: #fff; font-weight: 400; }
+
+            /* ---- Metro tiles (stats) -------------------------------------- */
+            #stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                grid-auto-rows: 150px;
+                gap: 10px;
+            }
+            .tile {
+                position: relative;
+                padding: 14px 16px;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                overflow: hidden;
+                color: #fff;
+                transition: transform 0.18s ease, box-shadow 0.18s ease;
+                animation: tileIn 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) backwards;
+            }
+            @keyframes tileIn { from { opacity: 0; transform: perspective(600px) rotateY(-50deg) translateX(-20px); } }
+            .tile:hover { transform: scale(1.04); box-shadow: 0 0 0 3px #fff, 0 10px 30px rgba(0, 0, 0, 0.5); z-index: 2; }
+            .tile.big { grid-column: span 2; grid-row: span 2; }
+            .tile.wide { grid-column: span 2; }
+            .tile-icon { position: absolute; top: 12px; left: 14px; font-size: 24px; opacity: 0.9; }
+            .tile.big .tile-icon { font-size: 54px; top: 18px; left: 20px; }
+            .tile-value { font-size: 30px; font-weight: 700; line-height: 1; }
+            .tile.big .tile-value { font-size: 84px; font-weight: 300; letter-spacing: -0.04em; }
+            .tile-label { font-size: 13px; font-weight: 600; margin-top: 6px; opacity: 0.9; }
+            .tile-sub { font-size: 11px; opacity: 0.75; }
+            .t-green { background: linear-gradient(135deg, #2c9c1c, #107c10); }
+            .t-lime { background: linear-gradient(135deg, #8fe03a, #5aa816); color: #062006; }
+            .t-dark { background: linear-gradient(135deg, #2a332a, #1a201a); }
+            .t-gold { background: linear-gradient(135deg, #e0b030, #a8780e); }
+            .t-teal { background: linear-gradient(135deg, #1b8a7a, #0e5c52); }
+            .t-red { background: linear-gradient(135deg, #c53030, #8a1a1a); }
+            .t-purple { background: linear-gradient(135deg, #7e3fbf, #4f2380); }
+            .t-blue { background: linear-gradient(135deg, #2878d0, #16508f); }
+            @media (max-width: 640px) {
+                #stats { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 120px; }
+                .tile.big .tile-value { font-size: 56px; }
+            }
+
+            /* ---- Glass panels -------------------------------------------- */
+            .glass {
+                background: var(--glass);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-top: 3px solid var(--lime);
+                backdrop-filter: blur(14px);
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+                padding: 18px 22px;
+                margin-top: 22px;
+            }
+            .glass-title { font-size: 20px; font-weight: 300; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+            .glass-title b { font-weight: 700; }
+            .kit-total-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #9fb59a; }
+            .kit-total-value { font-size: 22px; font-weight: 300; color: #fff; }
+            .kit-total[data-k="value"] .kit-total-value { color: var(--lime); font-weight: 600; }
+            .kit-total[data-k="cash"] .kit-total-value { color: #6ee7b7; }
+            .kit-total[data-k="voucher"] .kit-total-value { color: #fcd34d; }
+            .kit-total-value.is-up { color: var(--lime); font-weight: 600; }
+            .kit-total-value.is-down { color: #f87171; font-weight: 600; }
+            .kit-status { color: #9fb59a; }
+
+            /* ---- Controls ------------------------------------------------ */
+            .ghost-btn, .accent-btn, .seg button, .chip { border-radius: 4px; font-weight: 600; }
+            .ghost-btn { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.14); }
+            .ghost-btn:hover, .chip:hover { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); }
+            .accent-btn { background: linear-gradient(180deg, #8fe03a, #4caf1a); color: #062006; border-color: #4caf1a; }
+            .accent-btn:hover { background: linear-gradient(180deg, #a8f05a, #5ac21e); color: #031003; }
+            .seg { border-radius: 4px; }
+            .seg button.active { background: var(--lime); color: #062006; }
+            .chip.active { background: var(--lime); border-color: var(--lime); color: #062006; }
+            .kit-search input {
+                background: rgba(0, 0, 0, 0.45);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                border-radius: 4px;
+                color: #fff;
+                font-size: 15px;
+            }
+            .kit-search input:focus { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6), 0 0 24px rgba(126, 211, 33, 0.4); }
+            .kit-dropdown { background: #182018; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); }
+            .kit-badge { background: var(--lime); color: #062006; }
+            .kit-caret { color: #9fb59a; }
+            .kit-panel:not(.collapsed) { padding-top: 18px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+            .kit-summary { color: #9fb59a; font-size: 12px; }
+
+            /* ---- Game tiles --------------------------------------------- */
+            .section-h { font-size: 30px; font-weight: 300; margin: 40px 0 16px; display: flex; align-items: baseline; gap: 14px; }
+            .section-h small { font-size: 14px; color: #9fb59a; }
+            #cardsGrid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+                gap: 12px;
+            }
+            .xt {
+                position: relative;
+                aspect-ratio: 3 / 4.3;
+                overflow: hidden;
+                cursor: pointer;
+                background: linear-gradient(160deg, #233023, #0d140d);
+                outline: 3px solid transparent;
+                outline-offset: 2px;
+                transition: transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1), outline-color 0.15s ease, box-shadow 0.22s ease;
+                animation: tileIn 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) backwards;
+            }
+            .xt:hover, .xt:focus-visible {
+                transform: scale(1.07);
+                outline-color: #fff;
+                z-index: 10;
+                box-shadow: 0 0 40px rgba(126, 211, 33, 0.55), 0 18px 40px rgba(0, 0, 0, 0.7);
+            }
+            .xt img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+            .xt .noart {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                padding: 12px;
+                font-size: 15px;
+                font-weight: 300;
+                color: rgba(255, 255, 255, 0.5);
+            }
+            .xt-shine {
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.25) 45%, transparent 60%);
+                transform: translateX(-120%);
+                transition: transform 0.6s ease;
+            }
+            .xt:hover .xt-shine { transform: translateX(120%); }
+            .xt-info {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding: 30px 10px 8px;
+                background: linear-gradient(transparent, rgba(0, 0, 0, 0.92) 45%);
+            }
+            .xt-title { font-size: 14px; font-weight: 600; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+            .xt-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 11px; color: #b6c8b0; gap: 6px; }
+            .xt-meta .val { color: var(--lime); font-weight: 700; font-size: 13px; white-space: nowrap; }
+            .xt-band { position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+            .xt-badge {
+                position: absolute;
+                top: 10px;
+                left: 8px;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 2px 7px;
+                border-radius: 2px;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+            }
+            .xt-ring {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 9px;
+                font-weight: 800;
+                color: #fff;
+                background: conic-gradient(var(--lime) calc(var(--p) * 1%), rgba(255, 255, 255, 0.15) 0);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+            }
+            .xt-ring::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: rgba(0, 0, 0, 0.85); }
+            .xt-ring span { position: relative; }
+            .xt-new {
+                position: absolute;
+                top: 14px;
+                right: -30px;
+                width: 120px;
+                text-align: center;
+                transform: rotate(45deg);
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.15em;
+                color: #2a1c00;
+                background: linear-gradient(90deg, #b8912c, #f5d774, #b8912c);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+                padding: 2px 0;
+            }
+            .xt.tbc img { filter: grayscale(0.8) brightness(0.5); }
+            .xt.tbc .soon {
+                position: absolute;
+                top: 42%;
+                left: 0;
+                right: 0;
+                text-align: center;
+                font-size: 22px;
+                font-weight: 300;
+                color: #d8b4fe;
+                text-shadow: 0 2px 10px #000;
+            }
+            .xt.sealed { box-shadow: inset 0 0 0 2px #d4af37; }
+            .xt .hint {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(0.6);
+                opacity: 0;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 13px;
+                font-weight: 700;
+                background: rgba(0, 0, 0, 0.75);
+                padding: 6px 12px 6px 6px;
+                border-radius: 999px;
+                white-space: nowrap;
+            }
+            .xt:hover .hint { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            .btn-a {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                font-size: 12px;
+                font-weight: 800;
+                color: #fff;
+                box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
+            }
+            .btn-a.a { background: radial-gradient(circle at 35% 30%, #8ef05a, #2e8b12); }
+            .btn-a.b { background: radial-gradient(circle at 35% 30%, #ff7a6b, #b21f12); }
+            .btn-a.x { background: radial-gradient(circle at 35% 30%, #6bb5ff, #1452a8); }
+            .btn-a.y { background: radial-gradient(circle at 35% 30%, #ffe56b, #b58a0e); }
+            .delta-up { color: var(--lime); }
+
+            /* ---- Table / wall / shelf ----------------------------------- */
+            #tableWrap { background: var(--glass); backdrop-filter: blur(12px); border-top: 3px solid var(--lime); }
+            .gtable th { background: #141c14; color: #9fb59a; }
+            .gtable tbody tr:hover { background: rgba(126, 211, 33, 0.12); box-shadow: inset 3px 0 0 #fff; }
+            .wall-tile:hover { outline: 3px solid #fff; z-index: 10; }
+            #shelfView { background: repeating-linear-gradient(to bottom, transparent 0, transparent 178px, #1d281d 178px, #3a4d3a 182px, #0c120c 190px, transparent 190px, transparent 214px), rgba(10, 16, 10, 0.8); }
+
+            /* ---- Overlays & modal --------------------------------------- */
+            .ov { background: rgba(2, 6, 2, 0.88); backdrop-filter: blur(12px); }
+            .ov-panel.ov-card { background: #141c14; border-top: 4px solid var(--lime); padding: 28px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8); }
+            .ov-title { font-size: 40px; font-weight: 300; }
+            .ov-sub, .ov-roll-console { color: #9fb59a; }
+            .ov-kicker { font-size: 12px; text-transform: uppercase; letter-spacing: 0.3em; color: var(--lime); margin-bottom: 18px; }
+            .ov-roll-cover { outline: 4px solid #fff; box-shadow: 0 0 80px rgba(126, 211, 33, 0.6); }
+            .ov-roll-title { font-size: 30px; font-weight: 300; }
+            .ov-arrow, .ov-x { color: rgba(255, 255, 255, 0.5); }
+            .ov-arrow:hover, .ov-x:hover { color: #fff; }
+            #wrappedOverlay { background: radial-gradient(ellipse at 50% 120%, #2c9c1c, #062006 60%, #000); }
+            .trophy { border-radius: 2px; background: #182018; }
+            .trophy.unlocked { border-color: var(--lime); background: linear-gradient(150deg, rgba(126, 211, 33, 0.2), transparent 60%), #182018; }
+            .kit-modal { background: rgba(2, 6, 2, 0.86); backdrop-filter: blur(16px); }
+            .kit-modal-box { background: linear-gradient(180deg, #1a241a, #0d130d); border-top: 4px solid var(--lime); box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), 0 0 60px rgba(126, 211, 33, 0.15); }
+            #modalBox.sealed { border-top-color: #d4af37; }
+            #modalBody h2 { font-weight: 300 !important; font-size: 40px !important; }
+            .kit-modal-close, .kit-modal-nav { border-radius: 50%; background: rgba(0, 0, 0, 0.6); border: 2px solid rgba(255, 255, 255, 0.25); color: #fff; }
+            .kit-modal-close:hover, .kit-modal-nav:hover { border-color: #fff; background: var(--green); }
+            .kit-toast { background: #182018; border-left: 4px solid var(--lime); color: #fff; }
+            .kit-toast-error { border-left-color: #f87171; }
+            .kit-loading { background: rgba(0, 0, 0, 0.85); }
+            .kit-loading-panel { color: #9fb59a; font-size: 14px; }
+            .ring-load {
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 14px;
+                border-radius: 50%;
+                border: 5px solid rgba(126, 211, 33, 0.15);
+                border-top-color: var(--lime);
+                animation: spin 0.8s linear infinite;
+            }
+
+            /* ---- Achievement toast -------------------------------------- */
+            .kit-toasts { bottom: 40px; }
+            .ach {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 8px 26px 8px 8px;
+                border-radius: 999px;
+                background: linear-gradient(180deg, #3a3a3a, #121212);
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+                color: #fff;
+                min-width: 320px;
+                max-width: 90vw;
+                overflow: hidden;
+                animation: achWidth 0.6s cubic-bezier(0.2, 1.2, 0.4, 1);
+            }
+            @keyframes achWidth { from { max-width: 64px; } to { max-width: 90vw; } }
+            .ach-orb { width: 48px; height: 48px; flex-shrink: 0; }
+            .ach-top { font-size: 12px; color: #c8c8c8; white-space: nowrap; }
+            .ach-main { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+            /* ---- Guide ---------------------------------------------------- */
+            .guide-btn {
+                position: fixed;
+                right: 22px;
+                bottom: 22px;
+                z-index: 360;
+                width: 66px;
+                height: 66px;
+                border-radius: 50%;
+                cursor: pointer;
+                background: radial-gradient(circle at 35% 30%, #4a4a4a, #111);
+                box-shadow: 0 0 0 3px #2a2a2a, 0 0 30px rgba(126, 211, 33, 0.55), 0 10px 20px rgba(0, 0, 0, 0.6);
+                transition: transform 0.2s ease;
+                padding: 8px;
+            }
+            .guide-btn:hover { transform: scale(1.1); }
+            .guide-btn svg { animation: pulse 2.4s ease-in-out infinite; }
+            @keyframes pulse { 50% { filter: drop-shadow(0 0 10px #7ed321) brightness(1.25); } }
+            .guide {
+                position: fixed;
+                z-index: 470;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                width: min(380px, 92vw);
+                padding: 30px 0;
+                background: linear-gradient(180deg, rgba(30, 40, 30, 0.97), rgba(10, 16, 10, 0.98));
+                border-right: 4px solid var(--lime);
+                box-shadow: 30px 0 80px rgba(0, 0, 0, 0.7);
+                transform: translateX(-105%);
+                transition: transform 0.35s cubic-bezier(0.2, 1, 0.3, 1);
+            }
+            .guide.open { transform: none; }
+            .guide h3 { padding: 0 28px 16px; font-size: 32px; font-weight: 300; display: flex; align-items: center; gap: 12px; }
+            .guide button.gitem {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                width: 100%;
+                text-align: left;
+                padding: 12px 28px;
+                font-size: 17px;
+                color: #dfe9da;
+                transition: all 0.12s ease;
+            }
+            .guide button.gitem:hover { background: var(--lime); color: #062006; padding-left: 36px; }
+            .guide button.gitem span:first-child { width: 28px; text-align: center; font-size: 20px; }
+            .guide-scrim { position: fixed; inset: 0; z-index: 465; background: rgba(0, 0, 0, 0.5); display: none; }
+            .guide-scrim.open { display: block; }
+
+            .hints {
+                position: fixed;
+                left: 22px;
+                bottom: 22px;
+                z-index: 30;
+                display: flex;
+                gap: 16px;
+                font-size: 13px;
+                color: #cfdcc9;
+                background: rgba(0, 0, 0, 0.55);
+                padding: 8px 14px;
+                border-radius: 999px;
+                backdrop-filter: blur(8px);
+            }
+            .hints span { display: inline-flex; align-items: center; gap: 6px; }
+            @media (max-width: 760px) { .hints { display: none; } }
+
+            /* ---- Boot ----------------------------------------------------- */
+            .boot {
+                position: fixed;
+                inset: 0;
+                z-index: 1000;
+                background: #000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+                cursor: pointer;
+                transition: opacity 0.6s ease;
+            }
+            .boot.done { opacity: 0; pointer-events: none; }
+            .boot-orb { width: 200px; height: 200px; animation: orb 2.6s cubic-bezier(0.5, 0, 0.2, 1) forwards; }
+            .boot-flare {
+                position: absolute;
+                width: 140vw;
+                height: 6px;
+                background: linear-gradient(90deg, transparent, #c8ff7a, #fff, #c8ff7a, transparent);
+                filter: blur(2px);
+                box-shadow: 0 0 40px #7ed321;
+                animation: flare 2.6s ease forwards;
+            }
+            .boot-text { margin-top: 30px; font-size: 28px; font-weight: 300; letter-spacing: 0.4em; color: #dfe9da; opacity: 0; animation: btext 2.6s ease forwards; }
+            @keyframes orb {
+                0% { transform: scale(0) rotate(-180deg); opacity: 0; filter: brightness(3); }
+                40% { transform: scale(1.25) rotate(10deg); opacity: 1; }
+                60% { transform: scale(1) rotate(0); filter: brightness(1.4); }
+                100% { transform: scale(1); filter: brightness(1); }
+            }
+            @keyframes flare { 0%, 30% { transform: scaleX(0); opacity: 0; } 45% { transform: scaleX(1); opacity: 1; } 70%, 100% { transform: scaleX(1); opacity: 0; } }
+            @keyframes btext { 0%, 55% { opacity: 0; letter-spacing: 1em; } 100% { opacity: 1; letter-spacing: 0.4em; } }
+            @media (prefers-reduced-motion: reduce) {
+                .energy, .ribbon-bg { animation: none; }
+                .boot { display: none; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="energy"></div>
+        <div class="ribbon-bg r1"></div>
+        <div class="ribbon-bg r2"></div>
+
+        <div class="boot" id="boot" onclick="this.classList.add('done')">
+            <div class="boot-flare"></div>
+            <svg class="boot-orb" viewBox="0 0 100 100" id="orbSvg"></svg>
+            <div class="boot-text">COLLECTION</div>
+        </div>
+
+        <div class="wrap">
+            <div class="topbar animate-fadeInUp" id="home">
+                <div class="gamercard">
+                    <div class="avatar">🎮</div>
+                    <div>
+                        <div class="gt">Jake</div>
+                        <div class="gs"><span class="gicon">G</span><span id="gscore">0</span></div>
+                        <div class="rep" id="rep" title="Reputation: share of games finished">★★★★★</div>
+                        <div class="motto">Physical games · completeness · live CeX value</div>
+                    </div>
+                </div>
+                <div class="clock">
+                    <div class="clock-time" id="clock">--:--</div>
+                    <div class="clock-sub" id="clockSub"></div>
+                    <div class="toplinks">
+                        <a class="pill" href="achievements.html">🏆 Achievements</a>
+                        <a class="pill" href="stats.html">📈 Stats</a>
+                        <span id="sfxSlot"></span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="pivot" id="pivot">
+                <a data-to="home" class="on">home</a>
+                <a data-to="marketplace">marketplace</a>
+                <a data-to="games">games</a>
+                <a onclick="openGuide()">guide</a>
+            </nav>
+
+            <div id="stats"></div>
+
+            <section class="glass" id="marketplace">
+                <div class="glass-title"><span class="gicon">G</span> <span><b>Marketplace</b> value</span></div>
+                <div data-kit="value"></div>
+            </section>
+
+            <section class="glass" style="position: sticky; top: 49px; z-index: 40">
+                <div data-kit="controls"></div>
+            </section>
+
+            <h2 class="section-h" id="games">my games <small id="gamesCount"></small></h2>
+            <div id="cardsGrid"></div>
+            <div id="tableWrap" class="hidden overflow-x-auto scroll-thin"></div>
+            <div id="wallView" class="hidden"></div>
+            <div id="shelfView" class="hidden"></div>
+        </div>
+
+        <div class="hints">
+            <span><i class="btn-a a">A</i>Select</span>
+            <span><i class="btn-a b">B</i>Back</span>
+            <span><i class="btn-a x">X</i>Random</span>
+            <span><i class="btn-a y">Y</i>Search</span>
+        </div>
+        <button class="guide-btn" onclick="openGuide()" title="Guide" id="guideBtn"></button>
+        <div class="guide-scrim" id="guideScrim" onclick="closeGuide()"></div>
+        <aside class="guide" id="guide">
+            <h3><span id="guideOrb" style="width:40px;height:40px;display:inline-block"></span> Guide</h3>
+            <button class="gitem" onclick="guideDo('rollRandomGame')"><span>🎲</span><span>Pick something to play</span></button>
+            <button class="gitem" onclick="guideDo('openTrophies')"><span>🏆</span><span>Achievements</span></button>
+            <button class="gitem" onclick="guideDo('openWrapped')"><span>🎁</span><span>Collection Wrapped</span></button>
+            <button class="gitem" onclick="guideDo('openGuess')"><span>💷</span><span>Guess the price</span></button>
+            <button class="gitem" onclick="guideDo('openHealth')"><span>🩺</span><span>Data health</span></button>
+            <button class="gitem" onclick="guideDo('printInventory')"><span>🖨</span><span>Print inventory</span></button>
+            <button class="gitem" onclick="guideDo('toggleBreakdown')"><span>📊</span><span>Breakdown</span></button>
+            <button class="gitem" onclick="guideDo('toggleFilters')"><span>⚙</span><span>Filters</span></button>
+            <button class="gitem" onclick="guideDo('refreshData')"><span>↻</span><span>Sync with sheet</span></button>
+            <button class="gitem" onclick="guideDo('loadCexPrices', true)"><span>£</span><span>Refresh CeX prices</span></button>
+        </aside>
+
+        <script>
+            window.THEME = {
+                sfxDemo: "chime",
+                labels: {
+                    search: "Search games, consoles, editions…  ( Y )",
+                    grid: "Tiles",
+                    table: "List",
+                    refresh: "Sync",
+                    roll: "🎲",
+                    trophyTitle: "Achievements",
+                    rollTitle: "Now playing",
+                    close: "Back",
+                    cex: "Refresh Marketplace",
+                },
+                loadingHTML: `<div class="ring-load"></div><div>Signing in to your collection…</div>`,
+            };
+        </script>
+        <script src="theme-kit.js"></script>
+        <script src="collection-core.js"></script>
+        <script>
+            (function () {
+                kit.install();
+                document.getElementById("sfxSlot").outerHTML = kit.sfxButton();
+
+                // A glossy green sphere with an X carved through it.
+                const orb = (id) => `
+                    <defs>
+                        <radialGradient id="${id}g" cx="35%" cy="30%" r="75%">
+                            <stop offset="0" stop-color="#e6ffc2"/>
+                            <stop offset="0.35" stop-color="#7ed321"/>
+                            <stop offset="0.8" stop-color="#107c10"/>
+                            <stop offset="1" stop-color="#053b05"/>
+                        </radialGradient>
+                        <radialGradient id="${id}s" cx="40%" cy="20%" r="40%">
+                            <stop offset="0" stop-color="#fff" stop-opacity="0.7"/>
+                            <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="46" fill="url(#${id}g)"/>
+                    <path d="M24 22 C40 30 46 40 50 46 C54 40 60 30 76 22 C66 34 58 44 54 50 C58 56 66 66 76 78 C60 70 54 60 50 54 C46 60 40 70 24 78 C34 66 42 56 46 50 C42 44 34 34 24 22Z" fill="#f4fff0" opacity="0.95"/>
+                    <ellipse cx="42" cy="26" rx="26" ry="14" fill="url(#${id}s)"/>`;
+                document.getElementById("orbSvg").innerHTML = orb("boot");
+                document.getElementById("guideBtn").innerHTML = `<svg viewBox="0 0 100 100">${orb("gb")}</svg>`;
+                document.getElementById("guideOrb").innerHTML = `<svg viewBox="0 0 100 100">${orb("go")}</svg>`;
+
+                // Boot once per session.
+                const boot = document.getElementById("boot");
+                let booted = false;
+                try {
+                    booted = sessionStorage.getItem("xboxBooted") === "1";
+                    sessionStorage.setItem("xboxBooted", "1");
+                } catch (e) {}
+                if (booted) boot.remove();
+                else setTimeout(() => boot.classList.add("done"), 2900);
+
+                // Clock
+                const tickClock = () => {
+                    const d = new Date();
+                    document.getElementById("clock").textContent = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+                    document.getElementById("clockSub").textContent = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+                };
+                tickClock();
+                setInterval(tickClock, 15000);
+
+                // Pivot scrolls to sections and tracks position.
+                document.querySelectorAll("#pivot a[data-to]").forEach((a) => {
+                    a.onclick = () => document.getElementById(a.dataset.to).scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+                const sections = ["home", "marketplace", "games"];
+                addEventListener("scroll", () => {
+                    let cur = "home";
+                    for (const id of sections) {
+                        const el = document.getElementById(id);
+                        if (el && el.getBoundingClientRect().top < 200) cur = id;
+                    }
+                    document.querySelectorAll("#pivot a[data-to]").forEach((a) => a.classList.toggle("on", a.dataset.to === cur));
+                }, { passive: true });
+
+                // ---- Metro tiles ------------------------------------------------
+                window.displayStats = function () {
+                    const s = kit.stats();
+                    const tile = (cls, icon, value, label, sub = "", delay = 0) => `
+                        <div class="tile ${cls}" style="animation-delay:${delay}s">
+                            <div class="tile-icon">${icon}</div>
+                            <div class="tile-value">${value}</div>
+                            <div class="tile-label">${label}</div>
+                            ${sub ? `<div class="tile-sub">${sub}</div>` : ""}
+                        </div>`;
+                    document.getElementById("stats").innerHTML =
+                        tile("big t-green", "🎮", s.games, "games in my collection", `across ${s.consoles} consoles`, 0) +
+                        tile("wide t-lime", "💎", fmtMoney(s.value), "CeX value", `${s.priced} of ${s.games} priced`, 0.05) +
+                        tile("t-dark", "🛒", fmtMoney(s.paid), "total paid", "", 0.1) +
+                        tile(s.gain >= 0 ? "t-teal" : "t-red", s.gain >= 0 ? "📈" : "📉", fmtSigned(s.gain), "gain / loss", `${s.gainPct >= 0 ? "+" : "−"}${Math.abs(s.gainPct)}% on spend`, 0.15) +
+                        tile("wide t-blue", "🏆", `${s.completed}`, "completed", `${s.completedPct}% of collection`, 0.2) +
+                        tile("t-gold", "✨", s.sealed, "sealed", "", 0.25) +
+                        tile("t-dark", "🕹", s.consoles, "consoles", "", 0.3) +
+                        (s.toBuy > 0 ? tile("t-purple", "⭐", s.toBuy, "wishlist", "", 0.35) : "");
+                    kit.countUp(document.getElementById("gscore"), Math.round(s.value), (n) => Math.round(n).toLocaleString("en-GB"));
+                    const stars = Math.max(1, Math.round((s.completedPct / 100) * 5 + 1));
+                    document.getElementById("rep").textContent = "★".repeat(Math.min(5, stars)) + "☆".repeat(Math.max(0, 5 - stars));
+                };
+
+                // ---- Game tiles --------------------------------------------------
+                window.displayCards = function (data) {
+                    const grid = document.getElementById("cardsGrid");
+                    document.getElementById("gamesCount").textContent = `${data.length} shown`;
+                    if (!data.length) {
+                        grid.innerHTML = kit.empty();
+                        return;
+                    }
+                    const frag = document.createDocumentFragment();
+                    data.forEach((row, index) => {
+                        const c = kit.card(row);
+                        const hue = consoleHue(c.consoleName);
+                        const el = document.createElement("div");
+                        el.className = `xt${c.tbc ? " tbc" : ""}${c.sealed ? " sealed" : ""}`;
+                        el.tabIndex = 0;
+                        el.style.animationDelay = `${Math.min(index * 0.015, 0.45)}s`;
+                        el.innerHTML = `
+                            ${c.cover ? kit.img(c.cover, "", c.title) : `<div class="noart">${escapeHtml(c.title)}</div>`}
+                            <div class="xt-band" style="background:hsl(${hue} 60% 45%)"></div>
+                            <div class="xt-shine"></div>
+                            ${c.tbc ? `<span class="xt-badge" style="background:#7e3fbf">Wishlist</span><div class="soon">coming soon</div>`
+                              : c.edition !== "Standard" ? `<span class="xt-badge" style="background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.3)">${escapeHtml(c.edition)}</span>` : ""}
+                            ${c.sealed ? `<div class="xt-new">SEALED</div>` : c.completed ? `<div class="xt-ring" style="--p:100" title="Completed"><span>100%</span></div>` : ""}
+                            <div class="hint"><i class="btn-a a">A</i>Open</div>
+                            <div class="xt-info">
+                                <div class="xt-title">${escapeHtml(c.title)}</div>
+                                <div class="xt-meta">
+                                    <span class="truncate">${escapeHtml(c.consoleName)}${c.dup ? ` · ${escapeHtml(c.date)}` : ""}</span>
+                                    <span class="val">${c.value > 0 ? fmtMoney(c.value) : "—"} ${c.delta}</span>
+                                </div>
+                                <div class="xt-meta">
+                                    <span class="flex gap-1">${c.tbc ? "" : c.pills}</span>
+                                    <span>${!c.tbc && c.paid > 0 ? `paid ${fmtMoney(c.paid)}` : ""}</span>
+                                </div>
+                            </div>`;
+                        el.querySelectorAll(".cond").forEach((p) => (p.style.cssText = "width:18px;height:18px;font-size:9px"));
+                        el.onclick = () => openModal(row, index);
+                        el.onkeydown = (e) => {
+                            if (e.key === "Enter" || e.key === "a") openModal(row, index);
+                        };
+                        el.onmouseenter = () => kit.sfx("click");
+                        frag.appendChild(el);
+                        if (!c.cover) kit.coverFallback(el, c, "");
+                    });
+                    grid.innerHTML = "";
+                    grid.appendChild(frag);
+                };
+
+                // ---- Achievement unlocked ---------------------------------------
+                THEME.onModal = (row) => {
+                    const c = kit.card(row);
+                    const g = Math.max(5, Math.round(c.value * 10 / 5) * 5);
+                    kit.toast(
+                        `<div class="ach">
+                            <svg class="ach-orb" viewBox="0 0 100 100">${orb("a" + Date.now())}</svg>
+                            <div class="min-w-0">
+                                <div class="ach-top">${c.tbc ? "Wishlist item" : "Achievement unlocked"}</div>
+                                <div class="ach-main">${g}G – ${escapeHtml(c.title)}</div>
+                            </div>
+                        </div>`,
+                        "",
+                        3200,
+                    );
+                    kit.sfx("chime");
+                };
+
+                // ---- Guide -------------------------------------------------------
+                window.openGuide = () => {
+                    document.getElementById("guide").classList.add("open");
+                    document.getElementById("guideScrim").classList.add("open");
+                    kit.sfx("chime");
+                };
+                window.closeGuide = () => {
+                    document.getElementById("guide").classList.remove("open");
+                    document.getElementById("guideScrim").classList.remove("open");
+                };
+                window.guideDo = (fn, arg) => {
+                    closeGuide();
+                    if (fn === "toggleBreakdown" || fn === "toggleFilters")
+                        document.getElementById("games").scrollIntoView({ behavior: "smooth", block: "center" });
+                    window[fn](arg);
+                };
+
+                document.addEventListener("keydown", (e) => {
+                    const t = e.target;
+                    if (e.key === "Escape") closeGuide();
+                    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+                    if (!document.getElementById("modal").classList.contains("hidden") || anyOverlayOpen()) return;
+                    if (e.key === "x") rollRandomGame();
+                    if (e.key === "y") {
+                        e.preventDefault();
+                        document.getElementById("searchBox").focus();
+                    }
+                    if (e.key === "g") openGuide();
+                });
+            })();
+        </script>
+        <script src="theme-nav.js"></script>
+    </body>
+</html>

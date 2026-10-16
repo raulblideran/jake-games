@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Collection Inventory</title>
+        <link rel="icon" href="favicon.ico" sizes="48x48" />
+        <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+        <script src="theme-palette.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            accent: "#55ff55",
+                            "accent-dim": "#3a9e3a",
+                            ink: "#1d1d1d",
+                            surface: "#2b2b2b",
+                        },
+                        animation: {
+                            fadeIn: "fadeIn 0.15s ease",
+                            fadeInUp: "fadeIn 0.2s ease",
+                            slideUp: "pop 0.25s cubic-bezier(.2,1.6,.4,1)",
+                        },
+                        keyframes: {
+                            fadeIn: { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
+                            pop: { "0%": { opacity: "0", transform: "scale(.85)" }, "100%": { opacity: "1", transform: "scale(1)" } },
+                        },
+                    },
+                },
+            };
+            // Procedural 16×16 block textures, drawn once and used as CSS backgrounds.
+            (function () {
+                let seed = 1337;
+                const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+                const tex = (pick, size = 16) => {
+                    const c = document.createElement("canvas");
+                    c.width = c.height = size;
+                    const x = c.getContext("2d");
+                    for (let i = 0; i < size; i++)
+                        for (let j = 0; j < size; j++) {
+                            x.fillStyle = pick(i, j);
+                            x.fillRect(i, j, 1, 1);
+                        }
+                    return `url(${c.toDataURL()})`;
+                };
+                const from = (cols) => () => cols[Math.floor(rnd() * cols.length)];
+                const root = document.documentElement.style;
+                root.setProperty("--tex-dirt", tex(from(["#866043", "#79553a", "#966c4a", "#5d4130", "#6c4c35", "#b9855c"])));
+                root.setProperty("--tex-stone", tex(from(["#7f7f7f", "#747474", "#8f8f8f", "#686868", "#7a7a7a", "#9a9a9a"])));
+                root.setProperty("--tex-grass", tex((i, j) => (j < 4 || (j < 7 && rnd() > 0.5) ? ["#5d9b3a", "#6aad43", "#4f8a30", "#79c050"][Math.floor(rnd() * 4)] : ["#866043", "#79553a", "#966c4a", "#5d4130"][Math.floor(rnd() * 4)])));
+                root.setProperty("--tex-plank", tex((i, j) => (j % 4 === 3 ? "#6b5132" : ["#a2824e", "#9c7a48", "#b08f5a", "#8f6f40"][Math.floor(rnd() * 4)])));
+                root.setProperty("--tex-bedrock", tex(from(["#2b2b2b", "#3a3a3a", "#1f1f1f", "#565656", "#444"])));
+            })();
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="collection-base.css" />
+        <link rel="stylesheet" href="theme-kit.css" />
+        <style>
+            :root {
+                --accent: #55ff55;
+                --accent-rgb: 85, 255, 85;
+                --accent-dim: #3a9e3a;
+                --accent-soft: #8cff8c;
+                --accent-ink: #0b2a0b;
+                --surface: #2b2b2b;
+                --ink: #1d1d1d;
+                --gui: #c6c6c6;
+                --gui-dark: #555555;
+                --gui-text: #3f3f3f;
+                --slot: #8b8b8b;
+                --tnav-bg: rgba(0, 0, 0, 0.75);
+                --tnav-border: #000;
+                --tnav-fg: #fff;
+                --tnav-btn-bg: #6f6f6f;
+                --tnav-btn-border: #000;
+                --tnav-active-bg: #55ff55;
+                --tnav-active-fg: #0b2a0b;
+                --tnav-radius: 0;
+                --tnav-font: "Pixelify Sans", monospace;
+            }
+            html { background: #3b2a1e; }
+            body {
+                font-family: "Pixelify Sans", monospace;
+                color: #fff;
+                min-height: 100vh;
+                background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), var(--tex-dirt) 0 0 / 64px 64px;
+                image-rendering: pixelated;
+            }
+            .mc-text { text-shadow: 2px 2px 0 #3f3f3f; }
+
+            /* ---- Sky + grass hero ------------------------------------------ */
+            .sky {
+                position: relative;
+                padding: 50px 20px 0;
+                background: linear-gradient(180deg, #78a7ff 0%, #a9c8ff 70%, #c4dcff 100%);
+                overflow: hidden;
+                text-align: center;
+            }
+            .cloud {
+                position: absolute;
+                height: 26px;
+                background: #fff;
+                box-shadow: 30px -16px 0 #fff, 60px 0 0 #fff, 90px -10px 0 #fff;
+                opacity: 0.9;
+                animation: cloud linear infinite;
+            }
+            @keyframes cloud { from { transform: translateX(-200px); } to { transform: translateX(110vw); } }
+            .logo {
+                position: relative;
+                display: inline-block;
+                font-family: "Silkscreen", monospace;
+                font-weight: 700;
+                font-size: clamp(40px, 8vw, 112px);
+                line-height: 0.95;
+                letter-spacing: 0.02em;
+                color: transparent;
+                background: var(--tex-stone) 0 0 / 48px 48px;
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-stroke: 3px #1d1d1d;
+                filter: drop-shadow(0 4px 0 #3a3a3a) drop-shadow(0 4px 0 #2a2a2a) drop-shadow(0 6px 0 #1a1a1a) drop-shadow(0 10px 8px rgba(0, 0, 0, 0.4));
+            }
+            .splash {
+                position: absolute;
+                right: -40px;
+                bottom: 4px;
+                transform: rotate(-18deg);
+                font-family: "Pixelify Sans", monospace;
+                font-weight: 700;
+                font-size: clamp(14px, 1.8vw, 24px);
+                color: #ffff55;
+                text-shadow: 2px 2px 0 #3f3f15;
+                white-space: nowrap;
+                animation: splash 0.5s ease-in-out infinite alternate;
+                -webkit-text-stroke: 0;
+                filter: none;
+            }
+            @keyframes splash { to { transform: rotate(-18deg) scale(1.1); } }
+            .tag { margin-top: 18px; font-size: 18px; color: #fff; }
+            .menu { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 22px 0 40px; }
+            .grass-row { margin: 0 -20px; height: 64px; background: var(--tex-grass) 0 0 / 64px 64px; border-bottom: 4px solid #000; box-shadow: 0 8px 0 rgba(0, 0, 0, 0.25); }
+
+            /* ---- MC buttons ---------------------------------------------- */
+            .mcb, .ghost-btn, .accent-btn, .seg button, .chip, .kit-sfx {
+                font-family: "Pixelify Sans", monospace;
+                font-weight: 500;
+                font-size: 15px;
+                color: #fff;
+                text-shadow: 2px 2px 0 #3f3f3f;
+                background: linear-gradient(rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.12)), var(--tex-stone) 0 0 / 32px 32px;
+                border: 2px solid #000;
+                border-radius: 0;
+                box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.45), inset -2px -3px 0 rgba(0, 0, 0, 0.45);
+                padding: 8px 14px;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                letter-spacing: 0.02em;
+                transition: none;
+            }
+            .mcb:hover, .ghost-btn:hover, .accent-btn:hover, .seg button:hover, .chip:hover, .kit-sfx:hover {
+                color: #ffffa0;
+                background: linear-gradient(rgba(120, 140, 255, 0.35), rgba(80, 100, 220, 0.35)), var(--tex-stone) 0 0 / 32px 32px;
+                border-color: #fff;
+            }
+            .accent-btn, .seg button.active, .chip.active, .kit-sfx.on {
+                background: linear-gradient(rgba(40, 160, 40, 0.55), rgba(20, 110, 20, 0.6)), var(--tex-stone) 0 0 / 32px 32px;
+                color: #fff;
+            }
+            .mcb.big { font-size: 18px; padding: 10px 26px; min-width: 200px; justify-content: center; }
+            .seg { border: 0; gap: 4px; overflow: visible; flex-wrap: wrap; max-width: 100%; }
+            .chip { padding: 5px 10px; font-size: 13px; }
+
+            .wrap { max-width: 1600px; margin: 0 auto; padding: 30px 18px 140px; }
+            @media (min-width: 768px) { .wrap { padding: 36px 40px 160px; } }
+
+            /* ---- GUI panel ----------------------------------------------- */
+            .gui {
+                position: relative;
+                background: var(--gui);
+                color: var(--gui-text);
+                padding: 18px 20px;
+                border: 3px solid #000;
+                box-shadow: inset 3px 3px 0 #fff, inset -3px -3px 0 var(--gui-dark), 0 10px 0 rgba(0, 0, 0, 0.35);
+                margin-top: 28px;
+            }
+            .gui-title { font-size: 20px; color: var(--gui-text); margin-bottom: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+            .gui-title small { font-size: 14px; color: #6a6a6a; }
+            .dark-gui {
+                background: rgba(0, 0, 0, 0.62);
+                border: 3px solid #000;
+                box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+                padding: 16px 18px;
+                margin-top: 28px;
+            }
+
+            /* ---- Hotbar / status ------------------------------------------ */
+            .status-top { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; align-items: flex-end; max-width: 760px; margin: 0 auto 6px; }
+            .hearts, .food { display: flex; gap: 2px; font-size: 22px; line-height: 1; }
+            .food { flex-direction: row-reverse; }
+            .hearts span, .food span { filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5)); }
+            .hearts .empty, .food .empty { filter: grayscale(1) brightness(0.4); }
+            .xpbar { position: relative; max-width: 760px; margin: 0 auto 6px; height: 12px; background: #1d1d1d; border: 2px solid #000; }
+            .xpbar i { display: block; height: 100%; background: linear-gradient(#b8ff5a, #64c81e); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3); }
+            .xplvl { position: absolute; left: 50%; top: -26px; transform: translateX(-50%); font-family: "Silkscreen", monospace; font-weight: 700; font-size: 22px; color: #80ff20; text-shadow: 2px 0 0 #000, -2px 0 0 #000, 0 2px 0 #000, 0 -2px 0 #000; }
+            .hotbar { display: grid; grid-template-columns: repeat(9, 1fr); max-width: 760px; margin: 0 auto; border: 3px solid #000; background: #1d1d1d; padding: 3px; gap: 3px; }
+            .hslot {
+                position: relative;
+                aspect-ratio: 1;
+                background: rgba(139, 139, 139, 0.35);
+                box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.6), inset -2px -2px 0 rgba(255, 255, 255, 0.15);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: clamp(20px, 3vw, 36px);
+                cursor: default;
+            }
+            .hslot.sel { outline: 4px solid #fff; outline-offset: -1px; z-index: 2; }
+            .hslot b {
+                position: absolute;
+                right: 4px;
+                bottom: 1px;
+                font-family: "Pixelify Sans", monospace;
+                font-weight: 700;
+                font-size: clamp(11px, 1.4vw, 17px);
+                color: #fff;
+                text-shadow: 2px 2px 0 #3f3f3f;
+            }
+            .hotlabel { text-align: center; margin-top: 10px; font-size: 18px; min-height: 24px; text-shadow: 2px 2px 0 #3f3f3f; }
+
+            /* ---- Value strip (villager trade) ------------------------------ */
+            .kit-totals { gap: 8px; }
+            .kit-total {
+                background: var(--slot);
+                box-shadow: inset 2px 2px 0 #373737, inset -2px -2px 0 #fff;
+                padding: 8px 12px;
+                min-width: 150px;
+            }
+            .kit-total-label { font-size: 12px; color: #2a2a2a; }
+            .kit-total-value { font-size: 20px; font-weight: 700; color: #fff; text-shadow: 2px 2px 0 #3f3f3f; }
+            .kit-total[data-k="value"] .kit-total-value::before, .kit-total[data-k="sell"] .kit-total-value::before { content: "◆ "; color: #17dd62; }
+            .kit-total-value.is-up { color: #55ff55; }
+            .kit-total-value.is-down { color: #ff5555; }
+            .kit-status { color: #4a4a4a; }
+
+            /* ---- Controls (dark menu) ------------------------------------- */
+            .kit-search input {
+                background: #000;
+                border: 2px solid #a0a0a0;
+                color: #fff;
+                font-family: "Pixelify Sans", monospace;
+                font-size: 16px;
+            }
+            .kit-search input:focus { border-color: #fff; }
+            .kit-search input::placeholder { color: #808080; }
+            .kit-dropdown { background: #100010; border: 2px solid #28007f; box-shadow: inset 0 0 0 2px #5000ff; }
+            .kit-badge { background: #ffff55; color: #3f3f15; border-radius: 0; text-shadow: none; }
+            .kit-caret { color: #ffff55; }
+            .kit-panel:not(.collapsed) { padding-top: 16px; border-top: 2px solid rgba(255, 255, 255, 0.15); }
+            .kit-summary { color: #c0c0c0; }
+
+            /* ---- Inventory ------------------------------------------------- */
+            #cardsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px 6px; }
+            .slot { cursor: pointer; animation: slotIn 0.3s steps(4) backwards; }
+            @keyframes slotIn { from { opacity: 0; transform: scale(0.6); } }
+            .slot-box {
+                position: relative;
+                aspect-ratio: 3 / 4;
+                background: var(--slot);
+                box-shadow: inset 3px 3px 0 #373737, inset -3px -3px 0 #fff;
+                padding: 5px;
+            }
+            .slot-art { position: absolute; inset: 5px; overflow: hidden; }
+            .slot-art img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+            .slot-art .noart { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 46px; filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.3)); }
+            .slot:hover .slot-box::after { content: ""; position: absolute; inset: 5px; background: rgba(255, 255, 255, 0.35); z-index: 3; }
+            .slot-count {
+                position: absolute;
+                right: 6px;
+                bottom: 9px;
+                z-index: 4;
+                font-weight: 700;
+                font-size: 18px;
+                color: #fff;
+                text-shadow: 2px 2px 0 #3f3f3f;
+            }
+            .dura { position: absolute; left: 8px; right: 8px; bottom: 6px; height: 3px; background: #000; z-index: 4; }
+            .dura i { display: block; height: 100%; }
+            .slot-name { font-size: 13px; color: var(--gui-text); line-height: 1.15; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 30px; }
+            .slot.tbc .slot-art img { filter: grayscale(1) brightness(0.6); opacity: 0.7; }
+            .slot.tbc .slot-box { background: repeating-linear-gradient(45deg, #8b8b8b 0 6px, #7a7a7a 6px 12px); }
+            .glint::before {
+                /* enchanted item shimmer for sealed games */
+                content: "";
+                position: absolute;
+                inset: 0;
+                z-index: 2;
+                pointer-events: none;
+                mix-blend-mode: screen;
+                background: linear-gradient(115deg, transparent 20%, rgba(170, 80, 255, 0.75) 35%, transparent 50%, rgba(130, 60, 255, 0.55) 65%, transparent 80%) 0 0 / 300% 300%;
+                animation: glint 3s linear infinite;
+            }
+            @keyframes glint { from { background-position: 100% 100%; } to { background-position: 0 0; } }
+            .badge-tl { position: absolute; top: 6px; left: 6px; z-index: 4; font-size: 15px; filter: drop-shadow(1px 1px 0 #000); }
+            .particle { position: fixed; z-index: 999; width: 10px; height: 10px; pointer-events: none; animation: part 0.7s ease-out forwards; }
+            @keyframes part { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+
+            /* Tooltip */
+            .mctip {
+                position: fixed;
+                z-index: 700;
+                pointer-events: none;
+                max-width: 320px;
+                background: rgba(16, 0, 16, 0.94);
+                padding: 6px 8px;
+                border: 2px solid #100010;
+                box-shadow: inset 0 0 0 2px #5000ff, inset 0 -2px 0 2px #28007f;
+                font-size: 15px;
+                line-height: 1.35;
+                color: #aaa;
+                text-shadow: 2px 2px 0 #2a2a2a;
+                display: none;
+            }
+            .mctip .tt { font-size: 16px; }
+            .r0 { color: #fff; } .r1 { color: #ffff55; } .r2 { color: #55ffff; } .r3 { color: #ff55ff; }
+            .c-gray { color: #aaa; } .c-dgray { color: #555; } .c-gold { color: #ffaa00; } .c-green { color: #55ff55; } .c-red { color: #ff5555; } .c-blue { color: #5555ff; } .c-aqua { color: #55ffff; } .c-purple { color: #aa00aa; }
+            .cond { border-radius: 0; width: 18px; height: 18px; font-size: 10px; }
+            .delta-up { color: #55ff55; } .delta-down { color: #ff5555; }
+
+            /* ---- Table / wall / shelf ----------------------------------- */
+            #tableWrap { background: rgba(0, 0, 0, 0.7); border: 3px solid #000; }
+            .gtable { font-family: "Pixelify Sans", monospace; font-size: 14px; }
+            .gtable th { background: #1d1d1d; color: #ffff55; }
+            .gtable tbody tr:hover { background: rgba(120, 140, 255, 0.25); }
+            .gtable img, .wall-tile img { image-rendering: pixelated; }
+            #wallView { gap: 4px; }
+            .wall-tile { border: 3px solid #000; box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.3); }
+            #shelfView { background: repeating-linear-gradient(to bottom, transparent 0, transparent 178px, rgba(0, 0, 0, 0.6) 178px, transparent 190px, transparent 214px), var(--tex-plank) 0 0 / 64px 64px; border: 3px solid #000; border-radius: 0; }
+            .spine { font-family: "Pixelify Sans", monospace; border-radius: 0; }
+
+            .bar-track { border-radius: 0; background: #000; }
+            .bar-fill, .vbar, .spark div { border-radius: 0; background: linear-gradient(#b8ff5a, #64c81e); }
+            .hm-cell { border-radius: 0; }
+            .hm-cell[data-n="1"] { background: #2d5a1c; }
+            .hm-cell[data-n="2"] { background: #4f8a30; }
+            .hm-cell[data-n="3"] { background: #6aad43; }
+            .hm-cell[data-n="4"] { background: #b8ff5a; }
+
+            /* ---- Overlays & modal (dark tooltip style) -------------------- */
+            .ov { background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), var(--tex-dirt) 0 0 / 64px 64px; }
+            .ov-panel.ov-card { background: rgba(16, 0, 16, 0.96); border: 3px solid #100010; box-shadow: inset 0 0 0 3px #5000ff; padding: 24px; }
+            .ov-title { font-size: 40px; text-shadow: 3px 3px 0 #3f3f3f; }
+            .ov-sub, .ov-roll-console { color: #aaa; }
+            .ov-kicker { font-size: 18px; color: #ffff55; text-shadow: 2px 2px 0 #3f3f15; margin-bottom: 14px; }
+            .ov-roll-cover { border: 4px solid #000; box-shadow: inset 0 0 0 3px #fff; }
+            .ov-roll-cover img { image-rendering: pixelated; }
+            .ov-roll-title { font-size: 30px; text-shadow: 3px 3px 0 #3f3f3f; }
+            .ov-arrow, .ov-x { color: #fff; text-shadow: 2px 2px 0 #3f3f3f; }
+            #wrappedOverlay { background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.75)), var(--tex-stone) 0 0 / 64px 64px; }
+            #wrappedSlide { text-shadow: 3px 3px 0 #3f3f3f; }
+            .trophy { border-radius: 0; background: rgba(0, 0, 0, 0.6); border: 2px solid #000; }
+            .trophy.unlocked { box-shadow: inset 0 0 0 2px #ffff55; background: rgba(60, 50, 0, 0.6); }
+            .kit-modal { background: linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)), var(--tex-dirt) 0 0 / 64px 64px; }
+            .kit-modal-box { background: rgba(16, 0, 16, 0.97); border: 3px solid #100010; box-shadow: inset 0 0 0 3px #5000ff, inset 0 -3px 0 3px #28007f, 0 14px 0 rgba(0, 0, 0, 0.4); }
+            #modalBox.sealed { box-shadow: inset 0 0 0 3px #ffaa00, 0 14px 0 rgba(0, 0, 0, 0.4); }
+            #modalPoster { image-rendering: auto; padding: 14px; background: transparent !important; }
+            #modalBody h2 { font-family: "Pixelify Sans", monospace; text-shadow: 3px 3px 0 #3f3f3f; }
+            .kit-modal-close, .kit-modal-nav { border-radius: 0; color: #fff; text-shadow: 2px 2px 0 #3f3f3f; background: var(--tex-stone) 0 0 / 32px 32px; border: 2px solid #000; box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.45), inset -2px -3px 0 rgba(0, 0, 0, 0.45); }
+            .kit-modal-close:hover, .kit-modal-nav:hover { border-color: #fff; color: #ffffa0; }
+            .kit-toast { background: rgba(16, 0, 16, 0.94); border: 2px solid #5000ff; color: #fff; text-shadow: 2px 2px 0 #3f3f3f; }
+            .kit-toast-error { color: #ff5555; }
+            .kit-toasts { top: 64px; right: 16px; left: auto; bottom: auto; transform: none; align-items: flex-end; }
+            .adv {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                width: 320px;
+                max-width: 90vw;
+                padding: 8px 12px;
+                background: #212121;
+                border: 2px solid #000;
+                box-shadow: inset 0 0 0 2px #555;
+                text-shadow: 2px 2px 0 #000;
+            }
+            .adv-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 26px; background: #8b8b8b; box-shadow: inset 2px 2px 0 #373737, inset -2px -2px 0 #fff; flex-shrink: 0; }
+            .adv-top { color: #ffff55; font-size: 15px; }
+            .adv-main { color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .kit-loading { background: var(--tex-dirt) 0 0 / 64px 64px; }
+            .kit-loading-panel { font-size: 20px; text-shadow: 2px 2px 0 #3f3f3f; }
+            .loadbar { width: 260px; height: 8px; margin: 14px auto 0; border: 2px solid #fff; padding: 1px; }
+            .loadbar i { display: block; height: 100%; background: #55ff55; animation: loadbar 1.4s steps(12) infinite; }
+            @keyframes loadbar { from { width: 0; } to { width: 100%; } }
+            .bedrock { height: 64px; margin-top: 60px; background: var(--tex-bedrock) 0 0 / 64px 64px; border-top: 4px solid #000; }
+            @media (prefers-reduced-motion: reduce) { .cloud, .splash, .glint::before { animation: none; } }
+            @media (max-width: 640px) { #cardsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .splash { right: 0; bottom: -18px; } }
+        </style>
+    </head>
+    <body>
+        <header class="sky">
+            <div class="cloud" style="top: 40px; width: 80px; animation-duration: 70s; animation-delay: -10s"></div>
+            <div class="cloud" style="top: 110px; width: 60px; animation-duration: 95s; animation-delay: -50s"></div>
+            <div class="cloud" style="top: 70px; width: 100px; animation-duration: 120s; animation-delay: -90s"></div>
+            <div class="logo">GAME<br />COLLECTION<span class="splash" id="splash">Also try Terraria!</span></div>
+            <div class="tag mc-text">Physical games · completeness · live CeX value</div>
+            <div class="menu">
+                <a class="mcb big" href="achievements.html">🏆 Achievements</a>
+                <a class="mcb big" href="stats.html">📈 Statistics</a>
+                <span id="sfxSlot"></span>
+            </div>
+            <div class="grass-row"></div>
+        </header>
+
+        <div class="wrap">
+            <section>
+                <div id="stats"></div>
+            </section>
+
+            <section class="gui">
+                <div class="gui-title"><span>Villager Trading</span><small>prices from the CeX trading hall</small></div>
+                <div data-kit="value"></div>
+            </section>
+
+            <section class="dark-gui" style="position: sticky; top: 49px; z-index: 40">
+                <div data-kit="controls"></div>
+            </section>
+
+            <section class="gui">
+                <div class="gui-title"><span>Inventory</span><small id="invCount"></small></div>
+                <div id="cardsGrid"></div>
+                <div id="tableWrap" class="hidden overflow-x-auto scroll-thin"></div>
+                <div id="wallView" class="hidden"></div>
+                <div id="shelfView" class="hidden"></div>
+            </section>
+        </div>
+        <div class="bedrock"></div>
+        <div class="mctip" id="mctip"></div>
+
+        <script>
+            window.THEME = {
+                sfxDemo: "pop",
+                labels: {
+                    search: "Search inventory…  ( / )",
+                    grid: "Inventory",
+                    table: "Book",
+                    wall: "Item frames",
+                    shelf: "Chest",
+                    refresh: "Reload chunks",
+                    breakdown: "Statistics",
+                    filters: "Filter",
+                    roll: "🎲 Random",
+                    trophies: "🏆",
+                    wrapped: "🎁",
+                    guess: "💎",
+                    health: "🧪",
+                    print: "📜",
+                    cex: "Restock trades",
+                    total_value: "Worth",
+                    rollTitle: "Your next adventure",
+                    trophyTitle: "Advancements",
+                    healthTitle: "Brewing report",
+                    guessTitle: "Haggle with the villager",
+                    close: "Done",
+                    empty: "Nothing here but dirt.",
+                },
+                loadingHTML: `<div>Generating world…</div><div class="loadbar"><i></i></div>`,
+            };
+        </script>
+        <script src="theme-kit.js"></script>
+        <script src="collection-core.js"></script>
+        <script>
+            (function () {
+                kit.install();
+                document.getElementById("sfxSlot").outerHTML = kit.sfxButton("big");
+
+                const SPLASHES = ["Also try Terraria!", "Now with CeX prices!", "Sealed and enchanted!", "Blow the cartridge!", "100% pixel!", "Mind the creepers!", "Complete in box!", "Physical media FTW!", "Don't dig straight down!", "Shrink-wrapped!", "Insert disc 2!", "Ask your parents!"];
+                const splash = document.getElementById("splash");
+                splash.textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
+                splash.onclick = () => (splash.textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)]);
+                splash.style.cursor = "pointer";
+
+                // ---- Hearts, hunger, XP, hotbar -------------------------------------
+                const row = (n10, full, half, empty) => {
+                    let s = "";
+                    for (let i = 0; i < 10; i++) {
+                        const v = n10 - i;
+                        s += v >= 1 ? `<span>${full}</span>` : v >= 0.5 ? `<span>${half}</span>` : `<span class="empty">${empty}</span>`;
+                    }
+                    return s;
+                };
+                let hotLabels = [];
+                window.displayStats = function () {
+                    const s = kit.stats();
+                    const hearts = (s.completedPct / 100) * 10;
+                    const food = (s.complete / Math.max(1, s.games)) * 10;
+                    const slots = [
+                        ["🎮", s.games, `${s.games} games collected`],
+                        ["🗺", s.consoles, `${s.consoles} consoles explored`],
+                        ["💎", Math.round(s.value), `Worth ${fmtMoney(s.value)} at CeX (${s.priced}/${s.games} priced)`],
+                        ["🪙", Math.round(s.paid), `Spent ${fmtMoney(s.paid)}`],
+                        [s.gain >= 0 ? "📈" : "📉", (s.gain >= 0 ? "+" : "−") + Math.abs(Math.round(s.gain)), `${fmtSigned(s.gain)} (${s.gainPct >= 0 ? "+" : "−"}${Math.abs(s.gainPct)}%)`],
+                        ["🏆", s.completed, `${s.completed} completed (${s.completedPct}%)`],
+                        ["📦", s.complete, `${s.complete} complete in the box`],
+                        ["✨", s.sealed, `${s.sealed} still sealed — enchanted!`],
+                        ["⭐", s.toBuy, s.toBuy ? `${s.toBuy} still on the wishlist` : "Wishlist empty"],
+                    ];
+                    hotLabels = slots.map((x) => x[2]);
+                    document.getElementById("stats").innerHTML = `
+                        <div class="status-top">
+                            <div class="hearts" title="Health: share of games completed">${row(hearts, "❤️", "💔", "🖤")}</div>
+                            <div class="food" title="Hunger: share complete in box">${row(food, "🍗", "🦴", "🍗")}</div>
+                        </div>
+                        <div class="xpbar"><span class="xplvl">${s.games}</span><i style="width:${(s.value % 100)}%"></i></div>
+                        <div class="hotbar">${slots.map(([icon, n], i) => `<div class="hslot ${i === 0 ? "sel" : ""}" data-i="${i}">${icon}<b>${n}</b></div>`).join("")}</div>
+                        <div class="hotlabel" id="hotLabel">${escapeHtml(hotLabels[0])}</div>`;
+                    document.querySelectorAll(".hslot").forEach((el) => {
+                        el.onmouseenter = () => {
+                            document.querySelectorAll(".hslot").forEach((x) => x.classList.toggle("sel", x === el));
+                            document.getElementById("hotLabel").textContent = hotLabels[Number(el.dataset.i)];
+                        };
+                    });
+                };
+                // Number keys pick a hotbar slot, like in game.
+                document.addEventListener("keydown", (e) => {
+                    const t = e.target;
+                    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+                    if (!/^[1-9]$/.test(e.key)) return;
+                    const el = document.querySelector(`.hslot[data-i="${Number(e.key) - 1}"]`);
+                    if (el) el.onmouseenter();
+                });
+
+                // ---- Inventory slots ---------------------------------------------------
+                const RAR = (tier) => (tier >= 4 ? 3 : tier >= 3 ? 2 : tier >= 2 ? 1 : 0);
+                const RAR_NAME = ["Common", "Uncommon", "Rare", "Epic"];
+                const tip = document.getElementById("mctip");
+                const tipHTML = (c) => {
+                    const lines = [`<div class="tt r${RAR(c.tier)}">${escapeHtml(c.title)}</div>`];
+                    lines.push(`<div class="c-gray">${escapeHtml(c.consoleName)}</div>`);
+                    if (c.edition !== "Standard") lines.push(`<div class="c-aqua">${escapeHtml(c.edition)}</div>`);
+                    if (c.sealed) lines.push(`<div class="c-gold">✦ Sealed</div>`);
+                    if (c.completed) lines.push(`<div class="c-green">✔ Completed</div>`);
+                    if (c.tbc) lines.push(`<div class="c-purple">Wishlist · not owned</div>`);
+                    lines.push(`<div class="c-gray">Cover art: ${c.hasCoverArt === true ? "yes" : c.hasCoverArt === false ? "missing" : "n/a"} · Insert: ${c.hasInsert === true ? "yes" : c.hasInsert === false ? "missing" : "n/a"}</div>`);
+                    lines.push(`<div style="height:6px"></div><div class="c-gray">When on shelf:</div>`);
+                    if (c.value > 0) lines.push(`<div class="c-blue">${fmtMoney(c.value)} Value</div>`);
+                    if (!c.tbc && c.paid > 0) lines.push(`<div class="c-blue">${fmtMoney(c.paid)} Paid</div>`);
+                    if (!c.tbc && (c.value > 0 || c.paid > 0)) lines.push(`<div class="${c.gain >= 0 ? "c-blue" : "c-red"}">${fmtSigned(c.gain)} Gain</div>`);
+                    if (c.date) lines.push(`<div class="c-dgray">Acquired ${escapeHtml(c.date)}</div>`);
+                    lines.push(`<div class="c-purple" style="font-style:italic">${RAR_NAME[RAR(c.tier)]}</div>`);
+                    return lines.join("");
+                };
+                const moveTip = (e) => {
+                    const pad = 16;
+                    let x = e.clientX + pad;
+                    let y = e.clientY - 10;
+                    const r = tip.getBoundingClientRect();
+                    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
+                    if (y + r.height > innerHeight - 8) y = innerHeight - r.height - 8;
+                    tip.style.left = `${x}px`;
+                    tip.style.top = `${Math.max(8, y)}px`;
+                };
+                const CONSOLE_ICON = (n) => (/xbox/i.test(n) ? "🟩" : /playstation|psp/i.test(n) ? "🟦" : /wii|ds|nintendo|gameboy/i.test(n) ? "🟥" : /pc/i.test(n) ? "🖥" : "📦");
+
+                window.displayCards = function (data) {
+                    const grid = document.getElementById("cardsGrid");
+                    document.getElementById("invCount").textContent = `${data.length} items`;
+                    if (!data.length) {
+                        grid.innerHTML = kit.empty();
+                        return;
+                    }
+                    const frag = document.createDocumentFragment();
+                    data.forEach((row, index) => {
+                        const c = kit.card(row);
+                        const el = document.createElement("div");
+                        el.className = `slot${c.tbc ? " tbc" : ""}`;
+                        el.style.animationDelay = `${Math.min(index * 0.01, 0.3)}s`;
+                        const dur = (c.hasCoverArt !== false ? 1 : 0) + (c.hasInsert !== false ? 1 : 0) + (c.completed ? 1 : 0);
+                        const durColor = ["#ff3333", "#ffaa00", "#aaff00", "#33ff33"][dur];
+                        el.innerHTML = `
+                            <div class="slot-box ${c.sealed ? "glint" : ""}">
+                                <div class="slot-art">${c.cover || c.coverS ? kit.img(c.coverS || c.cover, "", c.title) : `<div class="noart">${CONSOLE_ICON(c.consoleName)}</div>`}</div>
+                                ${c.completed ? `<span class="badge-tl">✔</span>` : c.tbc ? `<span class="badge-tl">⭐</span>` : ""}
+                                ${c.value > 0 ? `<span class="slot-count">£${Math.round(c.value)}</span>` : ""}
+                                ${c.tbc ? "" : `<div class="dura" title="Cover, insert, completed"><i style="width:${Math.max(8, (dur / 3) * 100)}%;background:${durColor}"></i></div>`}
+                            </div>
+                            <div class="slot-name">${escapeHtml(c.title)}</div>`;
+                        el.onmouseenter = (e) => {
+                            tip.innerHTML = tipHTML(c);
+                            tip.style.display = "block";
+                            moveTip(e);
+                        };
+                        el.onmousemove = moveTip;
+                        el.onmouseleave = () => (tip.style.display = "none");
+                        el.onclick = (e) => {
+                            tip.style.display = "none";
+                            burst(e.clientX, e.clientY);
+                            kit.sfx("pop");
+                            openModal(row, index);
+                        };
+                        frag.appendChild(el);
+                        if (!c.cover && !c.coverS) kit.coverFallback(el.querySelector(".slot-art"), c, "w-full h-full object-cover");
+                    });
+                    grid.innerHTML = "";
+                    grid.appendChild(frag);
+                };
+
+                const burst = (x, y) => {
+                    const cols = ["#866043", "#5d9b3a", "#7f7f7f", "#966c4a", "#6aad43"];
+                    for (let i = 0; i < 14; i++) {
+                        const p = document.createElement("div");
+                        p.className = "particle";
+                        p.style.left = `${x}px`;
+                        p.style.top = `${y}px`;
+                        p.style.background = cols[i % cols.length];
+                        p.style.setProperty("--dx", `${(Math.random() - 0.5) * 140}px`);
+                        p.style.setProperty("--dy", `${Math.random() * 120 - 80}px`);
+                        document.body.appendChild(p);
+                        setTimeout(() => p.remove(), 750);
+                    }
+                };
+
+                // ---- Advancement toast ------------------------------------------------
+                const seen = new Set();
+                THEME.onModal = (row) => {
+                    const k = rowKey(row);
+                    if (seen.has(k)) return;
+                    seen.add(k);
+                    const c = kit.card(row);
+                    const kind = c.sealed ? ["Challenge Complete!", "#ff55ff", "✨"] : c.completed ? ["Goal Reached!", "#55ff55", "🏆"] : ["Advancement Made!", "#ffff55", "🎮"];
+                    kit.toast(
+                        `<div class="adv"><div class="adv-icon">${kind[2]}</div><div class="min-w-0"><div class="adv-top" style="color:${kind[1]}">${kind[0]}</div><div class="adv-main">${escapeHtml(c.title)}</div></div></div>`,
+                        "",
+                        3400,
+                    );
+                };
+            })();
+        </script>
+        <script src="theme-nav.js"></script>
+    </body>
+</html>

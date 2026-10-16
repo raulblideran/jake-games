@@ -1,0 +1,178 @@
+/* Structural styles for the markup theme-kit.js injects. Deliberately
+   colourless: each theme supplies the look. */
+
+.kit-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+.kit-search {
+    flex: 1 1 240px;
+    min-width: 200px;
+}
+.kit-search input {
+    width: 100%;
+    padding: 10px 14px;
+    outline: none;
+}
+.kit-extras {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.kit-sort .ghost-btn {
+    min-width: 210px;
+    justify-content: space-between;
+}
+.kit-dropdown {
+    position: absolute;
+    right: 0;
+    margin-top: 8px;
+    width: 260px;
+    z-index: 50;
+    overflow: hidden;
+}
+.kit-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 999px;
+}
+.kit-panel {
+    margin-top: 16px;
+}
+.kit-panel.collapsed {
+    padding: 0 !important;
+    border: 0 !important;
+    margin: 0 !important;
+}
+
+.kit-value-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+.kit-status {
+    font-size: 12px;
+}
+.kit-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+}
+
+.kit-empty {
+    grid-column: 1 / -1;
+    width: 100%;
+    text-align: center;
+    padding: 64px 0;
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* Toasts: core's #error/#success plus theme pop-ups */
+.kit-toast {
+    top: 64px;
+    right: 20px;
+    max-width: 28rem;
+    padding: 12px 16px;
+    font-size: 14px;
+}
+.kit-toasts {
+    position: fixed;
+    z-index: 500;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%);
+    align-items: center;
+}
+.kit-pop {
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+    transition:
+        opacity 0.35s ease,
+        transform 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.kit-pop.in {
+    opacity: 1;
+    transform: none;
+}
+.kit-pop.out {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+}
+
+.kit-modal-close {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+.kit-modal-nav {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    line-height: 1;
+    padding-bottom: 4px;
+    cursor: pointer;
+}
+@media (min-width: 640px) {
+    .kit-modal-nav {
+        width: 64px;
+        height: 64px;
+    }
+}
+
+.ov-roll-cover {
+    width: 220px;
+    height: 293px;
+    margin: 0 auto;
+    overflow: hidden;
+}
+.ov-roll-title {
+    margin-top: 20px;
+    min-height: 2rem;
+}
+.ov-arrow {
+    font-size: 40px;
+    cursor: pointer;
+}
+.ov-x {
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.kit-sfx {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kit-pop {
+        transition: opacity 0.2s ease;
+        transform: none !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .kit-sort .ghost-btn {
+        min-width: 0;
+    }
+}

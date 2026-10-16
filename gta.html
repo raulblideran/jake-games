@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Grand Theft Collection</title>
+        <link rel="icon" href="favicon.ico" sizes="48x48" />
+        <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+        <script src="theme-palette.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            accent: "#ff3ea5",
+                            "accent-dim": "#b3126d",
+                            ink: "#10031c",
+                            surface: "#1a0a2b",
+                            zinc: ramp("#fbf3ff", "#0c0214"),
+                            cyan: ramp("#e0fdff", "#003c47"),
+                        },
+                        animation: {
+                            fadeIn: "fadeIn 0.25s ease",
+                            fadeInUp: "fadeInUp 0.35s ease",
+                            slideUp: "slideUp 0.35s cubic-bezier(.2,1.3,.4,1)",
+                        },
+                        keyframes: {
+                            fadeIn: { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
+                            fadeInUp: {
+                                "0%": { opacity: "0", transform: "translateY(12px)" },
+                                "100%": { opacity: "1", transform: "translateY(0)" },
+                            },
+                            slideUp: {
+                                "0%": { opacity: "0", transform: "translateY(30px) skewY(3deg)" },
+                                "100%": { opacity: "1", transform: "none" },
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Anton&family=Kaushan+Script&family=Rubik:wght@400;500;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="collection-base.css" />
+        <link rel="stylesheet" href="theme-kit.css" />
+        <style>
+            :root {
+                --accent: #ff3ea5;
+                --accent-rgb: 255, 62, 165;
+                --accent-dim: #b3126d;
+                --accent-soft: #ff8fcf;
+                --accent-ink: #2a0018;
+                --surface: #1a0a2b;
+                --ink: #10031c;
+                --pink: #ff3ea5;
+                --cyan: #22e8ff;
+                --sun: #ffb347;
+                --money: #7cd96b;
+                --panel: rgba(20, 5, 35, 0.78);
+                --tnav-bg: rgba(16, 3, 28, 0.85);
+                --tnav-border: rgba(255, 62, 165, 0.35);
+                --tnav-fg: #f3dcff;
+                --tnav-active-bg: #ff3ea5;
+                --tnav-active-fg: #fff;
+                --tnav-font: "Rubik", sans-serif;
+            }
+            html { background: #10031c; }
+            body { font-family: "Rubik", sans-serif; color: #fbf3ff; min-height: 100vh; overflow-x: hidden; }
+
+            /* ---- Synthwave sunset ---------------------------------------- */
+            .sky {
+                position: fixed;
+                inset: 0;
+                z-index: 0;
+                pointer-events: none;
+                background: linear-gradient(180deg, #12002a 0%, #3b0a5c 28%, #a3206e 50%, #ff6a5c 62%, #ffb347 68%, #2a0640 68.2%, #12002a 100%);
+                overflow: hidden;
+            }
+            .stars {
+                position: absolute;
+                inset: 0 0 50% 0;
+                background-image:
+                    radial-gradient(1px 1px at 10% 20%, #fff, transparent),
+                    radial-gradient(1px 1px at 30% 8%, #fff, transparent),
+                    radial-gradient(1.5px 1.5px at 55% 15%, #fff, transparent),
+                    radial-gradient(1px 1px at 70% 30%, #fff, transparent),
+                    radial-gradient(1px 1px at 85% 12%, #fff, transparent),
+                    radial-gradient(1.5px 1.5px at 92% 35%, #fff, transparent),
+                    radial-gradient(1px 1px at 18% 40%, #fff, transparent),
+                    radial-gradient(1px 1px at 42% 33%, #fff, transparent);
+                animation: twinkle 4s ease-in-out infinite alternate;
+            }
+            @keyframes twinkle { to { opacity: 0.4; } }
+            .sun-wrap { position: absolute; left: 0; right: 0; top: 0; height: 68%; overflow: hidden; }
+            .sun {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: min(52vw, 560px);
+                aspect-ratio: 1;
+                transform: translateX(-50%);
+                border-radius: 50%;
+                background: linear-gradient(180deg, #fff27a 0%, #ffb347 40%, #ff3ea5 80%);
+                box-shadow: 0 0 120px rgba(255, 120, 80, 0.6);
+                -webkit-mask: linear-gradient(180deg, #000 0 52%, transparent 52% 55%, #000 55% 62%, transparent 62% 66%, #000 66% 72%, transparent 72% 77%, #000 77% 82%, transparent 82% 88%, #000 88% 92%, transparent 92%);
+                mask: linear-gradient(180deg, #000 0 52%, transparent 52% 55%, #000 55% 62%, transparent 62% 66%, #000 66% 72%, transparent 72% 77%, #000 77% 82%, transparent 82% 88%, #000 88% 92%, transparent 92%);
+            }
+            .floor {
+                position: absolute;
+                left: -50%;
+                right: -50%;
+                top: 68%;
+                bottom: -10%;
+                transform: perspective(300px) rotateX(62deg);
+                transform-origin: top;
+                background:
+                    linear-gradient(90deg, rgba(255, 62, 165, 0.7) 2px, transparent 2px) 0 0 / 70px 70px,
+                    linear-gradient(0deg, rgba(34, 232, 255, 0.6) 2px, transparent 2px) 0 0 / 70px 70px;
+                animation: floor 1.4s linear infinite;
+                -webkit-mask: linear-gradient(180deg, transparent, #000 30%);
+                mask: linear-gradient(180deg, transparent, #000 30%);
+            }
+            @keyframes floor { to { background-position: 0 70px, 0 70px; } }
+            .palms { position: absolute; left: 0; right: 0; bottom: 31%; height: 42vh; }
+            .palms svg { position: absolute; bottom: 0; height: 100%; fill: #12002a; }
+            .palms .p1 { left: -2vw; }
+            .palms .p2 { right: -1vw; transform: scaleX(-1); height: 80%; }
+            .palms .p3 { left: 18vw; height: 55%; opacity: 0.9; }
+
+            .wrap { position: relative; z-index: 2; max-width: 1760px; margin: 0 auto; padding: 24px 18px 140px; }
+            @media (min-width: 768px) { .wrap { padding: 30px 44px 160px; } }
+
+            /* ---- HUD -------------------------------------------------- */
+            .hud {
+                position: fixed;
+                right: 18px;
+                top: 60px;
+                z-index: 300;
+                text-align: right;
+                pointer-events: none;
+            }
+            .hud-money {
+                font-family: "Anton", sans-serif;
+                font-size: clamp(28px, 3.4vw, 48px);
+                color: var(--money);
+                letter-spacing: 0.02em;
+                -webkit-text-stroke: 2px #000;
+                paint-order: stroke fill;
+                text-shadow: 3px 3px 0 #000;
+                line-height: 1;
+            }
+            .hud-stars { font-size: 26px; letter-spacing: 2px; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; }
+            .hud-stars .on { color: #fff; text-shadow: 0 0 10px #fff; animation: flash 0.6s steps(2) infinite; }
+            .hud-stars .off { color: rgba(255, 255, 255, 0.18); }
+            @keyframes flash { 50% { color: #3b9bff; text-shadow: 0 0 12px #3b9bff; } }
+            .hud-bars { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; margin-top: 6px; }
+            .hud-bar { width: 170px; height: 9px; border: 2px solid #000; background: rgba(0, 0, 0, 0.5); }
+            .hud-bar i { display: block; height: 100%; transition: width 1.2s ease; }
+            .hud-bar.hp i { background: #4ad94a; }
+            .hud-bar.ar i { background: #3b9bff; }
+            .hud-cap { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-shadow: 1px 1px 0 #000; }
+            @media (max-width: 760px) { .hud { top: auto; bottom: 100px; right: 12px; transform: scale(0.75); transform-origin: bottom right; } }
+
+            /* ---- Hero collage --------------------------------------------- */
+            .hero { position: relative; display: grid; gap: 26px; grid-template-columns: 1fr; align-items: center; min-height: 520px; }
+            @media (min-width: 1100px) { .hero { grid-template-columns: 1.1fr 1fr; } .logo { margin-top: 150px; } }
+            .collage {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(3, 150px);
+                gap: 10px;
+                transform: rotate(-4deg) skewX(-4deg);
+                animation: collageIn 0.9s cubic-bezier(0.2, 1.2, 0.4, 1) backwards;
+            }
+            @keyframes collageIn { from { opacity: 0; transform: rotate(-14deg) skewX(-10deg) scale(0.8); } }
+            .cpanel {
+                position: relative;
+                overflow: hidden;
+                border: 5px solid #000;
+                box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+                background: linear-gradient(135deg, hsl(var(--h) 80% 55%), hsl(calc(var(--h) + 40) 80% 30%));
+                cursor: pointer;
+                transition: transform 0.2s ease;
+            }
+            .cpanel:hover { transform: scale(1.06) rotate(1deg); z-index: 3; }
+            .cpanel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+            .cpanel span {
+                position: absolute;
+                left: 8px;
+                right: 8px;
+                bottom: 6px;
+                font-family: "Anton", sans-serif;
+                font-size: 16px;
+                line-height: 1.05;
+                color: #fff;
+                -webkit-text-stroke: 1px #000;
+                paint-order: stroke fill;
+                text-shadow: 2px 2px 0 #000;
+                text-transform: uppercase;
+            }
+            .cpanel.big { grid-column: span 2; grid-row: span 2; }
+            .cpanel.big span { font-size: 26px; }
+            .logo { text-align: center; position: relative; }
+            .logo-script {
+                font-family: "Kaushan Script", cursive;
+                font-size: clamp(54px, 8vw, 120px);
+                color: #fff;
+                line-height: 0.9;
+                text-shadow: 0 0 10px #ff3ea5, 0 0 30px #ff3ea5, 0 0 60px #ff3ea5;
+                transform: rotate(-6deg);
+                animation: neon 3s ease-in-out infinite;
+            }
+            @keyframes neon { 0%, 18%, 22%, 100% { opacity: 1; } 20% { opacity: 0.6; } }
+            .logo-main {
+                font-family: "Anton", sans-serif;
+                font-size: clamp(52px, 7.4vw, 120px);
+                line-height: 0.92;
+                text-transform: uppercase;
+                background: linear-gradient(180deg, #fff 0%, #ffe9a8 35%, #ffb347 55%, #ff3ea5 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+                filter: drop-shadow(4px 4px 0 #000) drop-shadow(0 0 30px rgba(255, 62, 165, 0.5));
+                margin-top: 8px;
+            }
+            .logo-sub { font-weight: 700; letter-spacing: 0.35em; text-transform: uppercase; font-size: 13px; color: var(--cyan); text-shadow: 0 0 10px var(--cyan); margin-top: 14px; }
+            .logo-links { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+            .neon-btn {
+                font-family: "Anton", sans-serif;
+                letter-spacing: 0.08em;
+                font-size: 16px;
+                padding: 8px 18px;
+                color: #fff;
+                border: 2px solid var(--cyan);
+                box-shadow: 0 0 12px rgba(34, 232, 255, 0.5), inset 0 0 12px rgba(34, 232, 255, 0.3);
+                text-transform: uppercase;
+                transition: all 0.15s ease;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: rgba(16, 3, 28, 0.5);
+            }
+            .neon-btn:hover, .kit-sfx.on { background: var(--cyan); color: #10031c; }
+
+            /* ---- Pause-menu panels ---------------------------------------- */
+            .pm { margin-top: 30px; background: var(--panel); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.08); }
+            .pm-tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
+            .pm-tabs span {
+                flex: 1;
+                min-width: 120px;
+                text-align: center;
+                padding: 10px 12px;
+                font-family: "Anton", sans-serif;
+                letter-spacing: 0.08em;
+                font-size: 16px;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.55);
+                background: rgba(0, 0, 0, 0.35);
+                border-bottom: 4px solid transparent;
+            }
+            .pm-tabs span.on { color: #fff; background: rgba(255, 62, 165, 0.25); border-bottom-color: var(--pink); }
+            .pm-body { padding: 18px 20px; }
+            #stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 28px; }
+            .srow {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                gap: 12px;
+                padding: 9px 12px;
+                background: rgba(0, 0, 0, 0.3);
+                border-left: 4px solid transparent;
+                transition: all 0.12s ease;
+            }
+            .srow:hover { background: #fff; color: #10031c; border-left-color: var(--pink); }
+            .srow:hover .sval { color: #10031c; }
+            .slab { font-weight: 500; }
+            .sval { font-family: "Anton", sans-serif; font-size: 22px; letter-spacing: 0.03em; }
+            .sval.money { color: var(--money); }
+            .sval.pink { color: var(--pink); }
+            .sval.red { color: #ff5a5a; }
+
+            .kit-totals { gap: 6px 26px; }
+            .kit-total-label { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #e0b8ff; }
+            .kit-total-value { font-family: "Anton", sans-serif; font-size: 26px; letter-spacing: 0.03em; color: #fff; }
+            .kit-total[data-k="value"] .kit-total-value, .kit-total[data-k="sell"] .kit-total-value { color: var(--money); text-shadow: 2px 2px 0 #000; }
+            .kit-total-value.is-up { color: var(--money); }
+            .kit-total-value.is-down { color: #ff5a5a; }
+            .kit-status { color: #e0b8ff; }
+
+            /* ---- Controls ------------------------------------------------ */
+            .ghost-btn, .accent-btn, .seg button, .chip { border-radius: 0; font-weight: 700; letter-spacing: 0.02em; }
+            .ghost-btn { background: rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.2); }
+            .ghost-btn:hover { background: #fff; color: #10031c; border-color: #fff; }
+            .accent-btn { background: var(--pink); color: #fff; border-color: var(--pink); box-shadow: 0 0 18px rgba(255, 62, 165, 0.5); }
+            .accent-btn:hover { background: #fff; color: var(--pink); }
+            .seg { border-radius: 0; }
+            .seg button.active { background: var(--pink); color: #fff; }
+            .chip { border-radius: 0; }
+            .chip.active { background: var(--cyan); border-color: var(--cyan); color: #10031c; }
+            .chip:hover { border-color: var(--cyan); }
+            .kit-search input { background: rgba(0, 0, 0, 0.5); border: 2px solid rgba(255, 255, 255, 0.2); color: #fff; font-size: 15px; }
+            .kit-search input:focus { border-color: var(--pink); box-shadow: 0 0 20px rgba(255, 62, 165, 0.4); }
+            .kit-dropdown { background: #1a0a2b; border: 2px solid var(--pink); }
+            .kit-badge { background: var(--cyan); color: #10031c; }
+            .kit-caret { color: var(--pink); }
+            .kit-panel:not(.collapsed) { padding-top: 18px; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+            .kit-summary { color: #e0b8ff; font-size: 12px; }
+
+            /* ---- Loading-screen art cards -------------------------------- */
+            .sec-h { font-family: "Anton", sans-serif; font-size: 44px; text-transform: uppercase; margin: 46px 0 18px; display: flex; align-items: baseline; gap: 14px; text-shadow: 3px 3px 0 #000; }
+            .sec-h small { font-family: "Rubik", sans-serif; font-size: 14px; color: #e0b8ff; text-shadow: none; }
+            #cardsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 22px; }
+            .gc {
+                position: relative;
+                aspect-ratio: 3 / 4.4;
+                border: 5px solid #000;
+                background: linear-gradient(160deg, hsl(var(--h) 80% 50%), hsl(calc(var(--h) + 50) 70% 22%));
+                box-shadow: 7px 7px 0 rgba(0, 0, 0, 0.55);
+                transform: rotate(var(--r)) skewY(var(--s));
+                transition: transform 0.2s cubic-bezier(0.3, 1.6, 0.5, 1), box-shadow 0.2s ease;
+                cursor: pointer;
+                overflow: hidden;
+                animation: gcIn 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+            }
+            @keyframes gcIn { from { opacity: 0; transform: translateY(40px) rotate(calc(var(--r) * 4)); } }
+            .gc:hover { transform: rotate(0) skewY(0) scale(1.06); z-index: 10; box-shadow: 0 0 0 3px var(--pink), 0 0 40px rgba(255, 62, 165, 0.6), 10px 10px 0 rgba(0, 0, 0, 0.55); }
+            .gc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+            .gc:hover img { transform: scale(1.08); }
+            .gc .noart {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: "Kaushan Script", cursive;
+                font-size: 30px;
+                color: rgba(255, 255, 255, 0.35);
+                padding: 10px;
+                text-align: center;
+            }
+            .gc-band {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding: 34px 10px 8px;
+                background: linear-gradient(transparent, rgba(0, 0, 0, 0.88) 40%);
+            }
+            .gc-title {
+                font-family: "Anton", sans-serif;
+                font-size: 20px;
+                line-height: 1.02;
+                text-transform: uppercase;
+                color: #fff;
+                -webkit-text-stroke: 1.2px #000;
+                paint-order: stroke fill;
+                text-shadow: 2px 2px 0 #000;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            .gc-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 11px; font-weight: 700; color: #e0b8ff; gap: 6px; }
+            .gc-money {
+                font-family: "Anton", sans-serif;
+                font-size: 22px;
+                color: var(--money);
+                -webkit-text-stroke: 1px #000;
+                paint-order: stroke fill;
+                text-shadow: 2px 2px 0 #000;
+                white-space: nowrap;
+            }
+            .gc-stars { position: absolute; top: 6px; right: 8px; font-size: 15px; letter-spacing: 1px; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+            .gc-stars .on { color: #fff; }
+            .gc-stars .off { color: rgba(255, 255, 255, 0.22); }
+            .gc-tag {
+                position: absolute;
+                top: 8px;
+                left: -4px;
+                font-family: "Anton", sans-serif;
+                font-size: 13px;
+                letter-spacing: 0.06em;
+                padding: 2px 10px 2px 12px;
+                text-transform: uppercase;
+                box-shadow: 3px 3px 0 #000;
+            }
+            .gc-ed {
+                position: absolute;
+                top: 36px;
+                left: -4px;
+                max-width: 85%;
+                background: #000;
+                color: var(--cyan);
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                padding: 2px 8px 2px 12px;
+                text-transform: uppercase;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .gc-hover {
+                position: absolute;
+                top: 42%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(0.5) rotate(-6deg);
+                opacity: 0;
+                transition: all 0.2s cubic-bezier(0.3, 1.6, 0.5, 1);
+                font-family: "Anton", sans-serif;
+                font-size: 22px;
+                text-transform: uppercase;
+                white-space: nowrap;
+                -webkit-text-stroke: 1.5px #000;
+                paint-order: stroke fill;
+                text-shadow: 3px 3px 0 #000;
+                pointer-events: none;
+            }
+            .gc:hover .gc-hover { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-6deg); }
+            .gc-hover.up { color: #ffd33d; }
+            .gc-hover.down { color: #ff3b3b; }
+            .gc.tbc img { filter: grayscale(1) contrast(1.2) brightness(0.6); }
+            .gc.sealed { border-color: #d4af37; box-shadow: 7px 7px 0 rgba(0, 0, 0, 0.55), 0 0 22px rgba(245, 215, 116, 0.55); }
+            .cond { width: 18px; height: 18px; font-size: 9px; }
+            .delta-up { color: var(--money); }
+            .delta-down { color: #ff5a5a; }
+
+            /* ---- Table / wall / shelf ----------------------------------- */
+            #tableWrap { background: var(--panel); backdrop-filter: blur(10px); border: 2px solid #000; }
+            .gtable th { background: #1a0a2b; color: var(--cyan); font-weight: 700; }
+            .gtable tbody tr:hover { background: #fff; }
+            .gtable tbody tr:hover td { color: #10031c !important; }
+            .gtable tbody tr:hover td * { color: #10031c !important; }
+            .wall-tile { border: 2px solid #000; }
+            .wall-tile:hover { outline: 3px solid var(--pink); }
+            #shelfView { background: repeating-linear-gradient(to bottom, transparent 0, transparent 178px, #ff3ea5 178px, #22e8ff 181px, #10031c 190px, transparent 190px, transparent 214px), rgba(16, 3, 28, 0.8); }
+
+            .bar-fill, .vbar, .spark div { background: linear-gradient(90deg, #ff3ea5, #ffb347); }
+            .hm-cell[data-n="1"] { background: #5a1a6e; }
+            .hm-cell[data-n="2"] { background: #a3206e; }
+            .hm-cell[data-n="3"] { background: #ff3ea5; }
+            .hm-cell[data-n="4"] { background: #ffb347; }
+
+            /* ---- Overlays & modal --------------------------------------- */
+            .ov { background: rgba(16, 3, 28, 0.9); backdrop-filter: blur(8px); }
+            .ov-panel.ov-card { background: #1a0a2b; border: 3px solid #000; box-shadow: 0 0 0 2px var(--pink), 10px 10px 0 #000; padding: 26px; }
+            .ov-title { font-family: "Anton", sans-serif; font-size: 44px; text-transform: uppercase; text-shadow: 3px 3px 0 #000; }
+            .ov-sub, .ov-roll-console { color: #e0b8ff; }
+            .ov-kicker { font-family: "Kaushan Script", cursive; font-size: 30px; color: var(--pink); text-shadow: 0 0 14px var(--pink); margin-bottom: 14px; }
+            .ov-roll-cover { border: 6px solid #000; box-shadow: 0 0 0 3px var(--pink), 0 0 60px rgba(255, 62, 165, 0.6); }
+            .ov-roll-title { font-family: "Anton", sans-serif; font-size: 34px; text-transform: uppercase; text-shadow: 3px 3px 0 #000; }
+            .ov-arrow, .ov-x { color: var(--pink); }
+            #wrappedOverlay { background: linear-gradient(180deg, #12002a, #a3206e 70%, #ffb347); }
+            #wrappedSlide .text-6xl, #wrappedSlide .text-7xl, #wrappedSlide .text-4xl { font-family: "Anton", sans-serif; font-weight: 400; text-shadow: 4px 4px 0 #000; }
+            .trophy { border-radius: 0; background: #1a0a2b; }
+            .trophy.unlocked { border-color: #ffd33d; background: linear-gradient(150deg, rgba(255, 211, 61, 0.2), transparent 60%), #1a0a2b; }
+            .kit-modal { background: rgba(16, 3, 28, 0.88); backdrop-filter: blur(6px); }
+            .kit-modal-box { background: linear-gradient(160deg, #2a0b45, #12031f); border: 4px solid #000; box-shadow: 0 0 0 2px var(--pink), 12px 12px 0 #000; }
+            #modalBox.sealed { box-shadow: 0 0 0 2px #d4af37, 12px 12px 0 #000; }
+            #modalBody h2 { font-family: "Anton", sans-serif; font-weight: 400 !important; text-transform: uppercase; font-size: 40px !important; }
+            .kit-modal-close, .kit-modal-nav { border-radius: 0; background: #000; color: #fff; border: 2px solid var(--pink); font-family: "Anton", sans-serif; }
+            .kit-modal-close:hover, .kit-modal-nav:hover { background: var(--pink); }
+            .kit-toast { background: #000; border: 2px solid var(--pink); color: #fff; font-weight: 700; }
+            .kit-toast-error { border-color: #ff3b3b; }
+            .kit-loading { background: rgba(16, 3, 28, 0.9); }
+            .kit-loading-panel { font-family: "Anton", sans-serif; font-size: 22px; letter-spacing: 0.06em; text-transform: uppercase; }
+            .load-spin { width: 54px; height: 54px; margin: 0 auto 16px; border: 6px solid rgba(255, 255, 255, 0.15); border-top-color: var(--pink); border-right-color: var(--cyan); border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+            /* ---- Splash ------------------------------------------------- */
+            .splash {
+                position: fixed;
+                inset: 0;
+                z-index: 480;
+                pointer-events: none;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                animation: splash 1.9s ease forwards;
+            }
+            .splash.wasted { background: radial-gradient(ellipse at center, rgba(80, 0, 0, 0.25), rgba(0, 0, 0, 0.55)); backdrop-filter: grayscale(1); }
+            .splash-main {
+                font-family: "Anton", sans-serif;
+                font-size: clamp(54px, 9vw, 130px);
+                text-transform: uppercase;
+                line-height: 1;
+                -webkit-text-stroke: 3px #000;
+                paint-order: stroke fill;
+                text-shadow: 5px 5px 0 #000;
+            }
+            .splash.passed .splash-main { color: #ffd33d; }
+            .splash.wasted .splash-main { color: #d01919; letter-spacing: 0.04em; }
+            .splash-sub { font-family: "Anton", sans-serif; font-size: clamp(22px, 3vw, 40px); color: #fff; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; margin-top: 6px; }
+            @keyframes splash {
+                0% { opacity: 0; transform: scale(1.6); }
+                12% { opacity: 1; transform: scale(1); }
+                75% { opacity: 1; }
+                100% { opacity: 0; }
+            }
+
+            /* ---- Phone -------------------------------------------------- */
+            .phone-btn {
+                position: fixed;
+                right: 20px;
+                bottom: 20px;
+                z-index: 360;
+                width: 58px;
+                height: 58px;
+                border-radius: 16px;
+                font-size: 28px;
+                background: linear-gradient(160deg, #ff3ea5, #7a1fa2);
+                box-shadow: 0 0 0 3px #000, 0 0 30px rgba(255, 62, 165, 0.6);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.2s ease;
+            }
+            .phone-btn:hover { transform: rotate(-8deg) scale(1.1); }
+            .phone {
+                position: fixed;
+                right: 24px;
+                bottom: 92px;
+                z-index: 470;
+                width: 260px;
+                padding: 14px 12px 16px;
+                border-radius: 30px;
+                background: #0b0b0b;
+                border: 3px solid #333;
+                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), inset 0 0 0 2px #000;
+                transform: translateY(130%) rotate(6deg);
+                transition: transform 0.4s cubic-bezier(0.2, 1.2, 0.4, 1);
+            }
+            .phone.open { transform: none; }
+            .phone-screen { border-radius: 20px; padding: 14px 12px; background: linear-gradient(180deg, #2a0b45, #ff3ea5 160%); min-height: 330px; }
+            .phone-top { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-bottom: 14px; }
+            .apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 8px; }
+            .app { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; }
+            .app i { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-style: normal; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); transition: transform 0.12s ease; }
+            .app:hover i { transform: scale(1.12); }
+            .phone-brand { text-align: center; margin-top: 10px; font-size: 11px; letter-spacing: 0.3em; color: #888; }
+            .money-rain { position: fixed; top: -60px; z-index: 900; font-size: 34px; pointer-events: none; animation: rain linear forwards; }
+            @keyframes rain { to { transform: translateY(115vh) rotate(720deg); } }
+            .kit-toasts { top: 70px; bottom: auto; left: 24px; transform: none; align-items: flex-start; }
+            .radio { background: rgba(0, 0, 0, 0.75); padding: 8px 16px; border-left: 4px solid var(--cyan); }
+            .radio small { display: block; font-size: 10px; letter-spacing: 0.3em; color: var(--cyan); font-weight: 700; }
+            .radio b { font-family: "Kaushan Script", cursive; font-size: 26px; font-weight: 400; }
+            .cheat { background: #000; color: #ffd33d; font-family: "Anton", sans-serif; letter-spacing: 0.1em; padding: 8px 16px; font-size: 18px; text-transform: uppercase; border: 2px solid #ffd33d; }
+            .footer { margin-top: 70px; text-align: center; font-size: 12px; color: #e0b8ff; letter-spacing: 0.2em; text-transform: uppercase; }
+            .footer kbd { background: #000; padding: 2px 6px; color: #ffd33d; font-family: "Anton", sans-serif; letter-spacing: 0.1em; }
+            @media (prefers-reduced-motion: reduce) { .floor, .stars, .logo-script { animation: none; } }
+            @media (max-width: 640px) {
+                #cardsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+                .collage { grid-template-rows: repeat(3, 95px); }
+                .gc-title { font-size: 16px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="sky" aria-hidden="true">
+            <div class="stars"></div>
+            <div class="sun-wrap"><div class="sun"></div></div>
+            <div class="palms">
+                <svg class="p1" viewBox="0 0 200 400"><path d="M98 400 C96 320 92 250 104 150 L110 150 C102 250 106 320 110 400Z M106 150 C70 110 30 120 0 150 C30 100 80 100 104 140 C80 90 40 60 10 70 C50 40 95 80 108 135 C110 80 90 40 70 20 C110 40 120 90 112 138 C130 90 170 70 200 80 C160 90 125 115 114 145 C150 120 190 130 200 170 C170 140 135 140 112 150Z"/></svg>
+                <svg class="p2" viewBox="0 0 200 400"><path d="M98 400 C96 320 92 250 104 150 L110 150 C102 250 106 320 110 400Z M106 150 C70 110 30 120 0 150 C30 100 80 100 104 140 C80 90 40 60 10 70 C50 40 95 80 108 135 C110 80 90 40 70 20 C110 40 120 90 112 138 C130 90 170 70 200 80 C160 90 125 115 114 145 C150 120 190 130 200 170 C170 140 135 140 112 150Z"/></svg>
+                <svg class="p3" viewBox="0 0 200 400"><path d="M98 400 C96 320 92 250 104 150 L110 150 C102 250 106 320 110 400Z M106 150 C70 110 30 120 0 150 C30 100 80 100 104 140 C80 90 40 60 10 70 C50 40 95 80 108 135 C110 80 90 40 70 20 C110 40 120 90 112 138 C130 90 170 70 200 80 C160 90 125 115 114 145 C150 120 190 130 200 170 C170 140 135 140 112 150Z"/></svg>
+            </div>
+            <div class="floor"></div>
+        </div>
+
+        <div class="hud" aria-hidden="true">
+            <div class="hud-money" id="hudMoney">£00000000</div>
+            <div class="hud-stars" id="hudStars" title="Wanted level: games bought in the last 30 days"></div>
+            <div class="hud-bars">
+                <div class="hud-cap">COMPLETED</div>
+                <div class="hud-bar hp"><i id="hudHp" style="width:0"></i></div>
+                <div class="hud-cap">IN THE BOX</div>
+                <div class="hud-bar ar"><i id="hudAr" style="width:0"></i></div>
+            </div>
+        </div>
+
+        <div class="wrap">
+            <section class="hero">
+                <div class="collage" id="collage"></div>
+                <div class="logo">
+                    <div class="logo-script">Jake's</div>
+                    <div class="logo-main">Grand Theft<br />Collection</div>
+                    <div class="logo-sub">Physical games · completeness · live CeX value</div>
+                    <div class="logo-links">
+                        <a class="neon-btn" href="achievements.html">🏆 Achievements</a>
+                        <a class="neon-btn" href="stats.html">📈 Stats</a>
+                        <span id="sfxSlot"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="pm">
+                <div class="pm-tabs"><span>Map</span><span>Brief</span><span class="on">Stats</span><span>Settings</span><span>Game</span></div>
+                <div class="pm-body"><div id="stats"></div></div>
+            </section>
+
+            <section class="pm">
+                <div class="pm-tabs"><span class="on">Maze Bank</span><span>Fleeca</span><span>Lombank</span></div>
+                <div class="pm-body"><div data-kit="value"></div></div>
+            </section>
+
+            <section class="pm" style="position: sticky; top: 49px; z-index: 40">
+                <div class="pm-body"><div data-kit="controls"></div></div>
+            </section>
+
+            <h2 class="sec-h">Missions <small id="missionCount"></small></h2>
+            <div id="cardsGrid"></div>
+            <div id="tableWrap" class="hidden overflow-x-auto scroll-thin"></div>
+            <div id="wallView" class="hidden"></div>
+            <div id="shelfView" class="hidden"></div>
+            <p class="footer">Try typing <kbd>HESOYAM</kbd> or <kbd>LEAVEMEALONE</kbd> anywhere</p>
+        </div>
+
+        <button class="phone-btn" onclick="togglePhone()" title="Phone">📱</button>
+        <div class="phone" id="phone">
+            <div class="phone-screen">
+                <div class="phone-top"><span id="phoneTime">--:--</span><span>▂▄▆█ 🔋</span></div>
+                <div class="apps">
+                    <button class="app" onclick="phoneDo('rollRandomGame')"><i style="background:#ffb347">🎲</i>Random</button>
+                    <button class="app" onclick="phoneDo('openTrophies')"><i style="background:#ffd33d">🏆</i>Trophies</button>
+                    <button class="app" onclick="phoneDo('openWrapped')"><i style="background:#ff3ea5">🎁</i>Wrapped</button>
+                    <button class="app" onclick="phoneDo('openGuess')"><i style="background:#7cd96b">💷</i>Guess</button>
+                    <button class="app" onclick="phoneDo('openHealth')"><i style="background:#ff5a5a">🩺</i>Health</button>
+                    <button class="app" onclick="phoneDo('printInventory')"><i style="background:#ddd">🖨</i>Print</button>
+                    <button class="app" onclick="phoneDo('toggleBreakdown')"><i style="background:#22e8ff">📊</i>Breakdown</button>
+                    <button class="app" onclick="phoneDo('toggleFilters')"><i style="background:#9b6bff">⚙</i>Filters</button>
+                    <button class="app" onclick="phoneDo('loadCexPrices', true)"><i style="background:#3b9bff">£</i>CeX</button>
+                </div>
+            </div>
+            <div class="phone-brand">iFRUIT</div>
+        </div>
+
+        <script>
+            window.THEME = {
+                sfxDemo: "pass",
+                labels: {
+                    search: "Search missions: title, console, edition…  ( / )",
+                    grid: "Missions",
+                    table: "Stats",
+                    wall: "Wall",
+                    shelf: "Garage",
+                    refresh: "Respawn",
+                    breakdown: "Breakdown",
+                    roll: "🎲 Random mission",
+                    trophies: "🏆",
+                    wrapped: "🎁",
+                    guess: "💷",
+                    health: "🩺",
+                    print: "🖨",
+                    cex: "Check the stock market",
+                    rollTitle: "Next mission",
+                    trophyTitle: "Awards",
+                    healthTitle: "Hospital report",
+                    guessTitle: "Guess the price",
+                    close: "Back",
+                    empty: "No missions available. Try a different area.",
+                },
+                loadingHTML: `<div class="load-spin"></div><div>Loading story mode…</div>`,
+            };
+        </script>
+        <script src="theme-kit.js"></script>
+        <script src="collection-core.js"></script>
+        <script>
+            (function () {
+                kit.install();
+                document.getElementById("sfxSlot").outerHTML = kit.sfxButton("neon-btn");
+
+                const STATIONS = ["Flash FM", "Wave 103", "Emotion 98.3", "Fever 105", "V-Rock", "Non Stop Pop FM", "Radio Espantoso", "Los Santos Rock Radio"];
+                setTimeout(() => {
+                    kit.toast(`<div class="radio"><small>NOW PLAYING</small><b>${STATIONS[Math.floor(Math.random() * STATIONS.length)]}</b></div>`, "", 4200);
+                }, 900);
+
+                const starRow = (n, cls = "") =>
+                    Array.from({ length: 5 }, (_, i) => `<span class="${i < n ? "on" : "off"} ${cls}">★</span>`).join("");
+
+                // ---- HUD + pause-menu stats ---------------------------------------
+                window.displayStats = function () {
+                    const s = kit.stats();
+                    const row = (label, value, cls = "") => `<div class="srow"><span class="slab">${label}</span><span class="sval ${cls}">${value}</span></div>`;
+                    const avg = s.games ? s.paid / s.games : 0;
+                    document.getElementById("stats").innerHTML =
+                        row("Vehicles owned (games)", s.games) +
+                        row("Cities visited (consoles)", s.consoles, "pink") +
+                        row("Money spent", fmtMoney(s.paid)) +
+                        row("Street value (CeX)", fmtMoney(s.value), "money") +
+                        row("Profit from heists", fmtSigned(s.gain), s.gain >= 0 ? "money" : "red") +
+                        row("Return on investment", `${s.gainPct >= 0 ? "+" : "−"}${Math.abs(s.gainPct)}%`, s.gain >= 0 ? "money" : "red") +
+                        row("Missions passed", `${s.completed} (${s.completedPct}%)`) +
+                        row("Mint condition (sealed)", s.sealed, "pink") +
+                        row("Average purchase", fmtMoney(avg)) +
+                        row("Priced on the street", `${s.priced} / ${s.games}`) +
+                        (s.toBuy > 0 ? row("Wanted list", s.toBuy, "red") : "");
+
+                    const money = document.getElementById("hudMoney");
+                    kit.countUp(money, s.value, (n) => "£" + String(Math.round(n)).padStart(8, "0"), 1500);
+                    const cutoff = Date.now() - 30 * 86400000;
+                    const recent = s.owned.filter((r) => {
+                        const d = parseUkDate(r["Date Purchased"]);
+                        return d && d.getTime() >= cutoff;
+                    }).length;
+                    document.getElementById("hudStars").innerHTML = starRow(Math.min(5, Math.ceil(recent / 3)));
+                    document.getElementById("hudHp").style.width = `${s.completedPct}%`;
+                    document.getElementById("hudAr").style.width = `${s.games ? (s.complete / s.games) * 100 : 0}%`;
+                };
+
+                // ---- Hero collage: the priciest covers ------------------------------
+                THEME.onData = () => {
+                    const top = allData.filter((r) => !isTBC(r)).sort((a, b) => rowValue(b) - rowValue(a)).slice(0, 6);
+                    document.getElementById("collage").innerHTML = top
+                        .map((r, i) => {
+                            const cover = coverFromRow(r, "l");
+                            return `<div class="cpanel ${i === 0 ? "big" : ""}" style="--h:${Math.round(kit.hash(r["Game"]) * 360)}" data-gamekey="${escapeHtml(rowKey(r))}">
+                                ${kit.img(cover)}
+                                <span>${escapeHtml(r["Game"])}</span>
+                            </div>`;
+                        })
+                        .join("");
+                    document.querySelectorAll("#collage [data-gamekey]").forEach((p) => (p.onclick = () => openModalByKey(p.dataset.gamekey)));
+                };
+
+                // ---- Mission cards ---------------------------------------------------
+                window.displayCards = function (data) {
+                    const grid = document.getElementById("cardsGrid");
+                    document.getElementById("missionCount").textContent = `${data.length} available`;
+                    if (!data.length) {
+                        grid.innerHTML = kit.empty();
+                        return;
+                    }
+                    const frag = document.createDocumentFragment();
+                    data.forEach((row, index) => {
+                        const c = kit.card(row);
+                        const k = rowKey(row);
+                        const el = document.createElement("div");
+                        el.className = `gc${c.tbc ? " tbc" : ""}${c.sealed ? " sealed" : ""}`;
+                        el.style.setProperty("--r", `${(kit.hash(k) - 0.5) * 4}deg`);
+                        el.style.setProperty("--s", `${(kit.hash("s" + k) - 0.5) * 3}deg`);
+                        el.style.setProperty("--h", Math.round(kit.hash(c.consoleName) * 360));
+                        el.style.animationDelay = `${Math.min(index * 0.015, 0.4)}s`;
+                        const tag = c.tbc
+                            ? `<span class="gc-tag" style="background:#9b6bff;color:#fff">Not owned</span>`
+                            : c.sealed
+                              ? `<span class="gc-tag" style="background:#ffd33d;color:#000">Mint</span>`
+                              : c.completed
+                                ? `<span class="gc-tag" style="background:#7cd96b;color:#000">100% ✓</span>`
+                                : "";
+                        const hover = c.tbc
+                            ? `<div class="gc-hover up">Wanted</div>`
+                            : c.priced || c.value > 0
+                              ? c.gain >= 0
+                                  ? `<div class="gc-hover up">+${fmtMoney(c.gain)}</div>`
+                                  : `<div class="gc-hover down">Wasted</div>`
+                              : "";
+                        el.innerHTML = `
+                            ${c.cover ? kit.img(c.cover, "", c.title) : `<div class="noart">${escapeHtml(c.consoleName)}</div>`}
+                            <div class="gc-stars">${starRow(c.tier)}</div>
+                            ${tag}
+                            ${c.edition !== "Standard" ? `<span class="gc-ed">${escapeHtml(c.edition)}</span>` : ""}
+                            ${hover}
+                            <div class="gc-band">
+                                <div class="gc-title">${escapeHtml(c.title)}</div>
+                                <div class="gc-meta"><span class="truncate">${escapeHtml(c.consoleName)}${c.dup ? ` · ${escapeHtml(c.date)}` : ""}</span><span class="gc-money">${c.value > 0 ? fmtMoney(c.value) : "—"}</span></div>
+                                <div class="gc-meta"><span class="flex gap-1">${c.tbc ? "" : c.pills}</span><span>${!c.tbc && c.paid > 0 ? `paid ${fmtMoney(c.paid)}` : ""} ${c.delta}</span></div>
+                            </div>`;
+                        el.onclick = () => openModal(row, index);
+                        frag.appendChild(el);
+                        if (!c.cover) kit.coverFallback(el, c, "");
+                    });
+                    grid.innerHTML = "";
+                    grid.appendChild(frag);
+                };
+
+                // ---- Mission passed / wasted ------------------------------------------
+                const splash = (cls, main, sub) => {
+                    document.querySelectorAll(".splash").forEach((s) => s.remove());
+                    const el = document.createElement("div");
+                    el.className = `splash ${cls}`;
+                    el.innerHTML = `<div class="splash-main">${main}</div>${sub ? `<div class="splash-sub">${sub}</div>` : ""}`;
+                    document.body.appendChild(el);
+                    setTimeout(() => el.remove(), 2000);
+                };
+                THEME.onModal = (row) => {
+                    const c = kit.card(row);
+                    if (c.tbc) return;
+                    if (!c.priced && c.value === 0) return;
+                    if (c.gain >= 0) {
+                        splash("passed", "Mission passed!", `Respect + · ${fmtSigned(c.gain)}`);
+                        kit.sfx("pass");
+                    } else {
+                        splash("wasted", "Wasted", fmtSigned(c.gain));
+                        kit.sfx("wasted");
+                    }
+                };
+
+                // ---- Phone -----------------------------------------------------------
+                window.togglePhone = () => {
+                    document.getElementById("phone").classList.toggle("open");
+                    document.getElementById("phoneTime").textContent = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+                    kit.sfx("click");
+                };
+                window.phoneDo = (fn, arg) => {
+                    document.getElementById("phone").classList.remove("open");
+                    if (fn === "toggleBreakdown" || fn === "toggleFilters")
+                        document.getElementById("cardsGrid").scrollIntoView({ behavior: "smooth", block: "center" });
+                    window[fn](arg);
+                };
+
+                // ---- Cheats -----------------------------------------------------------
+                let typed = "";
+                document.addEventListener("keydown", (e) => {
+                    const t = e.target;
+                    if (e.key === "Escape") document.getElementById("phone").classList.remove("open");
+                    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+                    if (e.key.length !== 1) return;
+                    typed = (typed + e.key.toUpperCase()).slice(-14);
+                    if (typed.endsWith("HESOYAM")) {
+                        typed = "";
+                        kit.toast(`<div class="cheat">Cheat activated</div>`, "", 2500);
+                        kit.sfx("pass");
+                        for (let i = 0; i < 46; i++) {
+                            const m = document.createElement("div");
+                            m.className = "money-rain";
+                            m.textContent = ["💷", "💵", "💰"][i % 3];
+                            m.style.left = `${Math.random() * 100}vw`;
+                            m.style.animationDuration = `${1.6 + Math.random() * 2}s`;
+                            m.style.animationDelay = `${Math.random() * 0.8}s`;
+                            document.body.appendChild(m);
+                            setTimeout(() => m.remove(), 4500);
+                        }
+                    }
+                    if (typed.endsWith("LEAVEMEALONE")) {
+                        typed = "";
+                        clearAllFilters();
+                        document.getElementById("hudStars").innerHTML = starRow(0);
+                        kit.toast(`<div class="cheat">Cheat activated · filters cleared</div>`, "", 2500);
+                    }
+                });
+            })();
+        </script>
+        <script src="theme-nav.js"></script>
+    </body>
+</html>

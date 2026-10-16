@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Blackwater Ledger</title>
+        <link rel="icon" href="favicon.ico" sizes="48x48" />
+        <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+        <script src="theme-palette.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            // Paper theme: palettes run dark → light, so core's "bright text"
+            // classes print as ink and its dark panels become parchment.
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            accent: "#8b1a1a",
+                            "accent-dim": "#5e1010",
+                            ink: "#1b120b",
+                            surface: "#efe2c2",
+                            white: "#1a110a",
+                            black: "#f1e4c4",
+                            zinc: ramp("#1e140c", "#f4e9cf"),
+                            emerald: ramp("#173f17", "#3f7a3a"),
+                            red: ramp("#5c0f0f", "#a83232"),
+                            amber: ramp("#5a3a08", "#a8741f"),
+                            purple: ramp("#3b2448", "#7a5590"),
+                            cyan: ramp("#1f3d47", "#4b7b8a"),
+                        },
+                        animation: {
+                            fadeIn: "fadeIn 0.25s ease",
+                            fadeInUp: "fadeInUp 0.35s ease",
+                            slideUp: "slideUp 0.3s ease",
+                        },
+                        keyframes: {
+                            fadeIn: { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
+                            fadeInUp: {
+                                "0%": { opacity: "0", transform: "translateY(12px)" },
+                                "100%": { opacity: "1", transform: "translateY(0)" },
+                            },
+                            slideUp: {
+                                "0%": { opacity: "0", transform: "translateY(24px) rotate(-1deg)" },
+                                "100%": { opacity: "1", transform: "translateY(0)" },
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Rye&family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Special+Elite&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="collection-base.css" />
+        <link rel="stylesheet" href="theme-kit.css" />
+        <style>
+            :root {
+                --accent: #8b1a1a;
+                --accent-rgb: 139, 26, 26;
+                --accent-dim: #5e1010;
+                --accent-soft: #a83232;
+                --accent-ink: #f3e7c9;
+                --surface: #efe2c2;
+                --ink: #1b120b;
+                --paper: #ecdcb4;
+                --paper-hi: #f6ead0;
+                --paper-lo: #d8c18f;
+                --brown: #2b1d12;
+                --brown-mid: #6b4a2b;
+                --brass: #b08d57;
+                --blood: #8b1a1a;
+                --tnav-bg: rgba(28, 17, 9, 0.94);
+                --tnav-border: #5a3d22;
+                --tnav-fg: #e9d8b0;
+                --tnav-muted: #a88a5c;
+                --tnav-btn-border: #6b4a2b;
+                --tnav-active-bg: #b08d57;
+                --tnav-active-fg: #1b120b;
+                --tnav-radius: 3px;
+                --tnav-font: "IM Fell English SC", serif;
+            }
+            html {
+                background: #1a100a;
+            }
+            body {
+                font-family: "IM Fell English", Georgia, serif;
+                color: var(--brown);
+                letter-spacing: 0;
+                min-height: 100vh;
+                /* Saloon wall: dark planks with grain. */
+                background:
+                    radial-gradient(ellipse at 50% 0%, rgba(255, 190, 110, 0.18), transparent 60%),
+                    repeating-linear-gradient(
+                        90deg,
+                        rgba(0, 0, 0, 0.35) 0 2px,
+                        transparent 2px 180px
+                    ),
+                    repeating-linear-gradient(
+                        90deg,
+                        rgba(255, 220, 170, 0.025) 0 1px,
+                        transparent 1px 7px
+                    ),
+                    linear-gradient(90deg, #2a1a0f, #3a2415 30%, #2c1b10 55%, #3b2616 80%, #281810);
+                background-attachment: fixed;
+            }
+            .grain {
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                z-index: 600;
+                opacity: 0.16;
+                mix-blend-mode: multiply;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+                animation: grain 0.6s steps(3) infinite;
+            }
+            @keyframes grain {
+                0% { transform: translate(0, 0); }
+                33% { transform: translate(-3%, 2%); }
+                66% { transform: translate(2%, -3%); }
+            }
+            #dust {
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            /* ---- Paper -------------------------------------------------- */
+            .paper {
+                position: relative;
+                color: var(--brown);
+                background:
+                    radial-gradient(ellipse at 20% 10%, rgba(255, 255, 255, 0.35), transparent 50%),
+                    radial-gradient(ellipse at 85% 90%, rgba(120, 70, 20, 0.22), transparent 55%),
+                    radial-gradient(circle at 60% 40%, rgba(150, 100, 40, 0.08), transparent 30%),
+                    linear-gradient(180deg, var(--paper-hi), var(--paper) 40%, var(--paper-lo));
+                box-shadow:
+                    inset 0 0 60px rgba(110, 60, 15, 0.35),
+                    0 18px 40px rgba(0, 0, 0, 0.55);
+            }
+            .paper::after {
+                /* coffee ring + foxing */
+                content: "";
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                background:
+                    radial-gradient(circle at 92% 12%, transparent 26px, rgba(120, 70, 20, 0.16) 28px, transparent 34px),
+                    radial-gradient(circle at 7% 80%, rgba(120, 70, 20, 0.12), transparent 4%),
+                    radial-gradient(circle at 70% 70%, rgba(120, 70, 20, 0.08), transparent 3%);
+            }
+
+            .wrap {
+                position: relative;
+                z-index: 2;
+                max-width: 1680px;
+                margin: 0 auto;
+                padding: 32px 20px 80px;
+            }
+            @media (min-width: 768px) {
+                .wrap { padding: 40px 40px 100px; }
+            }
+
+            /* ---- Masthead ---------------------------------------------- */
+            .masthead {
+                padding: 22px 28px 26px;
+                transform: rotate(-0.4deg);
+            }
+            .mast-top {
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+                font-family: "IM Fell English SC", serif;
+                font-size: 13px;
+                border-bottom: 1px solid var(--brown);
+                padding-bottom: 6px;
+            }
+            .mast-title {
+                font-family: "Rye", serif;
+                text-align: center;
+                font-size: clamp(38px, 7.5vw, 104px);
+                line-height: 1;
+                margin: 14px 0 8px;
+                color: var(--brown);
+                text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.4);
+                letter-spacing: 0.01em;
+            }
+            .mast-rule {
+                text-align: center;
+                font-family: "IM Fell English SC", serif;
+                font-size: 14px;
+                letter-spacing: 0.2em;
+                border-top: 4px double var(--brown);
+                border-bottom: 4px double var(--brown);
+                padding: 6px 0;
+            }
+            .headline-row {
+                display: grid;
+                gap: 22px;
+                margin-top: 20px;
+                grid-template-columns: 1fr;
+            }
+            @media (min-width: 1024px) {
+                .headline-row { grid-template-columns: 1fr auto; align-items: end; }
+            }
+            .headline h2 {
+                font-family: "IM Fell English SC", serif;
+                font-size: clamp(26px, 3.6vw, 52px);
+                line-height: 1.02;
+                font-weight: 400;
+            }
+            .headline p {
+                font-style: italic;
+                font-size: 18px;
+                margin-top: 8px;
+                color: #4a3320;
+            }
+            .mast-links {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                align-items: center;
+            }
+            .handbill {
+                font-family: "Rye", serif;
+                font-size: 13px;
+                padding: 8px 14px;
+                background: var(--brown);
+                color: var(--paper-hi);
+                border: 2px solid var(--brown);
+                outline: 1px solid var(--paper-hi);
+                outline-offset: -5px;
+                cursor: pointer;
+                transition: transform 0.15s ease, background 0.15s ease;
+                display: inline-flex;
+                gap: 6px;
+                align-items: center;
+            }
+            .handbill:hover { transform: rotate(-2deg) scale(1.05); background: var(--blood); }
+            .handbill.on { background: var(--blood); }
+
+            /* Stats as newspaper columns */
+            .news-columns {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                margin-top: 22px;
+                border-top: 2px solid var(--brown);
+            }
+            .col {
+                padding: 12px 14px 4px;
+                border-right: 1px solid rgba(43, 29, 18, 0.45);
+            }
+            .col:last-child { border-right: 0; }
+            .col-label {
+                font-family: "IM Fell English SC", serif;
+                font-size: 12px;
+                letter-spacing: 0.12em;
+                border-bottom: 1px solid rgba(43, 29, 18, 0.4);
+                padding-bottom: 4px;
+            }
+            .col-value {
+                font-family: "Rye", serif;
+                font-size: 30px;
+                line-height: 1.1;
+                margin-top: 6px;
+            }
+            .col-value.red { color: var(--blood); }
+            .col-value.green { color: #2c5a26; }
+            .col-note { font-style: italic; font-size: 13px; color: #5a412a; }
+
+            /* ---- Bank statement (value strip) ---------------------------- */
+            .bank {
+                margin-top: 28px;
+                padding: 20px 26px;
+                transform: rotate(0.25deg);
+                border: 1px solid rgba(43, 29, 18, 0.35);
+            }
+            .bank h3, .board-title {
+                font-family: "Rye", serif;
+            }
+            .bank h3 {
+                font-size: 22px;
+                margin-bottom: 12px;
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .bank h3 small {
+                font-family: "IM Fell English", serif;
+                font-style: italic;
+                font-size: 14px;
+                font-weight: 400;
+            }
+            .kit-totals {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+                gap: 0 32px;
+            }
+            .kit-total {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+                padding: 6px 0;
+                border-bottom: 1px dotted rgba(43, 29, 18, 0.5);
+            }
+            .kit-total-label {
+                font-family: "IM Fell English SC", serif;
+                font-size: 15px;
+                white-space: nowrap;
+            }
+            .kit-total-label::after {
+                content: "";
+            }
+            .kit-total-value {
+                margin-left: auto;
+                font-family: "Special Elite", monospace;
+                font-size: 18px;
+                white-space: nowrap;
+            }
+            .kit-total[data-k="gain"] .kit-total-value.is-up { color: #2c5a26; }
+            .kit-total[data-k="gain"] .kit-total-value.is-down { color: var(--blood); }
+            .kit-total[data-k="value"] .kit-total-value { font-weight: 700; }
+            .kit-status { font-style: italic; color: #5a412a; font-size: 14px; }
+
+            /* ---- Buttons ------------------------------------------------ */
+            .ghost-btn,
+            .accent-btn,
+            .seg button,
+            .chip {
+                font-family: "IM Fell English SC", serif;
+                font-size: 15px;
+                border-radius: 2px;
+                letter-spacing: 0.03em;
+            }
+            .ghost-btn {
+                color: #f1e2bf;
+                background: linear-gradient(180deg, #5a3a20, #3b2414);
+                border: 1px solid #1f130a;
+                box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.25), 0 2px 0 #140c06;
+            }
+            .ghost-btn:hover {
+                color: #fff4d8;
+                border-color: var(--brass);
+                background: linear-gradient(180deg, #6e4826, #4a2e18);
+            }
+            .accent-btn {
+                color: #f6ead0;
+                background: linear-gradient(180deg, #a42424, #741313);
+                border: 1px solid #3e0a0a;
+                box-shadow: inset 0 1px 0 rgba(255, 200, 200, 0.25), 0 2px 0 #2a0606;
+            }
+            .accent-btn:hover { color: #fff; background: linear-gradient(180deg, #b52b2b, #821616); }
+            .seg {
+                border: 1px solid #1f130a;
+                border-radius: 2px;
+                box-shadow: 0 2px 0 #140c06;
+            }
+            .seg button {
+                color: #d8c39a;
+                background: linear-gradient(180deg, #4a2f1a, #2e1c0f);
+                border-right: 1px solid #1f130a;
+            }
+            .seg button:last-child { border-right: 0; }
+            .seg button:hover { color: #fff4d8; }
+            .seg button.active {
+                color: var(--brown);
+                background: linear-gradient(180deg, #e2c58c, var(--brass));
+            }
+            .chip {
+                color: var(--brown);
+                background: rgba(255, 250, 235, 0.35);
+                border: 1px solid rgba(43, 29, 18, 0.45);
+                padding: 4px 12px;
+            }
+            .chip:hover { border-color: var(--blood); color: var(--blood); }
+            .chip.active {
+                background: var(--brown);
+                border-color: var(--brown);
+                color: var(--paper-hi);
+                font-weight: 400;
+            }
+            .kit-badge { background: var(--blood); color: #fff; font-family: "Special Elite", monospace; }
+
+            /* ---- Controls plank ----------------------------------------- */
+            .plank {
+                margin-top: 30px;
+                padding: 16px 18px;
+                position: sticky;
+                top: 49px;
+                z-index: 40;
+                background:
+                    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 5px),
+                    linear-gradient(180deg, #6b4526, #4a2d17 60%, #3a2312);
+                border: 2px solid #1f130a;
+                box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 200, 140, 0.2);
+            }
+            .plank::before, .plank::after {
+                /* nail heads */
+                content: "";
+                position: absolute;
+                top: 50%;
+                width: 10px;
+                height: 10px;
+                margin-top: -5px;
+                border-radius: 50%;
+                background: radial-gradient(circle at 35% 35%, #d9d2c0, #5b5348 70%);
+                box-shadow: 0 1px 2px #000;
+            }
+            .plank::before { left: 6px; }
+            .plank::after { right: 6px; }
+            .kit-search input {
+                font-family: "Special Elite", monospace;
+                font-size: 15px;
+                background: var(--paper-hi);
+                color: var(--brown);
+                border: 1px solid #1f130a;
+                box-shadow: inset 0 2px 6px rgba(80, 40, 10, 0.35);
+            }
+            .kit-search input::placeholder { color: #8b6d48; }
+            .kit-search input:focus { border-color: var(--blood); }
+            .kit-dropdown {
+                background: var(--paper-hi);
+                border: 2px solid var(--brown);
+                box-shadow: 0 16px 30px rgba(0, 0, 0, 0.5);
+                font-family: "IM Fell English", serif;
+            }
+            .kit-caret { color: var(--brass); }
+            .kit-panel:not(.collapsed) {
+                margin-top: 16px;
+                padding: 20px 22px;
+                background: linear-gradient(180deg, var(--paper-hi), var(--paper));
+                box-shadow: inset 0 0 40px rgba(110, 60, 15, 0.3);
+                border: 1px solid #1f130a;
+                max-height: 70vh !important;
+                overflow-y: auto !important;
+            }
+            .kit-summary { font-style: italic; color: #5a412a; }
+            #filterGroups h3 { font-family: "IM Fell English SC", serif; font-size: 14px !important; letter-spacing: 0.1em !important; color: var(--brown) !important; }
+
+            /* ---- Bounty board ------------------------------------------- */
+            .board-title {
+                margin: 46px 0 26px;
+                text-align: center;
+                color: #e8d3a6;
+                font-size: clamp(26px, 4vw, 46px);
+                text-shadow: 0 3px 0 #120a05, 0 0 30px rgba(255, 180, 90, 0.25);
+                display: flex;
+                align-items: center;
+                gap: 18px;
+            }
+            .board-title::before, .board-title::after {
+                content: "";
+                flex: 1;
+                height: 2px;
+                background: linear-gradient(90deg, transparent, #a07c4c, transparent);
+            }
+            #cardsGrid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+                gap: 34px 26px;
+                padding: 6px;
+            }
+            .poster-wrap {
+                position: relative;
+                cursor: pointer;
+                transform: rotate(var(--r, 0deg)) translateY(var(--y, 0px));
+                transition: transform 0.25s cubic-bezier(0.3, 1.5, 0.5, 1), filter 0.25s ease;
+                filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.6));
+                animation: posterIn 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) backwards;
+            }
+            @keyframes posterIn {
+                from { opacity: 0; transform: rotate(calc(var(--r) * 4)) translateY(-30px) scale(0.9); }
+            }
+            .poster-wrap:hover {
+                transform: rotate(0deg) scale(1.06);
+                z-index: 20;
+                filter: drop-shadow(0 22px 22px rgba(0, 0, 0, 0.7));
+            }
+            .nail {
+                position: absolute;
+                top: 7px;
+                left: 50%;
+                width: 12px;
+                height: 12px;
+                margin-left: -6px;
+                border-radius: 50%;
+                z-index: 5;
+                background: radial-gradient(circle at 35% 35%, #e6e0d0, #6c6355 60%, #2b261f);
+                box-shadow: 0 2px 3px rgba(0, 0, 0, 0.6);
+            }
+            .poster {
+                clip-path: var(--torn);
+                padding: 22px 14px 14px;
+                text-align: center;
+                background:
+                    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.4), transparent 50%),
+                    radial-gradient(ellipse at 70% 100%, rgba(110, 60, 15, 0.35), transparent 60%),
+                    linear-gradient(180deg, #f2e2bc, #e3cc9a 60%, #d4b77c);
+                color: var(--brown);
+            }
+            .poster-head {
+                font-family: "Rye", serif;
+                font-size: 34px;
+                line-height: 1;
+                letter-spacing: 0.04em;
+            }
+            .poster-sub {
+                font-family: "IM Fell English SC", serif;
+                font-size: 12px;
+                letter-spacing: 0.25em;
+                border-top: 1px solid var(--brown);
+                border-bottom: 1px solid var(--brown);
+                margin: 6px 0 10px;
+                padding: 2px 0;
+            }
+            .poster-photo {
+                position: relative;
+                aspect-ratio: 3 / 4;
+                background: #c9ae78;
+                border: 3px solid var(--brown);
+                overflow: hidden;
+                box-shadow: inset 0 0 20px rgba(60, 30, 5, 0.6);
+            }
+            .poster-photo img {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                filter: sepia(0.85) contrast(1.15) brightness(0.92);
+                transition: filter 0.4s ease, transform 0.6s ease;
+            }
+            .poster-wrap:hover .poster-photo img {
+                filter: sepia(0) contrast(1.05);
+                transform: scale(1.05);
+            }
+            .poster-photo .no-photo {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: "Rye", serif;
+                font-size: 46px;
+                color: rgba(43, 29, 18, 0.35);
+            }
+            .poster-name {
+                font-family: "IM Fell English SC", serif;
+                font-size: 17px;
+                line-height: 1.1;
+                margin-top: 10px;
+                min-height: 38px;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            .poster-terr {
+                font-style: italic;
+                font-size: 12px;
+                color: #5a412a;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .poster-reward-label {
+                font-family: "Rye", serif;
+                font-size: 13px;
+                letter-spacing: 0.3em;
+                margin-top: 8px;
+            }
+            .poster-reward {
+                font-family: "Rye", serif;
+                font-size: 28px;
+                line-height: 1;
+                color: var(--blood);
+            }
+            .poster-reward .delta-up, .poster-reward .delta-down {
+                font-family: "Special Elite", monospace;
+                font-size: 11px;
+                vertical-align: middle;
+            }
+            .delta-up { color: #2c5a26; }
+            .delta-down { color: var(--blood); }
+            .poster-foot {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 10px;
+                padding-top: 6px;
+                border-top: 1px dashed rgba(43, 29, 18, 0.5);
+                font-family: "Special Elite", monospace;
+                font-size: 11px;
+            }
+            .cond {
+                width: 20px;
+                height: 20px;
+                font-size: 10px;
+                font-family: "Special Elite", monospace;
+                box-shadow: inset 0 0 0 1.5px rgba(43, 29, 18, 0.6);
+            }
+            .stamp {
+                position: absolute;
+                z-index: 4;
+                font-family: "Rye", serif;
+                padding: 2px 10px;
+                border: 3px solid currentColor;
+                border-radius: 4px;
+                letter-spacing: 0.08em;
+                mix-blend-mode: multiply;
+                opacity: 0.88;
+                -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.5 1.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+                mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.5 1.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            }
+            .stamp.captured {
+                color: #9b1c1c;
+                font-size: 22px;
+                top: 38%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-18deg);
+            }
+            .stamp.missing {
+                color: #3b2448;
+                font-size: 20px;
+                top: 45%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(12deg);
+                background: rgba(240, 225, 190, 0.6);
+            }
+            .wax {
+                position: absolute;
+                z-index: 4;
+                right: -4px;
+                bottom: -4px;
+                width: 52px;
+                height: 52px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: "Rye", serif;
+                font-size: 9px;
+                line-height: 1.1;
+                text-align: center;
+                color: #f0c9a0;
+                background: radial-gradient(circle at 35% 30%, #c94a3a, #8b1a1a 55%, #5a0c0c);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5), inset 0 0 0 4px rgba(90, 12, 12, 0.6);
+                transform: rotate(-12deg);
+            }
+            .ribbon {
+                position: absolute;
+                z-index: 3;
+                left: 0;
+                right: 0;
+                bottom: 8px;
+                background: rgba(43, 29, 18, 0.88);
+                color: var(--paper-hi);
+                font-family: "IM Fell English SC", serif;
+                font-size: 12px;
+                letter-spacing: 0.1em;
+                padding: 2px 6px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .cex-tag {
+                position: absolute;
+                z-index: 3;
+                top: 6px;
+                right: 6px;
+                font-family: "Special Elite", monospace;
+                font-size: 10px;
+                padding: 1px 5px;
+                background: var(--paper-hi);
+                border: 1px solid var(--brown);
+                transform: rotate(4deg);
+            }
+            .poster-wrap.tbc .poster { filter: grayscale(0.6) brightness(0.92); }
+            .poster-wrap.sealed .poster-photo { border-color: #8a6a1e; box-shadow: inset 0 0 0 2px #e2c25e, inset 0 0 20px rgba(60, 30, 5, 0.6); }
+            .bullet {
+                position: absolute;
+                z-index: 30;
+                width: 26px;
+                height: 26px;
+                margin: -13px 0 0 -13px;
+                border-radius: 50%;
+                pointer-events: none;
+                background: radial-gradient(circle, #0b0603 0 22%, #3b2414 30%, rgba(60, 35, 15, 0.6) 45%, transparent 66%);
+                animation: bullet 1.4s ease forwards;
+            }
+            @keyframes bullet {
+                0% { transform: scale(0.2); opacity: 1; }
+                10% { transform: scale(1.2); }
+                20% { transform: scale(1); }
+                85% { opacity: 1; }
+                100% { opacity: 0; }
+            }
+
+            /* ---- Ledger (table) ------------------------------------------ */
+            #tableWrap {
+                background:
+                    linear-gradient(90deg, transparent 52px, rgba(139, 26, 26, 0.5) 52px 54px, transparent 54px),
+                    linear-gradient(180deg, var(--paper-hi), var(--paper));
+                box-shadow: inset 0 0 50px rgba(110, 60, 15, 0.3), 0 18px 40px rgba(0, 0, 0, 0.55);
+                border: 1px solid #1f130a;
+            }
+            .gtable { font-family: "Special Elite", monospace; font-size: 13px; }
+            .gtable th {
+                font-family: "IM Fell English SC", serif;
+                font-size: 13px;
+                letter-spacing: 0.08em;
+                color: var(--brown);
+                background: #e6d2a4;
+                border-bottom: 2px solid var(--brown);
+            }
+            .gtable th.sortable:hover { color: var(--blood); }
+            .gtable td { color: var(--brown); border-bottom: 1px solid rgba(70, 110, 160, 0.3); }
+            .gtable tbody tr:hover { background: rgba(139, 26, 26, 0.08); }
+            .gtable img { filter: sepia(0.7); }
+
+            /* ---- Wall + shelf ------------------------------------------- */
+            #wallView { gap: 8px; }
+            .wall-tile { border: 3px solid #e6d2a4; box-shadow: 0 6px 10px rgba(0, 0, 0, 0.5); background: #c9ae78; }
+            .wall-tile img { filter: sepia(0.8) contrast(1.1); }
+            .wall-tile:hover img { filter: none; transform: scale(1.12); }
+            .wall-tile .wall-label { font-family: "IM Fell English SC", serif; font-size: 12px; color: #f6ead0; }
+            #shelfView { border: 2px solid #1f130a; }
+            .spine { font-family: "IM Fell English SC", serif; font-size: 11px; }
+
+            /* ---- Breakdown bits ----------------------------------------- */
+            .bar-track { background: rgba(43, 29, 18, 0.15); border-radius: 0; }
+            .bar-fill { background: repeating-linear-gradient(90deg, var(--blood) 0 6px, #a83232 6px 8px); border-radius: 0; }
+            .vbar { background: linear-gradient(180deg, #a83232, var(--blood)); border-radius: 0; }
+            .spark div { background: var(--brown-mid); border-radius: 0; }
+            .hm-cell { background: rgba(43, 29, 18, 0.1); border-radius: 0; }
+            .hm-cell[data-n="1"] { background: #d1a27a; }
+            .hm-cell[data-n="2"] { background: #b0623d; }
+            .hm-cell[data-n="3"] { background: #8b1a1a; }
+            .hm-cell[data-n="4"] { background: #4a0909; }
+
+            /* ---- Overlays ------------------------------------------------ */
+            .ov { background: rgba(14, 8, 4, 0.88); backdrop-filter: blur(3px) sepia(0.6); }
+            .ov-panel {
+                padding: 26px 30px;
+                background: linear-gradient(180deg, var(--paper-hi), var(--paper) 50%, var(--paper-lo));
+                box-shadow: inset 0 0 60px rgba(110, 60, 15, 0.35), 0 30px 60px rgba(0, 0, 0, 0.7);
+                color: var(--brown);
+            }
+            .ov-title { font-family: "Rye", serif; font-size: 34px; }
+            .ov-sub { font-style: italic; color: #5a412a; }
+            .ov-kicker {
+                font-family: "Rye", serif;
+                letter-spacing: 0.25em;
+                font-size: 14px;
+                color: var(--blood);
+                margin-bottom: 16px;
+            }
+            #rollOverlay .ov-kicker { color: #e8d3a6; font-size: 20px; }
+            .ov-roll-cover {
+                border: 8px solid #e6d2a4;
+                box-shadow: 0 0 0 2px #1f130a, 0 30px 60px rgba(0, 0, 0, 0.8);
+                background: #c9ae78;
+                animation: wobble 0.15s linear infinite alternate;
+            }
+            .ov-roll-cover img { filter: sepia(0.6); }
+            @keyframes wobble { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
+            .ov-roll-title { font-family: "Rye", serif; font-size: 30px; color: #f2e2bc; }
+            .ov-roll-console { font-style: italic; color: #c8a878; }
+            .ov-x { color: var(--brown); }
+            .ov-arrow { color: #e8d3a6; font-family: "Rye", serif; }
+            #wrappedOverlay { background: radial-gradient(ellipse at center, #f6ead0, #d8c18f 70%, #a8875a); }
+            #wrappedOverlay .ov-arrow { color: var(--brown); }
+            #wrappedSlide .text-6xl, #wrappedSlide .text-7xl, #wrappedSlide .text-4xl { font-family: "Rye", serif; font-weight: 400; }
+            .trophy {
+                background: linear-gradient(180deg, #f6ead0, #e3cc9a);
+                border: 1px solid rgba(43, 29, 18, 0.4);
+                border-radius: 2px;
+            }
+            .trophy.unlocked { border: 2px solid #8a6a1e; background: linear-gradient(150deg, rgba(226, 194, 94, 0.45), #f2e2bc 60%); }
+            .trophy .text-sm { font-family: "IM Fell English SC", serif; font-size: 16px; }
+            .health-row { background: rgba(255, 250, 235, 0.5) !important; border-color: rgba(43, 29, 18, 0.3) !important; }
+            .health-row.warn { border-left-color: var(--blood) !important; }
+
+            /* ---- Modal -------------------------------------------------- */
+            .kit-modal { background: rgba(14, 8, 4, 0.85); backdrop-filter: blur(2px) sepia(0.5); }
+            .kit-modal-box {
+                background:
+                    radial-gradient(ellipse at 20% 0%, rgba(255, 255, 255, 0.4), transparent 50%),
+                    linear-gradient(180deg, var(--paper-hi), var(--paper) 50%, var(--paper-lo));
+                box-shadow: inset 0 0 80px rgba(110, 60, 15, 0.35), 0 40px 80px rgba(0, 0, 0, 0.8);
+                border: 1px solid #1f130a;
+                outline: 2px solid var(--brown);
+                outline-offset: -12px;
+            }
+            #modalBox.sealed { outline-color: #b48a2a; }
+            #modalPoster { filter: sepia(0.75) contrast(1.1); transition: filter 0.6s ease; padding: 18px; background: transparent !important; }
+            #modalPoster:hover { filter: none; }
+            #modalBody h2 { font-family: "Rye", serif; font-weight: 400 !important; }
+            .modal-stamp {
+                font-family: "Rye", serif;
+                font-size: 13px;
+                letter-spacing: 0.3em;
+                color: var(--blood);
+                border-bottom: 1px solid var(--brown);
+                padding-bottom: 6px;
+                margin-bottom: 12px;
+            }
+            .kit-modal-close, .kit-modal-nav {
+                border-radius: 50%;
+                color: var(--paper-hi);
+                background: radial-gradient(circle at 35% 30%, #6e4826, #2b1d12);
+                border: 2px solid var(--brass);
+                font-family: "Rye", serif;
+            }
+            .kit-modal-close:hover, .kit-modal-nav:hover { background: radial-gradient(circle at 35% 30%, #c94a3a, #5a0c0c); }
+
+            /* ---- Toasts -------------------------------------------------- */
+            .kit-toast {
+                font-family: "Special Elite", monospace;
+                background: var(--paper-hi);
+                color: var(--brown);
+                border: 2px solid var(--brown);
+                box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+            }
+            .kit-toast-error { border-color: var(--blood); color: var(--blood); }
+            .telegram {
+                font-family: "Special Elite", monospace;
+                background: #f3e2b5;
+                color: var(--brown);
+                padding: 10px 18px;
+                border: 1px solid #8b6d48;
+                box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                font-size: 13px;
+                max-width: 90vw;
+            }
+            .telegram b { color: var(--blood); }
+            .kit-loading { background: rgba(14, 8, 4, 0.85); }
+            .kit-loading-panel { color: #e8d3a6; font-family: "Rye", serif; font-size: 22px; }
+            .cylinder {
+                width: 90px;
+                height: 90px;
+                margin: 0 auto 16px;
+                border-radius: 50%;
+                background: radial-gradient(circle, #1b120b 0 10px, transparent 11px),
+                    conic-gradient(from 0deg, #7a7266, #3d3832, #7a7266, #3d3832, #7a7266, #3d3832, #7a7266);
+                animation: spin 0.9s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+                position: relative;
+            }
+            .cylinder::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                background:
+                    radial-gradient(circle at 50% 18%, #0c0805 0 9px, transparent 10px),
+                    radial-gradient(circle at 80% 35%, #0c0805 0 9px, transparent 10px),
+                    radial-gradient(circle at 80% 65%, #0c0805 0 9px, transparent 10px),
+                    radial-gradient(circle at 50% 82%, #0c0805 0 9px, transparent 10px),
+                    radial-gradient(circle at 20% 65%, #0c0805 0 9px, transparent 10px),
+                    radial-gradient(circle at 20% 35%, #0c0805 0 9px, transparent 10px);
+            }
+
+            /* ---- Tumbleweed --------------------------------------------- */
+            .tumbleweed {
+                position: fixed;
+                bottom: 14px;
+                left: -120px;
+                width: 80px;
+                height: 80px;
+                z-index: 5;
+                pointer-events: none;
+                animation: roll 34s linear infinite;
+                animation-delay: 6s;
+            }
+            .tumbleweed svg { width: 100%; height: 100%; animation: tumble 1.2s linear infinite; }
+            @keyframes roll {
+                0% { transform: translate(0, 0); }
+                4% { transform: translate(15vw, -40px); }
+                8% { transform: translate(30vw, 0); }
+                12% { transform: translate(45vw, -26px); }
+                16% { transform: translate(60vw, 0); }
+                20% { transform: translate(75vw, -18px); }
+                24% { transform: translate(90vw, 0); }
+                28%, 100% { transform: translate(calc(100vw + 260px), 0); }
+            }
+            @keyframes tumble { to { transform: rotate(360deg); } }
+
+            /* ---- Dead Eye ----------------------------------------------- */
+            .deadeye-vignette {
+                position: fixed;
+                inset: 0;
+                z-index: 590;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.5s ease;
+                background: radial-gradient(ellipse at center, transparent 35%, rgba(150, 40, 0, 0.45) 75%, rgba(60, 10, 0, 0.85));
+            }
+            body.deadeye .deadeye-vignette { opacity: 1; animation: heartbeat 1.1s ease-in-out infinite; }
+            body.deadeye .wrap { filter: sepia(0.55) saturate(1.6) hue-rotate(-12deg) contrast(1.12); }
+            body.deadeye .poster-wrap { transition-duration: 0.9s; }
+            body.deadeye .poster-wrap:hover::after {
+                content: "✕";
+                position: absolute;
+                z-index: 40;
+                top: 40%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 64px;
+                color: #e01b1b;
+                text-shadow: 0 0 16px rgba(255, 0, 0, 0.8);
+                font-family: Arial, sans-serif;
+                font-weight: 900;
+            }
+            @keyframes heartbeat {
+                0%, 100% { opacity: 0.85; }
+                14% { opacity: 1; }
+                28% { opacity: 0.8; }
+                42% { opacity: 1; }
+            }
+            .kit-sfx {
+                font-family: "Rye", serif;
+                font-size: 13px;
+                padding: 8px 14px;
+                background: transparent;
+                color: var(--brown);
+                border: 2px solid var(--brown);
+            }
+            .kit-sfx.on { background: var(--brass); }
+            .footer {
+                text-align: center;
+                margin-top: 60px;
+                color: #a88a5c;
+                font-style: italic;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .grain, .tumbleweed, #dust { display: none; }
+                .poster-wrap { animation: none; }
+            }
+            @media (max-width: 640px) {
+                #cardsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 14px; }
+                .poster-head { font-size: 24px; }
+                .poster-reward { font-size: 22px; }
+                .plank { position: relative; top: 0; }
+                .masthead { padding: 16px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="grain"></div>
+        <canvas id="dust"></canvas>
+        <div class="deadeye-vignette"></div>
+        <div class="tumbleweed" aria-hidden="true">
+            <svg viewBox="0 0 100 100" fill="none" stroke="#8a6a3a" stroke-width="2.2" stroke-linecap="round">
+                <circle cx="50" cy="50" r="40" stroke="#6b4f2a" />
+                <path d="M15 45 Q50 10 85 50 Q55 90 20 60 Q40 30 75 30 Q90 70 45 85 Q10 70 30 25 Q70 15 80 70" />
+                <path d="M25 30 Q60 50 30 75 M70 20 Q40 55 75 80 M12 55 Q50 45 88 42" stroke="#a07c4c" />
+                <path d="M35 15 Q20 50 55 90 M60 12 Q85 40 62 88" stroke="#5b4220" />
+            </svg>
+        </div>
+
+        <div class="wrap">
+            <header class="paper masthead animate-fadeInUp">
+                <div class="mast-top">
+                    <span id="rdrIssue">Vol. I · No. 1</span>
+                    <span id="rdrDate">1899</span>
+                    <span>Price: One Cent</span>
+                </div>
+                <h1 class="mast-title">The Blackwater Ledger</h1>
+                <div class="mast-rule">✦ Physical Games · Completeness · Live CeX Valuation ✦</div>
+                <div class="headline-row">
+                    <div class="headline">
+                        <h2 id="rdrHeadline">Collector&rsquo;s Hoard Under Count</h2>
+                        <p id="rdrDeck">Our correspondent awaits word by telegraph&hellip;</p>
+                    </div>
+                    <div class="mast-links">
+                        <a href="achievements.html" class="handbill">🏆 Achievements</a>
+                        <a href="stats.html" class="handbill">📈 Stats</a>
+                        <button class="handbill" id="deadEyeBtn" onclick="toggleDeadEye()" title="Dead Eye (E)">◉ Dead Eye</button>
+                        <span id="sfxSlot"></span>
+                    </div>
+                </div>
+                <div id="stats" class="news-columns"></div>
+            </header>
+
+            <section class="paper bank animate-fadeInUp">
+                <h3>
+                    <span>Bank of Blackwater &mdash; Statement of Account</span>
+                    <small>valued at the CeX trading post</small>
+                </h3>
+                <div data-kit="value"></div>
+            </section>
+
+            <section class="plank">
+                <div data-kit="controls"></div>
+            </section>
+
+            <h2 class="board-title">Bounty Board</h2>
+
+            <div id="cardsGrid"></div>
+            <div id="tableWrap" class="hidden overflow-x-auto scroll-thin"></div>
+            <div id="wallView" class="hidden"></div>
+            <div id="shelfView" class="hidden"></div>
+
+            <p class="footer">Printed &amp; sold in Blackwater, West Elizabeth &middot; All prices subject to the whims of the CeX trading post</p>
+        </div>
+
+        <script>
+            window.THEME = {
+                sfxDemo: "shot",
+                labels: {
+                    search: "Search the territories… title, console, edition  ( / )",
+                    grid: "Posters",
+                    table: "Ledger",
+                    wall: "Wall",
+                    shelf: "Shelf",
+                    refresh: "Fresh Edition",
+                    breakdown: "Accounts",
+                    filters: "Sort the Herd",
+                    clear: "Clear the board",
+                    roll: "🎲 Ride Out",
+                    trophies: "⭐ Honours",
+                    wrapped: "📜 Almanac",
+                    guess: "💰 Haggle",
+                    health: "🩺 Doc",
+                    print: "🖨 Deed",
+                    cex: "Wire the Trading Post",
+                    total_sell: "Trading post asks",
+                    total_cash: "Cash offered",
+                    total_voucher: "Store credit",
+                    total_nolink: "Unlisted, appraised",
+                    total_paid: "Paid in coin",
+                    total_value: "Fortune",
+                    total_gain: "Profit / loss",
+                    rollTitle: "Tonight you ride with",
+                    trophyTitle: "Honours & Commendations",
+                    healthTitle: "The Doctor's Report",
+                    guessTitle: "Haggle with the trader",
+                    close: "Be off",
+                    empty: "Not a soul matches that description, partner.",
+                },
+                loadingHTML: `<div class="cylinder"></div><div>Awaiting the telegraph&hellip;</div>`,
+            };
+        </script>
+        <script src="theme-kit.js"></script>
+        <script src="collection-core.js"></script>
+        <script>
+            (function () {
+                kit.install();
+                document.getElementById("sfxSlot").outerHTML = kit.sfxButton();
+
+                // Ragged paper edge, shared by every poster.
+                const torn = (() => {
+                    const pts = [];
+                    const jag = (i) => (kit.hash("t" + i) * 1.6).toFixed(2);
+                    for (let i = 0; i <= 20; i++) pts.push(`${i * 5}% ${jag(i)}%`);
+                    for (let i = 0; i <= 20; i++) pts.push(`${100 - jag(i + 30)}% ${i * 5}%`);
+                    for (let i = 20; i >= 0; i--) pts.push(`${i * 5}% ${100 - jag(i + 60)}%`);
+                    for (let i = 20; i >= 0; i--) pts.push(`${jag(i + 90)}% ${i * 5}%`);
+                    return `polygon(${pts.join(",")})`;
+                })();
+                document.documentElement.style.setProperty("--torn", torn);
+
+                const today = new Date();
+                document.getElementById("rdrDate").textContent =
+                    today.toLocaleDateString("en-GB", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                    }) + ", 1899";
+
+                // ---- Newspaper columns ---------------------------------------
+                window.displayStats = function () {
+                    const s = kit.stats();
+                    const col = (label, value, note = "", cls = "") => `
+                        <div class="col">
+                            <div class="col-label">${label}</div>
+                            <div class="col-value ${cls}">${value}</div>
+                            ${note ? `<div class="col-note">${note}</div>` : ""}
+                        </div>`;
+                    document.getElementById("stats").innerHTML =
+                        col("Games in possession", s.games, `across ${s.consoles} territories`) +
+                        col("Spent at the store", fmtMoney(s.paid), `${fmtMoney(s.games ? s.paid / s.games : 0)} a head`) +
+                        col("Trading-post worth", fmtMoney(s.value), `${s.priced} of ${s.games} appraised`, "green") +
+                        col(s.gain >= 0 ? "Fortune made" : "Fortune lost", fmtSigned(s.gain), `${s.gainPct >= 0 ? "+" : "−"}${Math.abs(s.gainPct)}% on the outlay`, s.gain >= 0 ? "green" : "red") +
+                        col("Tales finished", s.completed, `${s.completedPct}% of the hoard`) +
+                        col("Still in wax paper", s.sealed, "never opened") +
+                        (s.toBuy > 0 ? col("Still wanted", s.toBuy, "on the list", "red") : "");
+
+                    document.getElementById("rdrIssue").textContent =
+                        `Vol. ${s.consoles} · No. ${s.games}`;
+                    document.getElementById("rdrHeadline").textContent =
+                        `Local Collector Hoards ${s.games} Games Across ${s.consoles} Territories`;
+                    document.getElementById("rdrDeck").textContent =
+                        `Fortune put at ${fmtMoney(s.value)} — ${s.gain >= 0 ? "a handsome profit of" : "a loss of"} ${fmtMoney(Math.abs(s.gain))} on the ${fmtMoney(s.paid)} laid down, the Sheriff's men confirm. ${s.games - s.completed} tales remain unfinished.`;
+                };
+
+                // ---- Wanted posters ------------------------------------------
+                window.displayCards = function (data) {
+                    const grid = document.getElementById("cardsGrid");
+                    if (!data.length) {
+                        grid.innerHTML = kit.empty();
+                        return;
+                    }
+                    const frag = document.createDocumentFragment();
+                    data.forEach((row, index) => {
+                        const c = kit.card(row);
+                        const h = kit.hash(rowKey(row));
+                        const wrap = document.createElement("div");
+                        wrap.className = `poster-wrap${c.tbc ? " tbc" : ""}${c.sealed ? " sealed" : ""}`;
+                        wrap.style.setProperty("--r", `${(h - 0.5) * 5}deg`);
+                        wrap.style.setProperty("--y", `${(kit.hash("y" + rowKey(row)) - 0.5) * 10}px`);
+                        wrap.style.animationDelay = `${Math.min(index * 0.02, 0.5)}s`;
+                        wrap.innerHTML = `
+                            <div class="nail"></div>
+                            <div class="poster">
+                                <div class="poster-head">${c.tbc ? "SOUGHT" : "WANTED"}</div>
+                                <div class="poster-sub">${c.tbc ? "NOT YET CAUGHT" : c.sealed ? "UNTOUCHED · ALIVE" : "DEAD OR ALIVE"}</div>
+                                <div class="poster-photo">
+                                    ${c.cover ? kit.img(c.cover, "", c.title) : `<div class="no-photo">?</div>`}
+                                    ${c.hasCex ? `<span class="cex-tag">CeX</span>` : ""}
+                                    ${c.completed ? `<span class="stamp captured">CAPTURED</span>` : ""}
+                                    ${c.tbc ? `<span class="stamp missing">NOT OWNED</span>` : ""}
+                                    ${c.edition !== "Standard" ? `<div class="ribbon">${escapeHtml(c.edition)}</div>` : ""}
+                                </div>
+                                <div class="poster-name">${escapeHtml(c.title)}</div>
+                                <div class="poster-terr">Territory of ${escapeHtml(c.consoleName)}${c.dup ? ` · ${escapeHtml(c.date)}` : ""}</div>
+                                <div class="poster-reward-label">REWARD</div>
+                                <div class="poster-reward">${c.value > 0 ? fmtMoney(c.value) : "—"} ${c.delta}</div>
+                                <div class="poster-foot">
+                                    ${c.tbc ? `<span>ON THE LIST</span>` : `<span class="flex gap-1">${c.pills}</span>`}
+                                    <span>${!c.tbc && c.paid > 0 ? `paid ${fmtMoney(c.paid)}` : ""}</span>
+                                </div>
+                            </div>
+                            ${c.sealed ? `<div class="wax">SEALED<br>✦</div>` : ""}`;
+                        wrap.onclick = (e) => {
+                            const r = wrap.getBoundingClientRect();
+                            const hole = document.createElement("div");
+                            hole.className = "bullet";
+                            hole.style.left = `${e.clientX - r.left}px`;
+                            hole.style.top = `${e.clientY - r.top}px`;
+                            wrap.appendChild(hole);
+                            setTimeout(() => hole.remove(), 1400);
+                            kit.sfx("shot");
+                            setTimeout(() => openModal(row, index), 160);
+                        };
+                        frag.appendChild(wrap);
+                        if (!c.cover) {
+                            const photo = wrap.querySelector(".poster-photo");
+                            kit.coverFallback(photo, c, "");
+                        }
+                    });
+                    grid.innerHTML = "";
+                    grid.appendChild(frag);
+                };
+
+                // ---- Modal: a wanted notice header ------------------------------
+                THEME.onModal = (row) => {
+                    const body = document.getElementById("modalBody");
+                    const tbc = isTBC(row);
+                    body.insertAdjacentHTML(
+                        "afterbegin",
+                        `<div class="modal-stamp">${tbc ? "SOUGHT · REWARD OFFERED" : isCompleted(row) ? "CAPTURED · CASE CLOSED" : "WANTED · DEAD OR ALIVE"}</div>`,
+                    );
+                };
+
+                // Telegram when prices land.
+                let lastValue = null;
+                THEME.onValue = (t) => {
+                    if (cexLoading || t.priced === 0) return;
+                    if (lastValue !== null && Math.abs(lastValue - t.value) < 0.01) return;
+                    if (lastValue !== null)
+                        kit.toast(
+                            `<div class="telegram">TELEGRAM ✦ TRADING POST REPORTS HOARD WORTH <b>${fmtMoney(t.value)}</b> STOP ${t.gain >= 0 ? "PROFIT" : "LOSS"} ${fmtMoney(Math.abs(t.gain))} STOP</div>`,
+                            "",
+                            5200,
+                        );
+                    lastValue = t.value;
+                };
+
+                // ---- Dead Eye ------------------------------------------------
+                window.toggleDeadEye = function () {
+                    const on = document.body.classList.toggle("deadeye");
+                    document.getElementById("deadEyeBtn").classList.toggle("on", on);
+                    if (on) kit.sfx("shot");
+                };
+                document.addEventListener("keydown", (e) => {
+                    const t = e.target;
+                    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+                    if (e.key === "e" || e.key === "E") toggleDeadEye();
+                });
+
+                // ---- Drifting dust in the lamplight ----------------------------
+                const cv = document.getElementById("dust");
+                const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                if (cv && !reduce) {
+                    const ctx = cv.getContext("2d");
+                    let w, h;
+                    const motes = Array.from({ length: 70 }, () => ({
+                        x: Math.random(),
+                        y: Math.random(),
+                        r: Math.random() * 1.8 + 0.4,
+                        vx: (Math.random() - 0.3) * 0.00025,
+                        vy: (Math.random() - 0.5) * 0.00018,
+                        a: Math.random() * 0.5 + 0.15,
+                    }));
+                    const size = () => {
+                        w = cv.width = innerWidth;
+                        h = cv.height = innerHeight;
+                    };
+                    size();
+                    addEventListener("resize", size);
+                    const tick = () => {
+                        ctx.clearRect(0, 0, w, h);
+                        for (const m of motes) {
+                            m.x = (m.x + m.vx + 1) % 1;
+                            m.y = (m.y + m.vy + 1) % 1;
+                            ctx.beginPath();
+                            ctx.fillStyle = `rgba(255, 214, 150, ${m.a})`;
+                            ctx.arc(m.x * w, m.y * h, m.r, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        requestAnimationFrame(tick);
+                    };
+                    tick();
+                }
+            })();
+        </script>
+        <script src="theme-nav.js"></script>
+    </body>
+</html>

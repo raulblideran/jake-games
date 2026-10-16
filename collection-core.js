@@ -1,0 +1,3286 @@
+// === CONFIG ============================================================
+// Published-to-web CSV of the MASTER tab (gid pins the tab).
+const GOOGLE_SHEETS_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM8N_x95reV1Y4vKQZfAyOfmJ0HqhRfcwEuCyIQLyYcmZWSxGCqFv1zJVGi-Q2wviNNl0gGzhd1MxG/pub?gid=1687075549&single=true&output=csv";
+const RAWG_API_KEY = "d6b5463dab6046898cccf5575f84f9d1";
+
+const PRIMARY_PROXY =
+    "https://cex-proxy.raul-blideran98.workers.dev";
+
+const CORS_PROXIES = [
+    ...(PRIMARY_PROXY
+        ? [
+              {
+                  url: (url) =>
+                      `${PRIMARY_PROXY}/?url=${encodeURIComponent(url)}`,
+                  timeout: 12000,
+              },
+          ]
+        : []),
+    {
+        url: (url) =>
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        timeout: 15000,
+    },
+    {
+        url: (url) =>
+            `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        timeout: 8000,
+    },
+    {
+        url: (url) =>
+            `https://api.cors.lol/?url=${encodeURIComponent(url)}`,
+        timeout: 8000,
+    },
+    { url: (url) => `https://cors.eu.org/${url}`, timeout: 8000 },
+];
+
+const CACHE_KEY = "gamesCSVCache";
+const CACHE_TIMESTAMP_KEY = "gamesCSVCacheTimestamp";
+const CACHE_DURATION = 5 * 60 * 1000;
+
+// Persisted CeX prices. The endpoint rate-limits bursts, so re-fetching
+// ~260 SKUs on every page view is neither fast nor polite.
+const CEX_CACHE_KEY = "cexDetailCache_v1";
+const CEX_CACHE_TTL = 24 * 60 * 60 * 1000;
+// Tuned against the live endpoint: 2 in flight with a 1s/3s retry
+// backoff priced 45/45 sample SKUs with no failures and was faster
+// than 3 in flight, which the rate limiter drops ~13% of.
+const CEX_CONCURRENCY = 2;
+const CEX_RETRIES = 2;
+// CeX rate-limits by IP, and every visitor shares the proxy's egress.
+// If it starts refusing, stop rather than pushing ~750 requests at a
+// wall and deepening the block.
+const CEX_FAILURE_LIMIT = 8;
+
+const VIEW_KEY = "collectionView";
+
+// Verified against the CeX API for every categoryName slug present in
+// the sheet: the image directory is NOT a mechanical transform of the
+// slug (PC-GAMES -> "PC Games", GAMEBOY-ADVANCE-SOFTWARE -> "GBA
+// Software"), so the known ones are mapped explicitly.
+const CEX_IMAGE_DIRS = {
+    "XBOX-ONE-GAMES": "Xbox One Software",
+    "XBOX-ONE-SOFTWARE": "Xbox One Software",
+    "XBOX-360-GAMES": "Xbox 360 Software",
+    "XBOX-360-SOFTWARE": "Xbox 360 Software",
+    "XBOX-360-RARITIES": "Xbox 360 Rarities",
+    "XBOX-SOFTWARE": "Xbox Software",
+    "XBOX-GAMES": "Xbox Software",
+    "XBOX-SERIES-GAMES": "Xbox Series Software",
+    "XBOX-SERIES-SOFTWARE": "Xbox Series Software",
+    "XBOX-SMART-DELIVERY-GAMES": "Xbox Smart Delivery Games",
+    "PLAYSTATION2-GAMES": "Playstation2 Software",
+    "PLAYSTATION2-SOFTWARE": "Playstation2 Software",
+    "PLAYSTATION2-RARITIES": "Playstation2 Rarities",
+    "PLAYSTATION3-GAMES": "Playstation3 Software",
+    "PLAYSTATION3-SOFTWARE": "Playstation3 Software",
+    "PLAYSTATION4-GAMES": "Playstation4 Software",
+    "PLAYSTATION4-SOFTWARE": "Playstation4 Software",
+    "PLAYSTATION5-GAMES": "Playstation5 Software",
+    "WII-GAMES": "Wii Software",
+    "WII-SOFTWARE": "Wii Software",
+    "NINTENDO-DS-GAMES": "DS Software",
+    "DS-SOFTWARE": "DS Software",
+    "PSP-GAMES": "PSP Software",
+    "PSP-SOFTWARE": "PSP Software",
+    "PC-GAMES": "PC Games",
+    "PC-SOFTWARE": "PC Games",
+    "GAMEBOY-ADVANCE-SOFTWARE": "GBA Software",
+    "GAMEBOY-ADVANCE-GAMES": "GBA Software",
+};
+
+// === STATE =============================================================
+let allData = [];
+let filteredData = [];
+let visibleData = [];
+let headers = [];
+let modalList = [];
+let modalIndex = -1;
+// Every filter group holds a Set; empty Set means "All".
+let activeFilters = {
+    status: new Set(),
+    console: new Set(),
+    completeness: new Set(),
+    edition: new Set(),
+    completed: new Set(),
+    sealed: new Set(),
+    price: new Set(),
+};
+let coverCache = {};
+let cexCache = {};
+let cexPricedAt = 0;
+let cexFailures = 0;
+let cexLoading = false;
+let workingProxyIndex = 0;
+let currentSort = "title";
+let currentView = "grid";
+let breakdownMode = "month";
+let searchTerm = "";
+let searchTimer = null;
+let restoringState = false;
+let duplicateKeys = new Set();
+
+const SORT_OPTIONS = [
+    ["title", "Title (A–Z)"],
+    ["console", "Console"],
+    ["value-desc", "CeX value (high → low)"],
+    ["gain-desc", "Biggest gain"],
+    ["gain-asc", "Biggest loss"],
+    ["paid-desc", "Price paid (high → low)"],
+    ["paid-asc", "Price paid (low → high)"],
+    ["date-newest", "Date purchased (newest)"],
+    ["date-oldest", "Date purchased (oldest)"],
+    ["edition", "Edition"],
+];
+
+// === UTILS =============================================================
+function normalizeConsole(c) {
+    if (!c) return "Unknown";
+    return c.trim().replace(/playstation/i, "PlayStation");
+}
+
+function parsePrice(str) {
+    if (!str) return 0;
+    const cleaned = String(str)
+        .replace(/[£$€,\s]/g, "")
+        .trim();
+    return parseFloat(cleaned) || 0;
+}
+
+// The sheet's checkbox columns export as TRUE/FALSE; "N/A" comes through
+// as an empty cell via gviz, which we read as "doesn't apply".
+function triState(v) {
+    const s = String(v ?? "").trim().toUpperCase();
+    if (s === "TRUE" || s === "Y" || s === "YES") return true;
+    if (s === "FALSE" || s === "N" || s === "NO") return false;
+    return null;
+}
+
+function isTBC(row) {
+    return (
+        (row["Date Purchased"] || "").trim().toUpperCase() === "TBC"
+    );
+}
+function isSealed(row) {
+    return triState(row["Sealed"]) === true;
+}
+function isCompleted(row) {
+    return triState(row["Completed"]) === true;
+}
+function isDuplicate(row) {
+    return duplicateKeys.has(
+        `${row["Game"]}|${normalizeConsole(row["Console Version"])}`.toLowerCase(),
+    );
+}
+function editionOf(row) {
+    return (row["Edition"] || "").trim() || "Standard";
+}
+function hasCover(row) {
+    return triState(row["Cover Art"]);
+}
+function hasInsert(row) {
+    return triState(row["Insert"]);
+}
+// "Complete" = nothing that applies to this release is missing.
+function isComplete(row) {
+    return hasCover(row) !== false && hasInsert(row) !== false;
+}
+
+function parseUkDate(str) {
+    if (!str) return null;
+    const m = String(str)
+        .trim()
+        .match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return null;
+    return new Date(
+        `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`,
+    );
+}
+
+function fmtMoney(n) {
+    const v = Number(n) || 0;
+    return `£${v.toLocaleString("en-GB", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
+
+function fmtSigned(n) {
+    const v = Number(n) || 0;
+    return `${v >= 0 ? "+" : "−"}${fmtMoney(Math.abs(v))}`;
+}
+
+function escapeHtml(s) {
+    return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// === FETCH WITH PROXY FALLBACK =========================================
+function fetchWithTimeout(url, timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, {
+        signal: controller.signal,
+        cache: "no-store",
+    }).finally(() => clearTimeout(timer));
+}
+
+async function fetchWithProxy(url) {
+    for (let i = workingProxyIndex; i < CORS_PROXIES.length; i++) {
+        const { url: proxyFn, timeout } = CORS_PROXIES[i];
+        try {
+            const resp = await fetchWithTimeout(
+                proxyFn(url),
+                timeout,
+            );
+            if (resp.ok) {
+                workingProxyIndex = i;
+                return resp;
+            }
+        } catch (e) {
+            console.warn(`Proxy ${i} failed`, e.message);
+        }
+    }
+    return null;
+}
+
+// === TOASTS / OVERLAY ==================================================
+function showError(message) {
+    const el = document.getElementById("error");
+    el.textContent = message;
+    el.classList.remove("hidden");
+    setTimeout(() => el.classList.add("hidden"), 8000);
+}
+function showSuccess(message) {
+    const el = document.getElementById("success");
+    el.textContent = message;
+    el.classList.remove("hidden");
+    setTimeout(() => el.classList.add("hidden"), 3000);
+}
+function showLoading(show) {
+    const o = document.getElementById("loadingOverlay");
+    o.classList.toggle("hidden", !show);
+    o.classList.toggle("flex", show);
+}
+
+// === CACHE =============================================================
+function getCachedData() {
+    try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        const ts = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+        if (cached && ts) {
+            if (Date.now() - parseInt(ts) < CACHE_DURATION)
+                return cached;
+        }
+    } catch (e) {}
+    return null;
+}
+function setCachedData(data) {
+    try {
+        localStorage.setItem(CACHE_KEY, data);
+        localStorage.setItem(
+            CACHE_TIMESTAMP_KEY,
+            Date.now().toString(),
+        );
+    } catch (e) {}
+}
+
+function loadCexCache() {
+    try {
+        const raw = localStorage.getItem(CEX_CACHE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        const out = {};
+        let newest = 0;
+        for (const [sku, rec] of Object.entries(parsed)) {
+            if (rec && Date.now() - rec.ts < CEX_CACHE_TTL) {
+                out[sku] = rec;
+                newest = Math.max(newest, rec.ts);
+            }
+        }
+        cexPricedAt = newest;
+        return out;
+    } catch (e) {
+        return {};
+    }
+}
+
+let saveCexTimer = null;
+function saveCexCache() {
+    clearTimeout(saveCexTimer);
+    saveCexTimer = setTimeout(() => {
+        try {
+            localStorage.setItem(
+                CEX_CACHE_KEY,
+                JSON.stringify(cexCache),
+            );
+        } catch (e) {}
+    }, 500);
+}
+
+// === DATA LOAD =========================================================
+function bustUrl(url) {
+    return `${url}${url.includes("?") ? "&" : "?"}_=${Date.now()}`;
+}
+
+async function fetchDataFromSource(useCache = true) {
+    if (useCache) {
+        const cached = getCachedData();
+        if (cached && parseCSV(cached)) {
+            showSuccess(
+                `Loaded ${allData.length} games from cache`,
+            );
+            revalidateInBackground();
+            return true;
+        }
+    }
+    showLoading(true);
+    try {
+        const response = await fetchWithProxy(
+            bustUrl(GOOGLE_SHEETS_URL),
+        );
+        if (!response) throw new Error("All proxies failed");
+        const csvText = await response.text();
+        if (!parseCSV(csvText))
+            throw new Error("Sheet returned no game rows");
+        setCachedData(csvText);
+        showSuccess(`Loaded ${allData.length} games from sheet`);
+        return true;
+    } catch (err) {
+        showError(`Load failed: ${err.message}`);
+        return false;
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function revalidateInBackground() {
+    try {
+        const response = await fetchWithProxy(
+            bustUrl(GOOGLE_SHEETS_URL),
+        );
+        if (!response) return;
+        const csvText = await response.text();
+        if (localStorage.getItem(CACHE_KEY) === csvText) return;
+        const modal = document.getElementById("modal");
+        setCachedData(csvText);
+        if (modal && !modal.classList.contains("hidden")) return;
+        if (parseCSV(csvText)) {
+            showSuccess(`Sheet updated — ${allData.length} games`);
+            loadCexPrices(false);
+        }
+    } catch (e) {
+        // silent
+    }
+}
+
+async function refreshData() {
+    const icon = document.getElementById("refreshIcon");
+    const btn = document.getElementById("refreshButton");
+    icon.classList.add("spin");
+    btn.disabled = true;
+    btn.style.opacity = "0.5";
+    const ok = await fetchDataFromSource(false);
+    icon.classList.remove("spin");
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    if (ok) loadCexPrices(false);
+}
+
+// === CSV PARSING =======================================================
+function parseCSVLine(line, delimiter = ",") {
+    const values = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        const nx = line[i + 1];
+        if (ch === '"') {
+            if (inQuotes && nx === '"') {
+                current += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (ch === delimiter && !inQuotes) {
+            values.push(current);
+            current = "";
+        } else {
+            current += ch;
+        }
+    }
+    values.push(current);
+    return values;
+}
+
+// Splits CSV into rows, respecting quoted fields that contain newlines.
+function splitCsvRows(text) {
+    const rows = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '"') {
+            inQuotes = !inQuotes;
+            cur += ch;
+        } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+            if (ch === "\r" && text[i + 1] === "\n") i++;
+            if (cur.trim() !== "") rows.push(cur);
+            cur = "";
+        } else {
+            cur += ch;
+        }
+    }
+    if (cur.trim() !== "") rows.push(cur);
+    return rows;
+}
+
+// The sheet's headers arrive in two shapes: the raw export keeps the
+// "Game Collection Tracker" title on its own row, while gviz folds that
+// title into the first header cell. Matching on meaning rather than exact
+// text keeps both working (and survives the next rename).
+const HEADER_ALIASES = [
+    [/console/i, "Console Version"],
+    [/cover\s*art/i, "Cover Art"],
+    [/^insert/i, "Insert"],
+    [/^sealed/i, "Sealed"],
+    [/complete/i, "Completed"],
+    [/^edition/i, "Edition"],
+    [/^notes?$/i, "Notes"],
+    [/date\s*purchas/i, "Date Purchased"],
+    [/^month/i, "Month"],
+    [/(purchase|paid)\s*price|price\s*purchased/i, "Purchase Price"],
+    [/current\s*price/i, "Current Price"],
+    [/cex|listing/i, "CEX Listing"],
+    [/^game$/i, "Game"],
+];
+
+function canonHeader(h) {
+    const n = String(h ?? "").replace(/\s+/g, " ").trim();
+    if (!n) return "";
+    for (const [re, name] of HEADER_ALIASES) {
+        if (re.test(n)) return name;
+    }
+    return n;
+}
+
+function parseCSV(csvText) {
+    const rows = splitCsvRows(csvText);
+    if (rows.length < 2) {
+        showError("Not enough data in sheet");
+        return false;
+    }
+
+    // Find the real header row: the first one that names both a game
+    // and a console column.
+    let headerRowIdx = -1;
+    let cols = null;
+    for (let i = 0; i < Math.min(rows.length, 6); i++) {
+        const canon = parseCSVLine(rows[i]).map(canonHeader);
+        if (
+            canon.includes("Game") &&
+            canon.includes("Console Version")
+        ) {
+            headerRowIdx = i;
+            cols = canon
+                .map((h, idx) => ({ h, idx }))
+                .filter(
+                    ({ h }) =>
+                        h && !h.toLowerCase().startsWith("total "),
+                );
+            break;
+        }
+    }
+    if (headerRowIdx === -1) {
+        showError(
+            "Could not find the MASTER header row — is the sheet still published?",
+        );
+        return false;
+    }
+
+    headers = cols.map((c) => c.h);
+    const parsed = [];
+    for (let i = headerRowIdx + 1; i < rows.length; i++) {
+        const values = parseCSVLine(rows[i]);
+        if (!values.some((v) => v.trim() !== "")) continue;
+        const row = {};
+        cols.forEach(({ h, idx }) => {
+            row[h] = (values[idx] ?? "").trim();
+        });
+        if (row["Game"]) parsed.push(row);
+    }
+
+    if (parsed.length === 0) {
+        showError("No game rows found");
+        return false;
+    }
+
+    allData = parsed;
+    // Titles owned more than once on the same console: the cards show a
+    // purchase date for these, since three of the pairs share an Edition
+    // and would otherwise look identical.
+    const seenKeys = {};
+    allData.forEach((r) => {
+        const k = `${r["Game"]}|${normalizeConsole(r["Console Version"])}`.toLowerCase();
+        seenKeys[k] = (seenKeys[k] || 0) + 1;
+    });
+    duplicateKeys = new Set(
+        Object.keys(seenKeys).filter((k) => seenKeys[k] > 1),
+    );
+    filteredData = [...allData];
+    createFilters();
+    buildSortDropdown();
+    displayStats();
+    renderBreakdown();
+    applyFilters();
+    return true;
+}
+
+// === CeX ===============================================================
+function extractCexSku(url) {
+    if (!url) return null;
+    const match = url.match(/[?&]id=([^&]+)/);
+    return match ? match[1] : null;
+}
+
+function isCexUrl(url) {
+    try {
+        const host = new URL(url).hostname.toLowerCase();
+        return host.includes("webuy.") || host.includes("cex.");
+    } catch {
+        return false;
+    }
+}
+
+function extractCexParam(url, name) {
+    const m = url.match(new RegExp(`[?&]${name}=([^&]*)`));
+    return m ? decodeURIComponent(m[1]) : null;
+}
+
+function parseCexLinks(linkStr) {
+    if (!linkStr) return [];
+    return String(linkStr)
+        .split(/[,\s]+/)
+        .map((s) => s.trim())
+        .filter((t) => t.startsWith("http") && isCexUrl(t));
+}
+
+// Some rows point at eBay instead of CeX — still worth linking, just not
+// priceable.
+function parseOtherLinks(linkStr) {
+    if (!linkStr) return [];
+    return String(linkStr)
+        .split(/[,\s]+/)
+        .map((s) => s.trim())
+        .filter((t) => t.startsWith("http") && !isCexUrl(t));
+}
+
+function rowSkus(row) {
+    return parseCexLinks(row["CEX Listing"])
+        .map(extractCexSku)
+        .filter(Boolean);
+}
+
+function cexImageDir(slug) {
+    const known = CEX_IMAGE_DIRS[slug.toUpperCase()];
+    if (known) return known;
+    // Unknown slug: best-effort title case, mapping "-GAMES" to the
+    // "Software" directory CeX uses for most platforms.
+    return slug
+        .split("-")
+        .map((s) =>
+            s.toUpperCase() === "GAMES"
+                ? "Software"
+                : s.charAt(0).toUpperCase() +
+                  s.slice(1).toLowerCase(),
+        )
+        .join(" ");
+}
+
+// Guessed box-art URL, used for the first paint before prices land.
+function cexImageFromUrl(cexUrl, size = "m") {
+    const sku = extractCexSku(cexUrl);
+    if (!sku) return null;
+    const slug = extractCexParam(cexUrl, "categoryName");
+    if (!slug) return null;
+    return `https://uk.static.webuy.com/product_images/Gaming/${encodeURIComponent(
+        cexImageDir(slug),
+    )}/${sku}_${size}.jpg`;
+}
+
+// Once a SKU has been priced we know its exact image path from the API,
+// which is the only reliable source for DS / PSP / PC / GBA titles.
+function coverFromRow(row, size = "m") {
+    const links = parseCexLinks(row["CEX Listing"]);
+    if (links.length === 0) return null;
+    const sku = extractCexSku(links[0]);
+    const rec = sku ? cexCache[sku] : null;
+    if (rec && rec.image) {
+        return encodeURI(
+            rec.image.replace(/_l\.jpg$/i, `_${size}.jpg`),
+        );
+    }
+    return cexImageFromUrl(links[0], size);
+}
+
+async function fetchCexDetails(sku, force = false) {
+    if (!sku) return null;
+    const hit = cexCache[sku];
+    if (
+        !force &&
+        hit &&
+        Date.now() - hit.ts < CEX_CACHE_TTL
+    )
+        return hit;
+
+    for (let attempt = 0; attempt <= CEX_RETRIES; attempt++) {
+        try {
+            const resp = await fetchWithProxy(
+                `https://wss2.cex.uk.webuy.io/v3/boxes/${sku}/detail`,
+            );
+            if (resp) {
+                const json = await resp.json();
+                const d =
+                    json?.response?.data?.boxDetails?.[0] ?? null;
+                if (d) {
+                    const rec = {
+                        sell: Number(d.sellPrice) || 0,
+                        cash: Number(d.cashPrice) || 0,
+                        voucher: Number(d.exchangePrice) || 0,
+                        boxName: d.boxName || "",
+                        image: d.imageUrls?.large || null,
+                        ts: Date.now(),
+                    };
+                    cexCache[sku] = rec;
+                    saveCexCache();
+                    return rec;
+                }
+            }
+        } catch (e) {
+            // Rate-limited responses come back as HTML and blow up on
+            // .json() — treated the same as a network failure.
+        }
+        if (attempt < CEX_RETRIES)
+            await sleep(1000 * Math.pow(3, attempt));
+    }
+    return hit || null;
+}
+
+// Bounded-concurrency queue: the CeX endpoint drops a noticeable share of
+// requests when hit in parallel bursts.
+async function runPool(items, limit, worker) {
+    let cursor = 0;
+    const runners = Array.from(
+        { length: Math.min(limit, items.length) },
+        async () => {
+            while (cursor < items.length) {
+                const item = items[cursor++];
+                await worker(item);
+            }
+        },
+    );
+    await Promise.all(runners);
+}
+
+// === VALUATION =========================================================
+// A game is valued at what CeX SELLS it for — i.e. what it would cost
+// to replace today. CeX's cash/voucher offers are trade-in prices and
+// run far below that, so they'd describe liquidation value, not what
+// the shelf is worth. Both are still shown in the strip and the modal.
+function rowCexValue(row) {
+    const skus = rowSkus(row);
+    if (!skus.length) return null;
+    let sum = 0;
+    let any = false;
+    for (const sku of skus) {
+        const rec = cexCache[sku];
+        if (rec) {
+            sum += rec.sell || 0;
+            any = true;
+        }
+    }
+    return any ? sum : null;
+}
+
+function rowValue(row) {
+    const cex = rowCexValue(row);
+    return cex !== null ? cex : parsePrice(row["Current Price"]);
+}
+
+function rowPaid(row) {
+    return parsePrice(row["Purchase Price"]);
+}
+
+function rowGain(row) {
+    return rowValue(row) - rowPaid(row);
+}
+
+function collectionTotals(rows) {
+    const owned = rows.filter((r) => !isTBC(r));
+    let paid = 0;
+    let value = 0;
+    let sell = 0;
+    let cash = 0;
+    let voucher = 0;
+    let noPrice = 0;
+    let priced = 0;
+    for (const row of owned) {
+        paid += rowPaid(row);
+        const c = rowCexValue(row);
+        if (c !== null) {
+            value += c;
+            priced++;
+        } else {
+            const manual = parsePrice(row["Current Price"]);
+            value += manual;
+            noPrice += manual;
+        }
+        // Counted per copy, not per SKU: six games are owned twice, and
+        // two copies really are worth two trade-ins. (The fetch list is
+        // still deduped — that's about requests, not value.)
+        for (const sku of rowSkus(row)) {
+            const rec = cexCache[sku];
+            if (!rec) continue;
+            sell += rec.sell || 0;
+            cash += rec.cash || 0;
+            voucher += rec.voucher || 0;
+        }
+    }
+    return {
+        count: owned.length,
+        paid,
+        value,
+        gain: value - paid,
+        sell,
+        cash,
+        voucher,
+        noPrice,
+        priced,
+    };
+}
+
+function setCexStatus(text) {
+    document.getElementById("cexStatus").innerHTML = text;
+}
+
+function updateValueStrip() {
+    const t = collectionTotals(allData);
+    const set = (id, v) =>
+        (document.getElementById(id).textContent = v);
+    set("totalSell", fmtMoney(t.sell));
+    set("totalCash", fmtMoney(t.cash));
+    set("totalVoucher", fmtMoney(t.voucher));
+    set("totalNoLink", fmtMoney(t.noPrice));
+    set("totalPaidAll", fmtMoney(t.paid));
+    set("totalCurrentValue", fmtMoney(t.value));
+    const gainEl = document.getElementById("totalGain");
+    const pct = t.paid > 0 ? (t.gain / t.paid) * 100 : 0;
+    gainEl.textContent = `${fmtSigned(t.gain)}${
+        t.paid > 0 ? ` (${pct >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(0)}%)` : ""
+    }`;
+    gainEl.className = `text-lg font-semibold ${
+        t.gain >= 0 ? "text-emerald-400" : "text-red-400"
+    }`;
+}
+
+async function loadCexPrices(force = false) {
+    if (cexLoading || allData.length === 0) return;
+    const skus = [
+        ...new Set(
+            allData.filter((r) => !isTBC(r)).flatMap(rowSkus),
+        ),
+    ];
+    if (skus.length === 0) {
+        setCexStatus("No CeX listings in this sheet.");
+        return;
+    }
+    const pending = force
+        ? skus
+        : skus.filter(
+              (s) =>
+                  !cexCache[s] ||
+                  Date.now() - cexCache[s].ts >= CEX_CACHE_TTL,
+          );
+
+    updateValueStrip();
+    if (pending.length === 0) {
+        setCexStatus(
+            `${skus.length} CeX prices cached · priced ${timeAgo(cexPricedAt)}`,
+        );
+        return;
+    }
+
+    cexLoading = true;
+    cexFailures = 0;
+    // Snapshot what we knew before, so deltas can be worked out after.
+    const before = {};
+    for (const [sku, rec] of Object.entries(cexCache))
+        before[sku] = rec.sell || 0;
+    const btn = document.getElementById("calcCexBtn");
+    const icon = document.getElementById("calcCexIcon");
+    btn.disabled = true;
+    btn.style.opacity = "0.5";
+    icon.classList.add("spin");
+
+    let done = 0;
+    let streak = 0;
+    let tripped = false;
+    await runPool(pending, CEX_CONCURRENCY, async (sku) => {
+        if (tripped) return;
+        const rec = await fetchCexDetails(sku, force);
+        if (rec) {
+            streak = 0;
+        } else {
+            cexFailures++;
+            streak++;
+            if (streak >= CEX_FAILURE_LIMIT) tripped = true;
+        }
+        done++;
+        if (done % 5 === 0 || done === pending.length) {
+            setCexStatus(
+                `Pricing ${done}/${pending.length} CeX listings…`,
+            );
+            updateValueStrip();
+            displayStats();
+        }
+    });
+
+    cexPricedAt = Date.now();
+    cexLoading = false;
+    recordHistory(before);
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    icon.classList.remove("spin");
+
+    updateValueStrip();
+    displayStats();
+    renderBreakdown();
+    const modal = document.getElementById("modal");
+    if (modal.classList.contains("hidden")) render();
+    if (tripped) {
+        setCexStatus(
+            `<span class="text-amber-400">CeX is refusing requests right now</span> — stopped after ${CEX_FAILURE_LIMIT} failures in a row. Cached prices are kept; press Refresh CeX prices to try again later.`,
+        );
+    } else {
+        setCexStatus(
+            `${skus.length - cexFailures}/${skus.length} CeX prices · updated just now` +
+                (cexFailures > 0
+                    ? ` · <span class="text-amber-400">${cexFailures} unavailable</span>`
+                    : ""),
+        );
+    }
+}
+
+function timeAgo(ts) {
+    if (!ts) return "recently";
+    const mins = Math.round((Date.now() - ts) / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins} min ago`;
+    const hrs = Math.round(mins / 60);
+    return hrs === 1 ? "1 hour ago" : `${hrs} hours ago`;
+}
+
+// === RAWG COVERS (fallback for rows with no CeX SKU) ====================
+async function fetchGameCover(title, consoleName) {
+    const key = `${title}__${consoleName}`;
+    if (coverCache[key] !== undefined) return coverCache[key];
+    if (!RAWG_API_KEY) {
+        coverCache[key] = null;
+        return null;
+    }
+    try {
+        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(
+            title,
+        )}&page_size=1`;
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            coverCache[key] = null;
+            return null;
+        }
+        const json = await resp.json();
+        const img = json?.results?.[0]?.background_image || null;
+        coverCache[key] = img;
+        return img;
+    } catch (e) {
+        coverCache[key] = null;
+        return null;
+    }
+}
+
+// === STATS =============================================================
+function displayStats() {
+    const el = document.getElementById("stats");
+    const owned = allData.filter((r) => !isTBC(r));
+    const toBuy = allData.length - owned.length;
+    const t = collectionTotals(allData);
+    const consoles = new Set(
+        owned.map((r) => normalizeConsole(r["Console Version"])),
+    ).size;
+    const completed = owned.filter(isCompleted).length;
+    const sealed = owned.filter(isSealed).length;
+    const completedPct = owned.length
+        ? Math.round((completed / owned.length) * 100)
+        : 0;
+
+    const tile = (label, value, valueClass = "text-white", sub = "") => `
+        <div class="stat-tile">
+            <div class="text-[10px] uppercase tracking-[0.18em] text-zinc-500 font-semibold">${label}</div>
+            <div class="text-2xl font-semibold mt-1 ${valueClass}">${value}</div>
+            ${sub ? `<div class="text-[11px] text-zinc-500 mt-0.5">${sub}</div>` : ""}
+        </div>`;
+
+    const gainClass =
+        t.gain >= 0 ? "text-emerald-400" : "text-red-400";
+    const gainPct =
+        t.paid > 0 ? Math.round((t.gain / t.paid) * 100) : 0;
+
+    el.innerHTML =
+        tile("Games", owned.length) +
+        tile("Consoles", consoles, "text-accent") +
+        tile("Total paid", fmtMoney(t.paid)) +
+        tile(
+            "CeX value",
+            fmtMoney(t.value),
+            "text-emerald-400",
+            `${t.priced} of ${owned.length} priced`,
+        ) +
+        tile(
+            "Gain / loss",
+            fmtSigned(t.gain),
+            gainClass,
+            t.paid > 0
+                ? `${gainPct >= 0 ? "+" : "−"}${Math.abs(gainPct)}% on spend`
+                : "",
+        ) +
+        tile(
+            "Completed",
+            `${completed}`,
+            "text-amber-300",
+            `${completedPct}% of collection`,
+        ) +
+        tile("Sealed", sealed, "text-[#e9c85a]") +
+        (toBuy > 0 ? tile("To buy", toBuy, "text-purple-300") : "");
+}
+
+// === BREAKDOWN =========================================================
+function monthKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function monthLabel(key) {
+    const [y, m] = key.split("-");
+    const names = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    return `${names[parseInt(m, 10) - 1]} ${y.slice(2)}`;
+}
+
+function setBreakdownMode(mode) {
+    breakdownMode = mode;
+    renderBreakdown();
+}
+
+function renderBreakdown() {
+    const el = document.getElementById("breakdownSection");
+    if (!allData.length) {
+        el.innerHTML = "";
+        return;
+    }
+    const owned = allData.filter((r) => !isTBC(r));
+
+    // --- per console -------------------------------------------------
+    const byConsole = new Map();
+    for (const row of owned) {
+        const name = normalizeConsole(row["Console Version"]);
+        if (!byConsole.has(name))
+            byConsole.set(name, {
+                name,
+                games: 0,
+                spend: 0,
+                lowest: Infinity,
+                highest: 0,
+                value: 0,
+            });
+        const c = byConsole.get(name);
+        const paid = rowPaid(row);
+        c.games++;
+        c.spend += paid;
+        c.lowest = Math.min(c.lowest, paid);
+        c.highest = Math.max(c.highest, paid);
+        c.value += rowValue(row);
+    }
+    const consoleRows = [...byConsole.values()].sort(
+        (a, b) => b.spend - a.spend || b.games - a.games,
+    );
+    const maxSpend = Math.max(
+        1,
+        ...consoleRows.map((c) => c.spend),
+    );
+    const totals = collectionTotals(allData);
+
+    const consoleTable = `
+        <table class="gtable">
+            <thead>
+                <tr>
+                    <th>Console</th><th>Games</th><th>Spend</th>
+                    <th>Average</th><th>Lowest</th><th>Highest</th>
+                    <th>CeX value</th><th>Gain / loss</th><th class="w-[160px]">Share of spend</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${consoleRows
+                    .map((c) => {
+                        const gain = c.value - c.spend;
+                        return `
+                    <tr data-console="${escapeHtml(c.name)}">
+                        <td class="text-zinc-100 font-medium">${escapeHtml(c.name)}</td>
+                        <td>${c.games}</td>
+                        <td>${fmtMoney(c.spend)}</td>
+                        <td>${fmtMoney(c.spend / c.games)}</td>
+                        <td>${fmtMoney(c.lowest === Infinity ? 0 : c.lowest)}</td>
+                        <td>${fmtMoney(c.highest)}</td>
+                        <td class="text-emerald-400">${fmtMoney(c.value)}</td>
+                        <td class="${gain >= 0 ? "text-emerald-400" : "text-red-400"}">${fmtSigned(gain)}</td>
+                        <td><div class="bar-track"><div class="bar-fill" style="width:${(c.spend / maxSpend) * 100}%"></div></div></td>
+                    </tr>`;
+                    })
+                    .join("")}
+                <tr class="font-semibold">
+                    <td class="text-white">Total</td>
+                    <td>${totals.count}</td>
+                    <td>${fmtMoney(totals.paid)}</td>
+                    <td>${fmtMoney(totals.count ? totals.paid / totals.count : 0)}</td>
+                    <td>—</td><td>—</td>
+                    <td class="text-emerald-400">${fmtMoney(totals.value)}</td>
+                    <td class="${totals.gain >= 0 ? "text-emerald-400" : "text-red-400"}">${fmtSigned(totals.gain)}</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>`;
+
+    // --- spend over time ---------------------------------------------
+    const buckets = new Map();
+    for (const row of owned) {
+        const d = parseUkDate(row["Date Purchased"]);
+        if (!d || isNaN(d)) continue;
+        const key =
+            breakdownMode === "year"
+                ? String(d.getFullYear())
+                : monthKey(d);
+        if (!buckets.has(key))
+            buckets.set(key, { key, spend: 0, games: 0 });
+        const b = buckets.get(key);
+        b.spend += rowPaid(row);
+        b.games++;
+    }
+    let series = [...buckets.values()].sort((a, b) =>
+        a.key.localeCompare(b.key),
+    );
+    // Purchases span nearly two decades with long gaps, so the monthly
+    // view only covers the recent, dense stretch.
+    if (breakdownMode === "month") series = series.slice(-24);
+    const maxBucket = Math.max(1, ...series.map((b) => b.spend));
+
+    const chart = `
+        <div class="flex items-end gap-1.5 h-[150px] min-w-full overflow-x-auto scroll-thin pb-1">
+            ${series
+                .map(
+                    (b) => `
+                <div class="flex flex-col items-center h-full flex-1 min-w-[26px]" title="${escapeHtml(
+                    breakdownMode === "year" ? b.key : monthLabel(b.key),
+                )} · ${b.games} games · ${fmtMoney(b.spend)}">
+                    <div class="text-[9px] text-zinc-500 mb-1">${b.spend > 0 ? Math.round(b.spend) : ""}</div>
+                    <div class="flex-1 min-h-0 w-full flex items-end">
+                        <div class="vbar w-full" style="height:${Math.max(2, (b.spend / maxBucket) * 100)}%"></div>
+                    </div>
+                    <div class="text-[9px] text-zinc-500 mt-1.5 whitespace-nowrap">${escapeHtml(
+                        breakdownMode === "year"
+                            ? b.key.slice(2)
+                            : monthLabel(b.key).split(" ")[0],
+                    )}</div>
+                </div>`,
+                )
+                .join("")}
+        </div>`;
+
+    // --- editions -----------------------------------------------------
+    const byEdition = new Map();
+    for (const row of owned) {
+        const e = editionOf(row);
+        byEdition.set(e, (byEdition.get(e) || 0) + 1);
+    }
+    const editionRows = [...byEdition.entries()].sort(
+        (a, b) => b[1] - a[1],
+    );
+    const maxEdition = Math.max(1, ...editionRows.map((e) => e[1]));
+    const editionList = editionRows
+        .map(
+            ([name, n]) => `
+            <div class="flex items-center gap-3 text-xs">
+                <span class="w-[130px] text-zinc-400 truncate">${escapeHtml(name)}</span>
+                <div class="flex-1 bar-track"><div class="bar-fill" style="width:${(n / maxEdition) * 100}%"></div></div>
+                <span class="w-8 text-right text-zinc-300">${n}</span>
+            </div>`,
+        )
+        .join("");
+
+    // --- movers -------------------------------------------------------
+    const priced = owned.filter((r) => rowCexValue(r) !== null);
+    const sorted = [...priced].sort((a, b) => rowGain(b) - rowGain(a));
+    const moverRow = (row) => {
+        const g = rowGain(row);
+        return `
+            <div class="flex items-center justify-between gap-3 text-xs py-1 border-b border-white/5 cursor-pointer hover:text-white" data-gamekey="${escapeHtml(rowKey(row))}">
+                <span class="truncate text-zinc-300">${escapeHtml(row["Game"])}</span>
+                <span class="whitespace-nowrap text-zinc-500">${fmtMoney(rowPaid(row))} → ${fmtMoney(rowValue(row))}</span>
+                <span class="whitespace-nowrap font-semibold ${g >= 0 ? "text-emerald-400" : "text-red-400"}">${fmtSigned(g)}</span>
+            </div>`;
+    };
+    const movers = priced.length
+        ? `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+                <h4 class="text-[11px] uppercase tracking-[0.15em] text-emerald-400 font-semibold mb-2">Top gainers</h4>
+                ${sorted.slice(0, 6).map(moverRow).join("")}
+            </div>
+            <div>
+                <h4 class="text-[11px] uppercase tracking-[0.15em] text-red-400 font-semibold mb-2">Biggest losses</h4>
+                ${sorted.slice(-6).reverse().map(moverRow).join("")}
+            </div>
+        </div>`
+        : `<p class="text-xs text-zinc-500">CeX prices still loading…</p>`;
+
+    el.innerHTML = `
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <div class="xl:col-span-2">
+                <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">By console</h3>
+                <div class="overflow-x-auto scroll-thin">${consoleTable}</div>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold">Spend over time</h3>
+                    <div class="seg">
+                        <button class="${breakdownMode === "month" ? "active" : ""}" onclick="setBreakdownMode('month')">Monthly</button>
+                        <button class="${breakdownMode === "year" ? "active" : ""}" onclick="setBreakdownMode('year')">Yearly</button>
+                    </div>
+                </div>
+                ${chart}
+            </div>
+            <div>
+                <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">By edition</h3>
+                <div class="flex flex-col gap-2">${editionList}</div>
+            </div>
+            <div class="xl:col-span-2">
+                <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Purchase heatmap</h3>
+                ${renderHeatmap(owned)}
+            </div>
+            <div class="xl:col-span-2">
+                <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Series</h3>
+                ${franchisePanel()}
+            </div>
+            <div class="xl:col-span-2">
+                <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Value over time</h3>
+                ${historyPanel()}
+            </div>
+            <div class="xl:col-span-2">
+                <h3 class="text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-3">Movers</h3>
+                ${movers}
+            </div>
+        </div>`;
+
+    // Data-attribute wiring rather than inline handlers: game titles
+    // contain apostrophes, which an HTML-escaped onclick would break on.
+    el.querySelectorAll("[data-console]").forEach((tr) => {
+        tr.onclick = () => filterToConsole(tr.dataset.console);
+    });
+    el.querySelectorAll("[data-gamekey]").forEach((d) => {
+        d.onclick = () => openModalByKey(d.dataset.gamekey);
+    });
+    el.querySelectorAll("[data-series]").forEach((d) => {
+        d.onclick = () => filterToSeries(d.dataset.series);
+    });
+}
+
+function filterToConsole(name) {
+    activeFilters.console = new Set([name.toLowerCase()]);
+    refreshChipStates();
+    applyFilters();
+    document
+        .getElementById("cardsGrid")
+        .scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// === FILTERS ===========================================================
+const PRICE_BANDS = {
+    lt5: (p) => p > 0 && p < 5,
+    "5to10": (p) => p >= 5 && p < 10,
+    "10to20": (p) => p >= 10 && p < 20,
+    gt20: (p) => p >= 20,
+    free: (p) => p === 0,
+};
+
+const FILTER_MATCHERS = {
+    status: {
+        owned: (r) => !isTBC(r),
+        tbc: (r) => isTBC(r),
+    },
+    completeness: {
+        complete: (r) => isComplete(r),
+        "no-cover": (r) => hasCover(r) === false,
+        "no-insert": (r) => hasInsert(r) === false,
+        loose: (r) => editionOf(r).toLowerCase() === "loose",
+    },
+    completed: {
+        yes: (r) => isCompleted(r),
+        no: (r) => !isCompleted(r),
+    },
+    sealed: {
+        yes: (r) => isSealed(r),
+        no: (r) => !isSealed(r),
+    },
+};
+
+function rowMatchesFilter(row, group, value) {
+    if (group === "console")
+        return (
+            normalizeConsole(row["Console Version"]).toLowerCase() ===
+            value
+        );
+    if (group === "edition")
+        return editionOf(row).toLowerCase() === value;
+    if (group === "price")
+        return (PRICE_BANDS[value] || (() => true))(rowPaid(row));
+    const fn = FILTER_MATCHERS[group]?.[value];
+    return fn ? fn(row) : true;
+}
+
+function makeChip(label, value, group) {
+    const btn = document.createElement("button");
+    btn.className = "chip";
+    btn.textContent = label;
+    btn.dataset.group = group;
+    btn.dataset.value = value;
+    btn.onclick = () => setFilter(group, value);
+    return btn;
+}
+
+function addFilterGroup(container, title, group, options) {
+    if (!options.length) return;
+    const wrap = document.createElement("div");
+    const h = document.createElement("h3");
+    h.className =
+        "text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold mb-2.5";
+    h.textContent = title;
+    const chips = document.createElement("div");
+    chips.className = "flex gap-2 flex-wrap";
+    chips.appendChild(makeChip("All", "all", group));
+    options.forEach(([label, value]) =>
+        chips.appendChild(makeChip(label, value, group)),
+    );
+    wrap.appendChild(h);
+    wrap.appendChild(chips);
+    container.appendChild(wrap);
+}
+
+function createFilters() {
+    const cont = document.getElementById("filterGroups");
+    cont.innerHTML = "";
+
+    // Only offered while the sheet actually has unpurchased rows.
+    if (allData.some(isTBC))
+        addFilterGroup(cont, "Status", "status", [
+            ["Owned", "owned"],
+            ["To buy", "tbc"],
+        ]);
+
+    const consoles = [
+        ...new Set(
+            allData.map((r) =>
+                normalizeConsole(r["Console Version"]),
+            ),
+        ),
+    ].sort((a, b) => a.localeCompare(b));
+    addFilterGroup(
+        cont,
+        "Console",
+        "console",
+        consoles.map((c) => [c, c.toLowerCase()]),
+    );
+
+    addFilterGroup(cont, "Completeness", "completeness", [
+        ["Complete", "complete"],
+        ["No cover art", "no-cover"],
+        ["No insert", "no-insert"],
+        ["Loose", "loose"],
+    ]);
+
+    const editions = [
+        ...new Set(allData.map(editionOf)),
+    ].sort((a, b) => a.localeCompare(b));
+    addFilterGroup(
+        cont,
+        "Edition",
+        "edition",
+        editions.map((e) => [e, e.toLowerCase()]),
+    );
+
+    addFilterGroup(cont, "Completed", "completed", [
+        ["Completed", "yes"],
+        ["Not completed", "no"],
+    ]);
+
+    addFilterGroup(cont, "Sealed", "sealed", [
+        ["Sealed", "yes"],
+        ["Not sealed", "no"],
+    ]);
+
+    addFilterGroup(cont, "Price paid", "price", [
+        ["Free / £0", "free"],
+        ["< £5", "lt5"],
+        ["£5–10", "5to10"],
+        ["£10–20", "10to20"],
+        ["> £20", "gt20"],
+    ]);
+
+    refreshChipStates();
+}
+
+function refreshChipStates() {
+    document
+        .querySelectorAll("#filterGroups .chip")
+        .forEach((chip) => {
+            const set = activeFilters[chip.dataset.group];
+            const on =
+                chip.dataset.value === "all"
+                    ? !set || set.size === 0
+                    : set && set.has(chip.dataset.value);
+            chip.classList.toggle("active", !!on);
+        });
+    const active = Object.values(activeFilters).reduce(
+        (n, s) => n + s.size,
+        0,
+    );
+    const badge = document.getElementById("filterCount");
+    badge.textContent = active;
+    badge.classList.toggle("hidden", active === 0);
+}
+
+function setFilter(group, value) {
+    const set = activeFilters[group];
+    if (value === "all") set.clear();
+    else if (set.has(value)) set.delete(value);
+    else set.add(value);
+    refreshChipStates();
+    applyFilters();
+}
+
+function clearAllFilters() {
+    Object.values(activeFilters).forEach((s) => s.clear());
+    document.getElementById("searchBox").value = "";
+    searchTerm = "";
+    refreshChipStates();
+    applyFilters();
+}
+
+function applyFilters() {
+    filteredData = allData.filter((row) =>
+        Object.entries(activeFilters).every(([group, set]) => {
+            if (set.size === 0) return true;
+            return [...set].some((v) =>
+                rowMatchesFilter(row, group, v),
+            );
+        }),
+    );
+    sortCards();
+}
+
+// Search only the fields a person would type — the CeX URL used to match
+// everything ("games", "software", "uk").
+function searchableText(row) {
+    return [
+        row["Game"],
+        normalizeConsole(row["Console Version"]),
+        row["Notes"],
+        editionOf(row),
+    ]
+        .join(" ")
+        .toLowerCase();
+}
+
+function onSearchInput() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        searchTerm = document
+            .getElementById("searchBox")
+            .value.toLowerCase()
+            .trim();
+        render();
+    }, 150);
+}
+
+// === SORT ==============================================================
+function buildSortDropdown() {
+    const dd = document.getElementById("sortDropdown");
+    dd.innerHTML = SORT_OPTIONS.map(
+        ([value, label]) => `
+        <div class="px-4 py-2.5 text-sm cursor-pointer ${
+            value === currentSort
+                ? "text-accent bg-accent/10"
+                : "text-zinc-200 hover:bg-white/5"
+        }" data-sort="${value}" onclick="selectSort('${value}')">${label}</div>`,
+    ).join("");
+    const label = SORT_OPTIONS.find(
+        ([v]) => v === currentSort,
+    )?.[1];
+    if (label)
+        document.getElementById("sortButtonText").textContent =
+            label;
+}
+
+function toggleSortDropdown() {
+    document
+        .getElementById("sortDropdown")
+        .classList.toggle("hidden");
+}
+
+function selectSort(sortBy) {
+    currentSort = sortBy;
+    buildSortDropdown();
+    document.getElementById("sortDropdown").classList.add("hidden");
+    sortCards();
+}
+
+function sortCards() {
+    const byTitle = (a, b) =>
+        (a["Game"] || "").localeCompare(b["Game"] || "");
+    filteredData.sort((a, b) => {
+        switch (currentSort) {
+            case "console":
+                return (
+                    normalizeConsole(a["Console Version"]).localeCompare(
+                        normalizeConsole(b["Console Version"]),
+                    ) || byTitle(a, b)
+                );
+            case "value-desc":
+                return rowValue(b) - rowValue(a) || byTitle(a, b);
+            case "gain-desc":
+                return rowGain(b) - rowGain(a) || byTitle(a, b);
+            case "gain-asc":
+                return rowGain(a) - rowGain(b) || byTitle(a, b);
+            case "paid-desc":
+                return rowPaid(b) - rowPaid(a) || byTitle(a, b);
+            case "paid-asc":
+                return rowPaid(a) - rowPaid(b) || byTitle(a, b);
+            case "date-newest":
+            case "date-oldest": {
+                const da = parseUkDate(a["Date Purchased"]);
+                const db = parseUkDate(b["Date Purchased"]);
+                const ta = da ? da.getTime() : 0;
+                const tb = db ? db.getTime() : 0;
+                return currentSort === "date-newest"
+                    ? tb - ta || byTitle(a, b)
+                    : ta - tb || byTitle(a, b);
+            }
+            case "edition":
+                return (
+                    editionOf(a).localeCompare(editionOf(b)) ||
+                    byTitle(a, b)
+                );
+            default:
+                return byTitle(a, b);
+        }
+    });
+    render();
+}
+
+// === URL STATE =========================================================
+function writeUrlState() {
+    if (restoringState) return;
+    const p = new URLSearchParams();
+    if (searchTerm) p.set("q", searchTerm);
+    if (currentSort !== "title") p.set("sort", currentSort);
+    if (currentView !== "grid") p.set("view", currentView);
+    for (const [group, set] of Object.entries(activeFilters)) {
+        if (set.size) p.set(group, [...set].join("|"));
+    }
+    const qs = p.toString();
+    try {
+        history.replaceState(
+            null,
+            "",
+            qs ? `${location.pathname}?${qs}` : location.pathname,
+        );
+    } catch (e) {
+        // file:// origins reject replaceState; filters still work.
+    }
+}
+
+function readUrlState() {
+    const p = new URLSearchParams(location.search);
+    restoringState = true;
+    const q = p.get("q");
+    if (q) {
+        searchTerm = q.toLowerCase();
+        document.getElementById("searchBox").value = q;
+    }
+    const sort = p.get("sort");
+    if (sort && SORT_OPTIONS.some(([v]) => v === sort))
+        currentSort = sort;
+    let stored = null;
+    try {
+        stored = localStorage.getItem(VIEW_KEY);
+    } catch (e) {}
+    const view = p.get("view") || stored;
+    if (view && VIEWS[view]) currentView = view;
+    for (const group of Object.keys(activeFilters)) {
+        const raw = p.get(group);
+        if (raw)
+            activeFilters[group] = new Set(
+                raw.split("|").filter(Boolean),
+            );
+    }
+    restoringState = false;
+}
+
+// === RENDER ============================================================
+function rowKey(row) {
+    return [
+        row["Game"],
+        row["Console Version"],
+        editionOf(row),
+        row["Date Purchased"],
+    ].join("§");
+}
+
+function updateFilterSummary() {
+    const el = document.getElementById("filterSummary");
+    if (el)
+        el.textContent = `Showing ${visibleData.length} of ${allData.length} games`;
+}
+
+function render() {
+    visibleData = searchTerm
+        ? filteredData.filter((r) =>
+              searchableText(r).includes(searchTerm),
+          )
+        : filteredData;
+    modalList = visibleData;
+    updateFilterSummary();
+    writeUrlState();
+    if (currentView === "table") renderTable(visibleData);
+    else if (currentView === "wall") renderWall(visibleData);
+    else if (currentView === "shelf") renderShelf(visibleData);
+    else displayCards(visibleData);
+}
+
+const VIEWS = {
+    grid: ["cardsGrid", "viewGridBtn"],
+    table: ["tableWrap", "viewTableBtn"],
+    wall: ["wallView", "viewWallBtn"],
+    shelf: ["shelfView", "viewShelfBtn"],
+};
+
+function applyView() {
+    for (const [name, [paneId, btnId]] of Object.entries(VIEWS)) {
+        const on = currentView === name;
+        document
+            .getElementById(paneId)
+            .classList.toggle("hidden", !on);
+        document
+            .getElementById(btnId)
+            .classList.toggle("active", on);
+    }
+    // #wallView is display:grid, so "hidden" needs help winning.
+    const wall = document.getElementById("wallView");
+    wall.style.display = currentView === "wall" ? "grid" : "none";
+    const shelf = document.getElementById("shelfView");
+    shelf.style.display = currentView === "shelf" ? "flex" : "none";
+}
+
+function setView(view) {
+    currentView = view;
+    try {
+        localStorage.setItem(VIEW_KEY, view);
+    } catch (e) {}
+    applyView();
+    render();
+}
+
+// Cover art / insert presence, shown as two initials.
+function completenessPills(row) {
+    return [
+        ["C", "Cover art", hasCover(row)],
+        ["I", "Insert", hasInsert(row)],
+    ]
+        .map(([abbr, label, state]) => {
+            const cls =
+                state === true
+                    ? "bg-emerald-400 text-black/80"
+                    : state === false
+                      ? "bg-red-500/80 text-white"
+                      : "bg-zinc-700 text-zinc-400";
+            const word =
+                state === true
+                    ? "present"
+                    : state === false
+                      ? "missing"
+                      : "not applicable";
+            return `<span class="cond ${cls}" title="${escapeHtml(
+                `${label}: ${word}`,
+            )}">${state === false ? "✕" : abbr}</span>`;
+        })
+        .join("");
+}
+
+function displayCards(data) {
+    const grid = document.getElementById("cardsGrid");
+    grid.innerHTML = "";
+    if (data.length === 0) {
+        grid.innerHTML = `<p class="col-span-full text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
+        return;
+    }
+
+    const frag = document.createDocumentFragment();
+    data.forEach((row, index) => {
+        const tbc = isTBC(row);
+        const sealed = isSealed(row);
+        const completed = isCompleted(row);
+        const edition = editionOf(row);
+        const card = document.createElement("div");
+        card.className =
+            "card animate-fadeInUp" +
+            (tbc ? " tbc" : "") +
+            (sealed ? " sealed" : "");
+        card.style.animationDelay = `${Math.min(index * 0.012, 0.3)}s`;
+        card.onclick = () => openModal(row, index);
+
+        const consoleName = normalizeConsole(row["Console Version"]);
+        const paid = rowPaid(row);
+        const value = rowValue(row);
+        const hasCex = rowSkus(row).length > 0;
+        const posterId = `poster-${index}`;
+        const cover = coverFromRow(row, "m");
+
+        const badges = `
+            ${hasCex ? `<span class="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/90 text-black border border-accent z-10">CeX</span>` : ""}
+            ${
+                tbc
+                    ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-600/90 text-white border border-purple-300/50 z-10">To buy</span>`
+                    : sealed
+                      ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#d4af37] text-black border border-[#f5d774] z-10">Sealed</span>`
+                      : completed
+                        ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/90 text-black border border-emerald-300 z-10">✓ Done</span>`
+                        : ""
+            }
+            ${edition !== "Standard" ? `<span class="absolute bottom-2 left-2 right-2 text-[10px] font-medium px-2 py-0.5 rounded bg-black/75 text-zinc-200 border border-white/15 z-10 truncate text-center">${escapeHtml(edition)}</span>` : ""}
+            ${tbc ? `<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10"><span class="tbc-stamp px-3 py-1 rounded-md bg-purple-600/85 text-white text-xs font-bold uppercase tracking-[0.15em] border border-purple-200/60">Not owned</span></div>` : ""}
+        `;
+
+        const poster = cover
+            ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(row["Game"] || "")}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" onerror="this.remove()" />`
+            : `<div class="absolute inset-0 flex items-center justify-center text-zinc-700 text-xs uppercase tracking-wider text-center px-2">${escapeHtml(consoleName)}</div>`;
+
+        card.innerHTML = `
+            <div class="relative aspect-[3/4] bg-black/40 ${cover ? "" : "skeleton"}" id="${posterId}">
+                ${poster}
+                ${badges}
+            </div>
+            <div class="p-3 flex flex-col gap-2 flex-1">
+                <h3 class="text-[15px] font-semibold text-zinc-100 leading-snug line-clamp-2 h-[42px] overflow-hidden">${escapeHtml(row["Game"] || "Untitled")}</h3>
+                <div class="text-xs text-zinc-500 truncate">${escapeHtml(consoleName)}${
+                    isDuplicate(row)
+                        ? ` · <span class="text-zinc-600" title="You own more than one copy — shown by purchase date">${escapeHtml(row["Date Purchased"] || "")}</span>`
+                        : ""
+                }</div>
+                <div class="flex items-end justify-between mt-auto pt-2 border-t border-white/5">
+                    ${tbc ? `<div class="text-[10px] uppercase tracking-wider text-purple-300 font-semibold">Wishlist</div>` : `<div class="flex gap-1.5">${completenessPills(row)}</div>`}
+                    <div class="text-right leading-tight">
+                        <div class="text-sm font-semibold ${tbc ? "text-purple-300" : "text-accent"}">${value > 0 ? fmtMoney(value) : "—"} ${deltaBadge(row)}</div>
+                        ${!tbc && paid > 0 ? `<div class="text-[10px] text-zinc-500">paid ${fmtMoney(paid)}</div>` : ""}
+                    </div>
+                </div>
+            </div>
+        `;
+        frag.appendChild(card);
+
+        // RAWG is only needed for the handful of rows with no CeX SKU
+        // (eBay links, mostly). Hold the element itself rather than
+        // looking it up later — a re-render would rebind the id to a
+        // different game.
+        if (!cover) {
+            const posterEl = card.firstElementChild;
+            fetchGameCover(row["Game"], consoleName).then((url) => {
+                const el = posterEl;
+                if (!el || !el.isConnected) return;
+                el.classList.remove("skeleton");
+                if (!url) {
+                    el.classList.add(
+                        "bg-gradient-to-br",
+                        "from-zinc-900",
+                        "to-black",
+                    );
+                    return;
+                }
+                const placeholder = el.querySelector("div");
+                if (placeholder) placeholder.remove();
+                const img = document.createElement("img");
+                img.src = url;
+                img.alt = row["Game"] || "";
+                img.className =
+                    "absolute inset-0 w-full h-full object-cover";
+                img.loading = "lazy";
+                el.insertBefore(img, el.firstChild);
+            });
+        }
+    });
+    grid.appendChild(frag);
+}
+
+const TABLE_COLUMNS = [
+    ["", null],
+    ["Game", "title"],
+    ["Console", "console"],
+    ["Edition", "edition"],
+    ["Cover", null],
+    ["Insert", null],
+    ["Sealed", null],
+    ["Done", null],
+    ["Purchased", "date-newest"],
+    ["Paid", "paid-desc"],
+    ["CeX sell", "value-desc"],
+    ["Δ", "gain-desc"],
+    ["Link", null],
+];
+
+function renderTable(data) {
+    const wrap = document.getElementById("tableWrap");
+    if (data.length === 0) {
+        wrap.innerHTML = `<p class="text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
+        return;
+    }
+    const head = TABLE_COLUMNS.map(
+        ([label, sort]) =>
+            `<th class="${sort ? "sortable" : ""}"${
+                sort ? ` onclick="selectSort('${sort}')"` : ""
+            }>${escapeHtml(label)}${
+                sort && currentSort === sort ? " ▾" : ""
+            }</th>`,
+    ).join("");
+
+    const yn = (state) =>
+        state === true
+            ? `<span class="text-emerald-400">✓</span>`
+            : state === false
+              ? `<span class="text-red-400">✕</span>`
+              : `<span class="text-zinc-600">–</span>`;
+
+    const body = data
+        .map((row, index) => {
+            const paid = rowPaid(row);
+            const value = rowValue(row);
+            const gain = value - paid;
+            const priced = rowCexValue(row) !== null;
+            const cover = coverFromRow(row, "s");
+            const links = parseCexLinks(row["CEX Listing"]);
+            const other = parseOtherLinks(row["CEX Listing"]);
+            const link = links[0] || other[0];
+            return `
+            <tr class="${isSealed(row) ? "sealed" : ""}" onclick="openModalByIndex(${index})">
+                <td class="w-[44px]">${
+                    cover
+                        ? `<img src="${escapeHtml(cover)}" class="w-8 h-10 object-cover rounded" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'" alt="" />`
+                        : ""
+                }</td>
+                <td class="text-zinc-100 font-medium max-w-[320px] truncate">${escapeHtml(row["Game"])}</td>
+                <td class="text-zinc-400">${escapeHtml(normalizeConsole(row["Console Version"]))}</td>
+                <td class="text-zinc-400">${escapeHtml(editionOf(row))}</td>
+                <td>${yn(hasCover(row))}</td>
+                <td>${yn(hasInsert(row))}</td>
+                <td>${isSealed(row) ? `<span class="text-[#e9c85a]">✓</span>` : `<span class="text-zinc-600">–</span>`}</td>
+                <td>${isCompleted(row) ? `<span class="text-emerald-400">✓</span>` : `<span class="text-zinc-600">–</span>`}</td>
+                <td class="text-zinc-400">${escapeHtml(row["Date Purchased"] || "—")}</td>
+                <td>${paid > 0 ? fmtMoney(paid) : "—"}</td>
+                <td class="text-emerald-400">${priced ? fmtMoney(value) : value > 0 ? fmtMoney(value) : "—"} ${deltaBadge(row)}</td>
+                <td class="${gain >= 0 ? "text-emerald-400" : "text-red-400"}">${priced || value > 0 ? fmtSigned(gain) : "—"}</td>
+                <td>${
+                    link
+                        ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener" class="text-accent hover:text-cyan-300" onclick="event.stopPropagation()">↗</a>`
+                        : ""
+                }</td>
+            </tr>`;
+        })
+        .join("");
+
+    wrap.innerHTML = `<table class="gtable"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+// === MODAL =============================================================
+function openModalByIndex(index) {
+    if (modalList[index]) openModal(modalList[index], index);
+}
+
+function openModalByKey(key) {
+    const idx = modalList.findIndex((r) => rowKey(r) === key);
+    if (idx >= 0) return openModal(modalList[idx], idx);
+    const row = allData.find((r) => rowKey(r) === key);
+    if (row) openModal(row, -1);
+}
+
+async function openModal(row, index) {
+    const modal = document.getElementById("modal");
+    const body = document.getElementById("modalBody");
+    const poster = document.getElementById("modalPoster");
+
+    modalIndex =
+        typeof index === "number" ? index : modalList.indexOf(row);
+    updateModalNav();
+
+    const consoleName = normalizeConsole(row["Console Version"]);
+    const paid = rowPaid(row);
+    const value = rowValue(row);
+    const gain = value - paid;
+    const priced = rowCexValue(row) !== null;
+    const cexLinks = parseCexLinks(row["CEX Listing"]);
+    const otherLinks = parseOtherLinks(row["CEX Listing"]);
+    const tbc = isTBC(row);
+    const sealed = isSealed(row);
+
+    const infoRow = (label, valueHtml) => `
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+            <span class="text-zinc-500 text-xs uppercase tracking-wider">${escapeHtml(label)}</span>
+            <span class="text-sm text-zinc-100">${valueHtml}</span>
+        </div>`;
+
+    const stateRow = (label, state, trueWord = "Present", falseWord = "Missing") =>
+        infoRow(
+            label,
+            state === true
+                ? `<span class="flex items-center gap-2"><span class="dot bg-emerald-400"></span>${trueWord}</span>`
+                : state === false
+                  ? `<span class="flex items-center gap-2"><span class="dot bg-red-500"></span>${falseWord}</span>`
+                  : `<span class="flex items-center gap-2"><span class="dot bg-zinc-700"></span>N/A</span>`,
+        );
+
+    const badge = (text, cls) =>
+        `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${cls}">${escapeHtml(text)}</span>`;
+
+    const notes = (row["Notes"] || "").trim();
+
+    let html = `
+        <div class="flex items-center gap-2 mb-3 flex-wrap">
+            ${badge(consoleName, "bg-white/5 text-zinc-300 border border-white/10")}
+            ${editionOf(row) !== "Standard" ? badge(editionOf(row), "bg-cyan-500/10 text-cyan-300 border border-cyan-500/30") : ""}
+            ${tbc ? badge("To buy · not owned", "bg-purple-500/10 text-purple-300 border border-purple-500/40") : ""}
+            ${sealed ? badge("Sealed", "bg-[#d4af37]/15 text-[#f5d774] border border-[#d4af37]/50") : ""}
+            ${isCompleted(row) ? badge("Completed", "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30") : ""}
+        </div>
+        <h2 class="text-3xl font-semibold text-white tracking-tight pr-12 mb-5">${escapeHtml(row["Game"] || "")}</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-6">
+            ${stateRow("Cover art", hasCover(row))}
+            ${stateRow("Insert", hasInsert(row))}
+            ${stateRow("Sealed", isSealed(row) ? true : false, "Yes", "No")}
+            ${stateRow("Completed", isCompleted(row) ? true : false, "Yes", "Not yet")}
+            ${infoRow("Edition", escapeHtml(editionOf(row)))}
+            ${infoRow("Date purchased", escapeHtml(row["Date Purchased"] || "—"))}
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="${tbc ? "bg-purple-500/5 border-purple-500/20" : "bg-white/5 border-white/8"} rounded-lg p-4 border">
+                <div class="text-[10px] uppercase tracking-wider ${tbc ? "text-purple-300" : "text-zinc-500"} mb-1">Price paid</div>
+                <div class="text-xl font-semibold ${tbc ? "text-purple-300" : "text-white"}">${tbc ? "Not purchased" : paid > 0 ? fmtMoney(paid) : "—"}</div>
+            </div>
+            <div class="bg-accent/5 rounded-lg p-4 border border-accent/20">
+                <div class="text-[10px] uppercase tracking-wider text-accent mb-1">${tbc ? "Target price" : "Current value"}</div>
+                <div class="text-xl font-semibold text-accent">${value > 0 ? fmtMoney(value) : "—"}</div>
+                <div class="text-[10px] text-zinc-500 mt-0.5">${priced ? "CeX sell price" : cexLinks.length > 0 ? "CeX price pending…" : "sheet column"} ${deltaBadge(row, "text-[10px]")}</div>
+            </div>
+            <div class="rounded-lg p-4 border ${gain >= 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20"}">
+                <div class="text-[10px] uppercase tracking-wider ${gain >= 0 ? "text-emerald-400" : "text-red-400"} mb-1">Gain / loss</div>
+                <div class="text-xl font-semibold ${gain >= 0 ? "text-emerald-400" : "text-red-400"}">${value > 0 || paid > 0 ? fmtSigned(gain) : "—"}</div>
+                <div class="text-[10px] text-zinc-500 mt-0.5">${paid > 0 ? `${Math.round((gain / paid) * 100)}% on spend` : "no spend"}</div>
+            </div>
+        </div>
+    `;
+
+    if (notes) {
+        html += `
+            <div class="mb-6">
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Notes</div>
+                <div class="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap bg-white/5 rounded-lg p-4 border border-white/8">${escapeHtml(notes)}</div>
+            </div>`;
+    }
+
+    if (cexLinks.length > 0) {
+        html += `
+            <div class="mb-4">
+                <div class="text-[10px] uppercase tracking-wider text-accent mb-2">CeX value</div>
+                <div id="cexPricing" class="text-zinc-500 text-sm">Loading CeX pricing…</div>
+            </div>`;
+    }
+
+    if (otherLinks.length > 0) {
+        html += `
+            <div class="mb-2">
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Listing</div>
+                ${otherLinks
+                    .map((l) => {
+                        let host = l;
+                        try {
+                            host = new URL(l).hostname.replace(
+                                /^www\./,
+                                "",
+                            );
+                        } catch (e) {}
+                        return `<a href="${escapeHtml(l)}" target="_blank" rel="noopener" class="text-accent hover:text-cyan-300 underline text-sm mr-3">${escapeHtml(host)} →</a>`;
+                    })
+                    .join("")}
+            </div>`;
+    }
+
+    body.innerHTML = html;
+    document
+        .getElementById("modalBox")
+        .classList.toggle("sealed", sealed);
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    document.body.style.overflow = "hidden";
+
+    // Cover art — CeX box art preferred, RAWG as fallback.
+    poster.classList.add("hidden");
+    poster.src = "";
+    poster.onerror = null;
+    const cover = coverFromRow(row, "l");
+    if (cover) {
+        poster.onerror = () => {
+            poster.onerror = null;
+            poster.classList.add("hidden");
+            fetchGameCover(row["Game"], consoleName).then((u) => {
+                if (u) {
+                    poster.src = u;
+                    poster.classList.remove("hidden");
+                }
+            });
+        };
+        poster.src = cover;
+        poster.classList.remove("hidden");
+    } else {
+        fetchGameCover(row["Game"], consoleName).then((url) => {
+            if (url) {
+                poster.src = url;
+                poster.classList.remove("hidden");
+            }
+        });
+    }
+
+    if (cexLinks.length > 0) {
+        const pEl = document.getElementById("cexPricing");
+        let out = "";
+        let loaded = 0;
+        for (const link of cexLinks) {
+            const sku = extractCexSku(link);
+            if (!sku) continue;
+            const d = await fetchCexDetails(sku);
+            if (!d) {
+                out += `<div class="mb-2 text-red-300 text-xs">Could not load SKU ${escapeHtml(sku)}</div>`;
+                continue;
+            }
+            loaded++;
+            out += `
+                <div class="${loaded > 1 ? "mt-3 pt-3 border-t border-white/8" : ""}">
+                    <div class="grid grid-cols-3 gap-2 mb-2">
+                        <div class="bg-white/5 rounded-lg p-3 border border-white/8">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500">Sell</div>
+                            <div class="text-base font-semibold text-white">${fmtMoney(d.sell)}</div>
+                        </div>
+                        <div class="bg-emerald-500/5 rounded-lg p-3 border border-emerald-500/20">
+                            <div class="text-[10px] uppercase tracking-wider text-emerald-400">Cash</div>
+                            <div class="text-base font-semibold text-emerald-400">${fmtMoney(d.cash)}</div>
+                        </div>
+                        <div class="bg-amber-500/5 rounded-lg p-3 border border-amber-500/20">
+                            <div class="text-[10px] uppercase tracking-wider text-amber-400">Voucher</div>
+                            <div class="text-base font-semibold text-amber-400">${fmtMoney(d.voucher)}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-zinc-500 truncate">${escapeHtml(d.boxName || "")}</span>
+                        <a href="${escapeHtml(link)}" target="_blank" rel="noopener" class="text-accent hover:text-cyan-300 underline ml-2" onclick="event.stopPropagation()">CeX page →</a>
+                    </div>
+                </div>`;
+        }
+        if (pEl)
+            pEl.innerHTML =
+                out ||
+                `<span class="text-red-300">Could not fetch CeX data</span>`;
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById("modal");
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    document.body.style.overflow = "auto";
+    modalIndex = -1;
+}
+
+function navModal(dir) {
+    if (!modalList.length || modalIndex < 0) return;
+    const next =
+        (modalIndex + dir + modalList.length) % modalList.length;
+    const body = document.getElementById("modalBody");
+    if (body) body.scrollTop = 0;
+    openModal(modalList[next], next);
+}
+
+function updateModalNav() {
+    const show = modalList.length > 1 && modalIndex >= 0;
+    ["modalPrev", "modalNext"].forEach((id) => {
+        const b = document.getElementById(id);
+        if (b) b.classList.toggle("hidden", !show);
+    });
+}
+
+// === COVER WALL / SHELF ================================================
+// Stable per-console colour for the shelf spines.
+const CONSOLE_HUE = {
+    "Xbox 360": 122,
+    "Xbox One": 142,
+    "Xbox Series": 158,
+    Xbox: 104,
+    "PlayStation 1": 232,
+    "PlayStation 2": 222,
+    "PlayStation 3": 212,
+    "PlayStation 4": 204,
+    PSP: 192,
+    Wii: 184,
+    "Nintendo DS": 348,
+    "Gameboy Advance": 280,
+    PC: 28,
+};
+
+function consoleHue(name) {
+    if (CONSOLE_HUE[name] !== undefined) return CONSOLE_HUE[name];
+    let h = 0;
+    for (let i = 0; i < name.length; i++)
+        h = (h * 31 + name.charCodeAt(i)) % 360;
+    return h;
+}
+
+function renderWall(data) {
+    const wall = document.getElementById("wallView");
+    if (!data.length) {
+        wall.innerHTML = `<p class="col-span-full text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
+        return;
+    }
+    wall.innerHTML = data
+        .map((row, index) => {
+            const cover = coverFromRow(row, "m");
+            const name = normalizeConsole(row["Console Version"]);
+            return `
+            <div class="wall-tile ${isSealed(row) ? "sealed" : ""}" data-idx="${index}" title="${escapeHtml(
+                `${row["Game"]} · ${name}`,
+            )}">
+                ${
+                    cover
+                        ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'" />`
+                        : `<div class="w-full h-full flex items-center justify-center text-[9px] text-zinc-700 uppercase tracking-wider text-center px-1">${escapeHtml(name)}</div>`
+                }
+                <div class="wall-label">${escapeHtml(row["Game"])}</div>
+            </div>`;
+        })
+        .join("");
+    wall.querySelectorAll(".wall-tile").forEach((t) => {
+        t.onclick = () => openModalByIndex(Number(t.dataset.idx));
+    });
+}
+
+function renderShelf(data) {
+    const shelf = document.getElementById("shelfView");
+    if (!data.length) {
+        shelf.innerHTML = `<p class="w-full text-center text-zinc-500 py-16 text-sm">No games match the current filters.</p>`;
+        return;
+    }
+    shelf.innerHTML = data
+        .map((row, index) => {
+            const name = normalizeConsole(row["Console Version"]);
+            const hue = consoleHue(name);
+            const paid = rowPaid(row);
+            // Fatter spine for a pricier game — roughly how a chunky
+            // special edition sits on a real shelf.
+            const width = Math.round(
+                Math.max(19, Math.min(44, 19 + paid * 1.1)),
+            );
+            const light = 26 + ((index * 7) % 10);
+            return `
+            <div class="spine ${isSealed(row) ? "sealed" : ""}" data-idx="${index}"
+                 style="width:${width}px;background:linear-gradient(90deg,hsl(${hue} 42% ${light + 8}%),hsl(${hue} 46% ${light}%))"
+                 title="${escapeHtml(`${row["Game"]} · ${name} · ${fmtMoney(paid)}`)}">${escapeHtml(
+                     row["Game"],
+                 )}</div>`;
+        })
+        .join("");
+    shelf.querySelectorAll(".spine").forEach((t) => {
+        t.onclick = () => openModalByIndex(Number(t.dataset.idx));
+    });
+}
+
+// === PURCHASE HEATMAP ==================================================
+function renderHeatmap(owned) {
+    const byDay = new Map();
+    for (const row of owned) {
+        const d = parseUkDate(row["Date Purchased"]);
+        if (!d || isNaN(d)) continue;
+        const key = d.toISOString().slice(0, 10);
+        if (!byDay.has(key))
+            byDay.set(key, { n: 0, spend: 0, titles: [] });
+        const e = byDay.get(key);
+        e.n++;
+        e.spend += rowPaid(row);
+        e.titles.push(row["Game"]);
+    }
+    if (!byDay.size)
+        return `<p class="text-xs text-zinc-500">No dated purchases.</p>`;
+
+    const years = new Map();
+    for (const [key, e] of byDay) {
+        const year = key.slice(0, 4);
+        const d = new Date(`${key}T00:00:00Z`);
+        const dayOfYear = Math.floor(
+            (d - Date.UTC(d.getUTCFullYear(), 0, 1)) / 86400000,
+        );
+        const week = Math.min(52, Math.floor(dayOfYear / 7));
+        if (!years.has(year)) years.set(year, new Map());
+        const weeks = years.get(year);
+        if (!weeks.has(week))
+            weeks.set(week, { n: 0, spend: 0, notes: [] });
+        const w = weeks.get(week);
+        w.n += e.n;
+        w.spend += e.spend;
+        w.notes.push(
+            `${key}: ${e.titles.slice(0, 4).join(", ")}${
+                e.titles.length > 4 ? ` +${e.titles.length - 4} more` : ""
+            }`,
+        );
+    }
+
+    const level = (n) => (n >= 8 ? 4 : n >= 4 ? 3 : n >= 2 ? 2 : 1);
+    const rows = [...years.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([year, weeks]) => {
+            let total = 0;
+            let spend = 0;
+            weeks.forEach((w) => {
+                total += w.n;
+                spend += w.spend;
+            });
+            const cells = Array.from({ length: 53 }, (_, i) => {
+                const w = weeks.get(i);
+                if (!w) return `<div class="hm-cell"></div>`;
+                return `<div class="hm-cell" data-n="${level(w.n)}" title="${escapeHtml(
+                    `${w.n} game${w.n === 1 ? "" : "s"} · ${fmtMoney(w.spend)}\n${w.notes.join("\n")}`,
+                )}"></div>`;
+            }).join("");
+            return `
+            <div class="flex items-center gap-2">
+                <span class="w-9 text-[10px] text-zinc-500 tabular-nums">${year}</span>
+                <div class="flex gap-[2px]">${cells}</div>
+                <span class="text-[10px] text-zinc-500 ml-2 whitespace-nowrap">${total} · ${fmtMoney(spend)}</span>
+            </div>`;
+        })
+        .join("");
+
+    return `
+        <div class="overflow-x-auto scroll-thin">
+            <div class="flex flex-col gap-1.5 min-w-max">${rows}</div>
+        </div>
+        <div class="flex items-center gap-2 mt-3 text-[10px] text-zinc-500">
+            <span>Quieter</span>
+            <div class="hm-cell"></div>
+            <div class="hm-cell" data-n="1"></div>
+            <div class="hm-cell" data-n="2"></div>
+            <div class="hm-cell" data-n="3"></div>
+            <div class="hm-cell" data-n="4"></div>
+            <span>Busier</span>
+            <span class="ml-2">· one square = one week</span>
+        </div>`;
+}
+
+// === OVERLAY HELPERS ===================================================
+function openOverlay(id) {
+    const el = document.getElementById(id);
+    el.classList.remove("hidden");
+    el.classList.add(
+        id === "trophyOverlay" ? "block" : "flex",
+    );
+    document.body.style.overflow = "hidden";
+}
+function closeOverlay(id) {
+    const el = document.getElementById(id);
+    el.classList.add("hidden");
+    el.classList.remove("flex", "block");
+    if (
+        document
+            .getElementById("modal")
+            .classList.contains("hidden")
+    )
+        document.body.style.overflow = "auto";
+}
+function anyOverlayOpen() {
+    return [
+        "rollOverlay",
+        "trophyOverlay",
+        "wrappedOverlay",
+        "guessOverlay",
+    ].find(
+        (id) =>
+            !document.getElementById(id).classList.contains("hidden"),
+    );
+}
+
+// === COLLECTION FACTS (shared by trophies + wrapped) ===================
+function collectionFacts() {
+    const owned = allData.filter((r) => !isTBC(r));
+    const consoles = {};
+    const days = {};
+    const months = {};
+    const editions = {};
+    const titles = {};
+    let spend = 0;
+    let free = 0;
+    let cheap = 0;
+    let dearest = null;
+    let bargain = null;
+    let oldest = null;
+    for (const row of owned) {
+        const name = normalizeConsole(row["Console Version"]);
+        consoles[name] = (consoles[name] || 0) + 1;
+        editions[editionOf(row)] =
+            (editions[editionOf(row)] || 0) + 1;
+        const key = `${row["Game"]}|${name}`.toLowerCase();
+        titles[key] = (titles[key] || 0) + 1;
+
+        const paid = rowPaid(row);
+        spend += paid;
+        if (paid === 0) free++;
+        else if (paid < 3) cheap++;
+        if (!dearest || paid > rowPaid(dearest)) dearest = row;
+        if (paid > 0 && (!bargain || paid < rowPaid(bargain)))
+            bargain = row;
+
+        const raw = (row["Date Purchased"] || "").trim();
+        if (raw) days[raw] = (days[raw] || 0) + 1;
+        const d = parseUkDate(raw);
+        if (d && !isNaN(d)) {
+            if (!oldest || d < parseUkDate(oldest["Date Purchased"]))
+                oldest = row;
+            const mk = monthKey(d);
+            if (!months[mk]) months[mk] = { n: 0, spend: 0 };
+            months[mk].n++;
+            months[mk].spend += paid;
+        }
+    }
+    const consoleRank = Object.entries(consoles).sort(
+        (a, b) => b[1] - a[1],
+    );
+    const busiestDay = Object.entries(days).sort(
+        (a, b) => b[1] - a[1],
+    )[0] || ["—", 0];
+    const busiestMonth = Object.entries(months).sort(
+        (a, b) => b[1].n - a[1].n,
+    )[0];
+    const dupes = Object.values(titles).filter((v) => v > 1).length;
+    const totals = collectionTotals(allData);
+    const priced = owned.filter((r) => rowCexValue(r) !== null);
+    const bestFind = [...priced].sort(
+        (a, b) => rowGain(b) - rowGain(a),
+    )[0];
+    return {
+        owned,
+        n: owned.length,
+        consoles,
+        consoleRank,
+        editions,
+        spend,
+        free,
+        cheap,
+        dearest,
+        bargain,
+        oldest,
+        busiestDay,
+        busiestMonth,
+        dupes,
+        totals,
+        bestFind,
+        completed: owned.filter(isCompleted).length,
+        sealed: owned.filter(isSealed).length,
+        complete: owned.filter(isComplete).length,
+    };
+}
+
+// === TROPHY CABINET ====================================================
+function buildAchievements() {
+    const f = collectionFacts();
+    const topConsole = f.consoleRank[0] ? f.consoleRank[0][1] : 0;
+    const families = new Set();
+    for (const name of Object.keys(f.consoles)) {
+        if (/xbox/i.test(name)) families.add("ms");
+        else if (/playstation|psp/i.test(name)) families.add("sony");
+        else if (/wii|nintendo|gameboy|ds/i.test(name))
+            families.add("nintendo");
+    }
+    const oldestYears = f.oldest
+        ? (Date.now() -
+              parseUkDate(f.oldest["Date Purchased"]).getTime()) /
+          (365.25 * 86400000)
+        : 0;
+    const pctComplete = f.n ? (f.complete / f.n) * 100 : 0;
+
+    return [
+        { icon: "📚", name: "Collector", desc: "Own 250 games", value: f.n, target: 250 },
+        { icon: "🏛️", name: "Centurion", desc: "100 games on a single console", value: topConsole, target: 100 },
+        { icon: "🌍", name: "Platform Nomad", desc: "Collect across 10 consoles", value: Object.keys(f.consoles).length, target: 10 },
+        { icon: "🎮", name: "Console War Veteran", desc: "Own Nintendo, Sony and Microsoft games", value: families.size, target: 3 },
+        { icon: "🏆", name: "Completionist", desc: "Finish 25 games", value: f.completed, target: 25 },
+        { icon: "🧊", name: "Sealed Vault", desc: "Keep 5 games sealed", value: f.sealed, target: 5 },
+        { icon: "💎", name: "Shelf Perfect", desc: "90% of games complete in the box", value: Math.round(pctComplete), target: 90, unit: "%" },
+        { icon: "💰", name: "Big Spender", desc: "Spend £1,000 in total", value: Math.round(f.spend), target: 1000, unit: "£" },
+        { icon: "💸", name: "High Roller", desc: "Pay £40 for a single game", value: Math.round(f.dearest ? rowPaid(f.dearest) : 0), target: 40, unit: "£" },
+        { icon: "🪙", name: "Bargain Hunter", desc: "50 games bought under £3", value: f.cheap, target: 50 },
+        { icon: "🎁", name: "Freebie Fiend", desc: "25 games that cost nothing", value: f.free, target: 25 },
+        { icon: "🛒", name: "Supermarket Sweep", desc: "20 games in a single day", value: f.busiestDay[1], target: 20 },
+        { icon: "⏳", name: "Time Capsule", desc: "Still own something bought 15 years ago", value: Math.floor(oldestYears), target: 15, unit: "y" },
+        { icon: "👯", name: "Double Dipper", desc: "Own the same game twice", value: f.dupes, target: 1 },
+        { icon: "🗡️", name: "Steel Reserve", desc: "Own a Steelcase edition", value: f.editions["Steelcase"] || 0, target: 1 },
+        { icon: "🥇", name: "GOTY Hunter", desc: "Own 4 Game of the Year editions", value: f.editions["GOTY"] || 0, target: 4 },
+        { icon: "🃏", name: "Loose Cannon", desc: "15 loose, boxless games", value: f.editions["Loose"] || 0, target: 15 },
+        { icon: "📈", name: "In the Black", desc: "Collection worth more than you paid", value: Math.round(f.totals.value), target: Math.max(1, Math.round(f.totals.paid)), unit: "£" },
+    ];
+}
+
+function openTrophies() {
+    const list = buildAchievements();
+    const unlocked = list.filter((a) => a.value >= a.target).length;
+    document.getElementById("trophyScore").textContent =
+        `${unlocked} of ${list.length} unlocked`;
+    document.getElementById("trophyGrid").innerHTML = list
+        .map((a) => {
+            const got = a.value >= a.target;
+            const pct = Math.min(
+                100,
+                Math.round((a.value / a.target) * 100),
+            );
+            const u = a.unit === "£" ? "£" : "";
+            const suffix = a.unit && a.unit !== "£" ? a.unit : "";
+            return `
+            <div class="trophy ${got ? "unlocked" : "locked"}">
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl leading-none">${a.icon}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold ${got ? "text-[#f5d774]" : "text-zinc-300"}">${escapeHtml(a.name)}</div>
+                        <div class="text-[11px] text-zinc-500 leading-snug mt-0.5">${escapeHtml(a.desc)}</div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="bar-track"><div class="bar-fill" style="width:${pct}%;${got ? "background:linear-gradient(90deg,#b8912c,#f5d774)" : ""}"></div></div>
+                    <div class="flex justify-between text-[10px] mt-1 ${got ? "text-[#e9c85a]" : "text-zinc-500"}">
+                        <span>${got ? "Unlocked" : "Locked"}</span>
+                        <span class="tabular-nums">${u}${a.value.toLocaleString("en-GB")}${suffix} / ${u}${a.target.toLocaleString("en-GB")}${suffix}</span>
+                    </div>
+                </div>
+            </div>`;
+        })
+        .join("");
+    openOverlay("trophyOverlay");
+}
+
+// === COLLECTION WRAPPED ================================================
+let wrappedSlides = [];
+let wrappedIndex = 0;
+
+function buildWrapped() {
+    const f = collectionFacts();
+    const big = (t) =>
+        `<div class="text-6xl md:text-7xl font-bold text-white tracking-tight">${t}</div>`;
+    const lead = (t) =>
+        `<div class="text-sm uppercase tracking-[0.3em] text-accent mb-5">${escapeHtml(t)}</div>`;
+    const sub = (t) =>
+        `<div class="text-zinc-400 mt-5 text-lg">${t}</div>`;
+    const slides = [];
+
+    slides.push(
+        lead("Your collection") +
+            big(f.n.toLocaleString("en-GB")) +
+            sub(
+                `physical games, across <span class="text-white font-semibold">${Object.keys(f.consoles).length}</span> consoles`,
+            ),
+    );
+
+    const top3 = f.consoleRank.slice(0, 3);
+    slides.push(
+        lead("Your top platforms") +
+            `<div class="flex flex-col gap-4 mt-2">${top3
+                .map(
+                    ([name, n], i) => `
+                <div class="flex items-center gap-4">
+                    <span class="text-3xl font-bold text-zinc-600 w-8">${i + 1}</span>
+                    <span class="text-3xl font-semibold text-white flex-1 text-left">${escapeHtml(name)}</span>
+                    <span class="text-3xl font-bold text-accent tabular-nums">${n}</span>
+                </div>`,
+                )
+                .join("")}</div>`,
+    );
+
+    slides.push(
+        lead("You spent") +
+            big(fmtMoney(f.spend)) +
+            sub(
+                `that's <span class="text-white font-semibold">${fmtMoney(f.spend / Math.max(1, f.n))}</span> a game on average`,
+            ),
+    );
+
+    if (f.busiestMonth) {
+        const [mk, m] = f.busiestMonth;
+        slides.push(
+            lead("Your biggest month") +
+                big(escapeHtml(monthLabel(mk))) +
+                sub(
+                    `<span class="text-white font-semibold">${m.n}</span> games in one month, for ${fmtMoney(m.spend)}`,
+                ),
+        );
+    }
+
+    if (f.busiestDay[1] > 1) {
+        slides.push(
+            lead("Your biggest single day") +
+                big(escapeHtml(f.busiestDay[0])) +
+                sub(
+                    `you walked out with <span class="text-white font-semibold">${f.busiestDay[1]}</span> games`,
+                ),
+        );
+    }
+
+    if (f.dearest) {
+        slides.push(
+            lead("Your biggest splurge") +
+                `<div class="text-4xl md:text-5xl font-bold text-white">${escapeHtml(f.dearest["Game"])}</div>` +
+                sub(
+                    `${fmtMoney(rowPaid(f.dearest))} · ${escapeHtml(normalizeConsole(f.dearest["Console Version"]))}`,
+                ),
+        );
+    }
+
+    if (f.bargain) {
+        slides.push(
+            lead("Your cheapest win") +
+                `<div class="text-4xl md:text-5xl font-bold text-white">${escapeHtml(f.bargain["Game"])}</div>` +
+                sub(
+                    `just ${fmtMoney(rowPaid(f.bargain))}${f.free > 0 ? ` — and ${f.free} more came free` : ""}`,
+                ),
+        );
+    }
+
+    if (f.oldest) {
+        slides.push(
+            lead("The one that started it") +
+                `<div class="text-4xl md:text-5xl font-bold text-white">${escapeHtml(f.oldest["Game"])}</div>` +
+                sub(
+                    `bought ${escapeHtml(f.oldest["Date Purchased"])} — still on the shelf`,
+                ),
+        );
+    }
+
+    slides.push(
+        lead("Still to play") +
+            big(`${f.n - f.completed}`) +
+            sub(
+                `you've finished <span class="text-white font-semibold">${f.completed}</span>. No pressure.`,
+            ),
+    );
+
+    const stat = (label, value, cls = "text-white") => `
+        <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+            <div class="text-[10px] uppercase tracking-wider text-zinc-500">${escapeHtml(label)}</div>
+            <div class="text-2xl font-bold mt-1 ${cls}">${value}</div>
+        </div>`;
+    slides.push(
+        lead("That's your collection") +
+            `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+                ${stat("Games", f.n)}
+                ${stat("Consoles", Object.keys(f.consoles).length, "text-accent")}
+                ${stat("Spent", fmtMoney(f.spend))}
+                ${stat("Completed", f.completed, "text-amber-300")}
+                ${stat("Sealed", f.sealed, "text-[#e9c85a]")}
+                ${stat("In the box", `${Math.round((f.complete / Math.max(1, f.n)) * 100)}%`, "text-emerald-400")}
+            </div>`,
+    );
+    return slides;
+}
+
+function renderWrapped() {
+    document.getElementById("wrappedSlide").innerHTML =
+        `<div class="wrap-slide" key="${wrappedIndex}">${wrappedSlides[wrappedIndex]}</div>`;
+    document.getElementById("wrappedDots").innerHTML = wrappedSlides
+        .map(
+            (_, i) =>
+                `<div class="h-1 rounded-full transition-all ${
+                    i === wrappedIndex
+                        ? "w-6 bg-accent"
+                        : "w-2 bg-white/20"
+                }"></div>`,
+        )
+        .join("");
+}
+
+function wrappedStep(dir) {
+    if (!wrappedSlides.length) return;
+    wrappedIndex =
+        (wrappedIndex + dir + wrappedSlides.length) %
+        wrappedSlides.length;
+    renderWrapped();
+}
+
+function openWrapped() {
+    if (!allData.length) return;
+    wrappedSlides = buildWrapped();
+    wrappedIndex = 0;
+    renderWrapped();
+    openOverlay("wrappedOverlay");
+}
+
+// === RANDOM PICKER =====================================================
+function rollRandomGame() {
+    const base = visibleData.length ? visibleData : allData;
+    const unplayed = base.filter((r) => !isCompleted(r) && !isTBC(r));
+    const pool = unplayed.length ? unplayed : base;
+    if (!pool.length) return;
+
+    openOverlay("rollOverlay");
+    const coverEl = document.getElementById("rollCover");
+    const titleEl = document.getElementById("rollTitle");
+    const consoleEl = document.getElementById("rollConsole");
+
+    let delay = 55;
+    let elapsed = 0;
+    const tick = () => {
+        const row = pool[Math.floor(Math.random() * pool.length)];
+        const cover = coverFromRow(row, "m");
+        const name = normalizeConsole(row["Console Version"]);
+        coverEl.innerHTML = cover
+            ? `<img src="${escapeHtml(cover)}" class="w-full h-full object-cover" alt="" />`
+            : `<div class="w-full h-full flex items-center justify-center text-zinc-600 text-xs uppercase tracking-wider">${escapeHtml(name)}</div>`;
+        titleEl.textContent = row["Game"];
+        consoleEl.textContent = name;
+
+        elapsed += delay;
+        delay *= 1.15;
+        if (elapsed < 1800) {
+            setTimeout(tick, delay);
+        } else {
+            // Settle on the last one shown, then hand over to the modal.
+            setTimeout(() => {
+                closeOverlay("rollOverlay");
+                openModal(row, modalList.indexOf(row));
+            }, 750);
+        }
+    };
+    tick();
+}
+
+// === GUESS THE PRICE ===================================================
+let guessState = { round: 0, score: 0, streak: 0, best: 0, row: null };
+
+function guessPool() {
+    return allData.filter(
+        (r) => !isTBC(r) && rowCexValue(r) !== null,
+    );
+}
+
+function openGuess() {
+    guessState = { round: 0, score: 0, streak: 0, best: guessState.best || 0, row: null };
+    // Overlay first — focus() is a no-op on a hidden input.
+    openOverlay("guessOverlay");
+    nextGuess();
+}
+
+function nextGuess() {
+    const pool = guessPool();
+    const body = document.getElementById("guessBody");
+    if (!pool.length) {
+        body.innerHTML = `<p class="text-sm text-zinc-400">No CeX prices loaded yet — let the valuation finish (or press <span class="text-accent">Refresh CeX prices</span>) and come back.</p>`;
+        return;
+    }
+    guessState.row = pool[Math.floor(Math.random() * pool.length)];
+    guessState.round++;
+    const row = guessState.row;
+    const cover = coverFromRow(row, "m");
+    body.innerHTML = `
+        <div class="flex gap-4 mb-5">
+            <div class="w-[96px] h-[128px] rounded-lg overflow-hidden bg-black/50 border border-white/10 shrink-0">
+                ${
+                    cover
+                        ? `<img src="${escapeHtml(cover)}" class="w-full h-full object-cover" alt="" />`
+                        : ""
+                }
+            </div>
+            <div class="min-w-0">
+                <div class="text-lg font-semibold text-white leading-snug">${escapeHtml(row["Game"])}</div>
+                <div class="text-xs text-zinc-500 mt-1">${escapeHtml(normalizeConsole(row["Console Version"]))} · ${escapeHtml(editionOf(row))}</div>
+                <div class="text-[11px] text-zinc-600 mt-2">Round ${guessState.round} · score ${guessState.score} · streak ${guessState.streak}</div>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <div class="relative flex-1">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">£</span>
+                <input id="guessInput" type="number" step="0.01" min="0" autocomplete="off"
+                    class="w-full pl-7 pr-3 py-2.5 bg-black/40 border border-white/10 rounded-lg text-sm text-zinc-100 focus:outline-none focus:border-accent/50" />
+            </div>
+            <button class="accent-btn" onclick="submitGuess()">Lock it in</button>
+        </div>
+        <div id="guessResult" class="mt-4"></div>`;
+    const input = document.getElementById("guessInput");
+    input.focus();
+    input.onkeydown = (e) => {
+        if (e.key === "Enter") submitGuess();
+        e.stopPropagation();
+    };
+}
+
+function submitGuess() {
+    const row = guessState.row;
+    if (!row) return;
+    const input = document.getElementById("guessInput");
+    if (!input || input.disabled) return;
+    const guess = parseFloat(input.value);
+    if (isNaN(guess)) return;
+    input.disabled = true;
+
+    const actual = rowCexValue(row) || 0;
+    const off = Math.abs(guess - actual);
+    // Score on relative error, with a floor so penny items aren't
+    // impossible to score on.
+    const pts = Math.max(
+        0,
+        Math.round(100 - (off / Math.max(actual, 2)) * 100),
+    );
+    guessState.score += pts;
+    guessState.streak = pts >= 70 ? guessState.streak + 1 : 0;
+    guessState.best = Math.max(guessState.best, guessState.streak);
+
+    const verdict =
+        pts === 100
+            ? ["Spot on", "text-emerald-400"]
+            : pts >= 70
+              ? ["Close", "text-emerald-400"]
+              : pts >= 35
+                ? ["Not bad", "text-amber-400"]
+                : ["Way off", "text-red-400"];
+
+    document.getElementById("guessResult").innerHTML = `
+        <div class="rounded-lg border border-white/10 bg-white/5 p-4">
+            <div class="flex items-baseline justify-between">
+                <span class="text-sm ${verdict[1]} font-semibold">${verdict[0]}</span>
+                <span class="text-xs text-zinc-500">+${pts} pts</span>
+            </div>
+            <div class="mt-2 text-sm text-zinc-300">
+                CeX sells it for <span class="text-emerald-400 font-semibold">${fmtMoney(actual)}</span> —
+                you said ${fmtMoney(guess)} <span class="text-zinc-500">(${fmtMoney(off)} out)</span>
+            </div>
+            <div class="text-[11px] text-zinc-500 mt-1">You paid ${fmtMoney(rowPaid(row))} for it.</div>
+        </div>
+        <button class="ghost-btn w-full mt-3 justify-center" onclick="nextGuess()">Next game →</button>`;
+}
+
+// === KONAMI / CRT MODE =================================================
+const KONAMI = [
+    "arrowup", "arrowup", "arrowdown", "arrowdown",
+    "arrowleft", "arrowright", "arrowleft", "arrowright",
+    "b", "a",
+];
+let konamiBuffer = [];
+
+function pushKonami(key) {
+    konamiBuffer.push(String(key).toLowerCase());
+    if (konamiBuffer.length > KONAMI.length) konamiBuffer.shift();
+    if (
+        konamiBuffer.length === KONAMI.length &&
+        konamiBuffer.every((k, i) => k === KONAMI[i])
+    ) {
+        konamiBuffer = [];
+        toggleCrt();
+    }
+}
+
+function toggleCrt() {
+    const on = document.body.classList.toggle("crt");
+    try {
+        localStorage.setItem("crtMode", on ? "1" : "0");
+    } catch (e) {}
+    if (on) {
+        document.body.classList.add("booting");
+        setTimeout(
+            () => document.body.classList.remove("booting"),
+            700,
+        );
+        showSuccess("CRT mode engaged ▚▚▚");
+    } else {
+        showSuccess("Back to flat panel");
+    }
+}
+
+// === PRICE HISTORY =====================================================
+// Each completed CeX refresh appends a totals snapshot and remembers the
+// per-SKU prices it replaced, so games can show what moved since.
+const HISTORY_KEY = "cexHistory_v1";
+const PREVPRICE_KEY = "cexPrevPrices_v1";
+const HISTORY_MAX = 60;
+const HISTORY_MIN_GAP = 60 * 60 * 1000;
+let priceHistory = [];
+let prevPrices = {};
+
+function loadHistory() {
+    try {
+        priceHistory =
+            JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+    } catch (e) {
+        priceHistory = [];
+    }
+    try {
+        prevPrices =
+            JSON.parse(localStorage.getItem(PREVPRICE_KEY)) || {};
+    } catch (e) {
+        prevPrices = {};
+    }
+}
+
+function recordHistory(before) {
+    const t = collectionTotals(allData);
+    const last = priceHistory[priceHistory.length - 1];
+    if (!last || Date.now() - last.ts >= HISTORY_MIN_GAP) {
+        priceHistory.push({
+            ts: Date.now(),
+            value: Math.round(t.value * 100) / 100,
+            paid: Math.round(t.paid * 100) / 100,
+            priced: t.priced,
+        });
+        if (priceHistory.length > HISTORY_MAX)
+            priceHistory = priceHistory.slice(-HISTORY_MAX);
+    }
+    // Only replace the comparison baseline when we actually had one.
+    if (before && Object.keys(before).length) prevPrices = before;
+    try {
+        localStorage.setItem(
+            HISTORY_KEY,
+            JSON.stringify(priceHistory),
+        );
+        localStorage.setItem(
+            PREVPRICE_KEY,
+            JSON.stringify(prevPrices),
+        );
+    } catch (e) {}
+}
+
+// Change in this row's CeX price since the previous refresh, or null.
+function rowPriceDelta(row) {
+    const skus = rowSkus(row);
+    if (!skus.length) return null;
+    let now = 0;
+    let then = 0;
+    let seen = false;
+    for (const sku of skus) {
+        const rec = cexCache[sku];
+        if (!rec || prevPrices[sku] === undefined) continue;
+        now += rec.sell || 0;
+        then += prevPrices[sku] || 0;
+        seen = true;
+    }
+    if (!seen) return null;
+    const d = now - then;
+    return Math.abs(d) < 0.005 ? 0 : d;
+}
+
+function deltaBadge(row, cls = "text-[10px]") {
+    const d = rowPriceDelta(row);
+    if (d === null || d === 0) return "";
+    return `<span class="${cls} ${d > 0 ? "delta-up" : "delta-down"}" title="Since the last price check">${
+        d > 0 ? "▲" : "▼"
+    }${fmtMoney(Math.abs(d)).replace("£", "£")}</span>`;
+}
+
+function historyPanel() {
+    if (priceHistory.length < 2)
+        return `<p class="text-xs text-zinc-500">Only one price check so far — come back after the next refresh and this will show how the collection has moved.</p>`;
+    const vals = priceHistory.map((h) => h.value);
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const span = Math.max(0.01, max - min);
+    const first = priceHistory[0];
+    const last = priceHistory[priceHistory.length - 1];
+    const move = last.value - first.value;
+    const bars = priceHistory
+        .map(
+            (h) =>
+                `<div style="height:${Math.max(4, ((h.value - min) / span) * 100)}%" title="${escapeHtml(
+                    `${new Date(h.ts).toLocaleString("en-GB")} · ${fmtMoney(h.value)}`,
+                )}"></div>`,
+        )
+        .join("");
+    return `
+        <div class="spark mb-3">${bars}</div>
+        <div class="text-xs text-zinc-400">
+            <span class="${move >= 0 ? "delta-up" : "delta-down"} font-semibold">${fmtSigned(move)}</span>
+            since ${escapeHtml(new Date(first.ts).toLocaleDateString("en-GB"))}
+            <span class="text-zinc-600">· ${priceHistory.length} checks</span>
+        </div>`;
+}
+
+// === FRANCHISES ========================================================
+// Trim a title down to the series it belongs to: drop the subtitle after
+// a colon or dash, then a trailing sequel number or roman numeral.
+function franchiseOf(title) {
+    let t = String(title || "").trim();
+    t = t.split(/\s*[:–—]\s*/)[0];
+    t = t.split(/\s+-\s+/)[0];
+    t = t.replace(/\s*\([^)]*\)\s*$/, "");
+    t = t.replace(/\s+(\d{1,2}|[IVX]{1,4})$/i, "");
+    t = t.replace(/^(the|a)\s+/i, "");
+    return t.trim();
+}
+
+function franchiseGroups() {
+    const groups = new Map();
+    for (const row of allData.filter((r) => !isTBC(r))) {
+        const key = franchiseOf(row["Game"]);
+        if (key.length < 4) continue;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+    }
+    return [...groups.entries()]
+        .filter(([, rows]) => rows.length > 1)
+        .sort(
+            (a, b) =>
+                b[1].length - a[1].length ||
+                a[0].localeCompare(b[0]),
+        );
+}
+
+function franchisePanel() {
+    const groups = franchiseGroups();
+    if (!groups.length)
+        return `<p class="text-xs text-zinc-500">No repeated series found.</p>`;
+    const inSeries = groups.reduce((n, g) => n + g[1].length, 0);
+    return `
+        <p class="text-xs text-zinc-500 mb-3">${inSeries} games across ${groups.length} series</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            ${groups
+                .slice(0, 18)
+                .map(([name, rows]) => {
+                    const paid = rows.reduce(
+                        (n, r) => n + rowPaid(r),
+                        0,
+                    );
+                    const value = rows.reduce(
+                        (n, r) => n + rowValue(r),
+                        0,
+                    );
+                    const covers = rows
+                        .slice(0, 6)
+                        .map((r) => {
+                            const c = coverFromRow(r, "s");
+                            return c
+                                ? `<img src="${escapeHtml(c)}" class="w-6 h-8 object-cover rounded-sm" loading="lazy" onerror="this.style.visibility='hidden'" alt="" />`
+                                : `<div class="w-6 h-8 rounded-sm bg-white/5"></div>`;
+                        })
+                        .join("");
+                    return `
+                    <div class="flex items-center gap-3 p-2.5 rounded-lg border border-white/8 bg-white/[0.02] cursor-pointer hover:border-accent/40 transition" data-series="${escapeHtml(name)}">
+                        <div class="flex gap-1 shrink-0">${covers}</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm text-zinc-100 font-medium truncate">${escapeHtml(name)}</div>
+                            <div class="text-[11px] text-zinc-500">${rows.length} games · ${fmtMoney(paid)} → ${fmtMoney(value)}</div>
+                        </div>
+                        <div class="text-lg font-bold text-accent tabular-nums">${rows.length}</div>
+                    </div>`;
+                })
+                .join("")}
+        </div>`;
+}
+
+function filterToSeries(name) {
+    const box = document.getElementById("searchBox");
+    box.value = name;
+    searchTerm = name.toLowerCase();
+    render();
+    document
+        .getElementById("cardsGrid")
+        .scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// === DATA HEALTH =======================================================
+function healthChecks() {
+    const owned = allData.filter((r) => !isTBC(r));
+    const dupKey = (r) =>
+        `${r["Game"]}|${normalizeConsole(r["Console Version"])}`.toLowerCase();
+    const dupCount = {};
+    owned.forEach((r) => {
+        dupCount[dupKey(r)] = (dupCount[dupKey(r)] || 0) + 1;
+    });
+    const today = new Date();
+
+    const checks = [
+        {
+            label: "Loose, but cover art is ticked",
+            level: "warn",
+            why: "A loose game shouldn't have its box.",
+            rows: owned.filter(
+                (r) =>
+                    editionOf(r).toLowerCase() === "loose" &&
+                    hasCover(r) === true,
+            ),
+        },
+        {
+            label: "No cover art, but not marked Loose",
+            level: "warn",
+            why: "Either the edition or the cover-art tick looks wrong.",
+            rows: owned.filter(
+                (r) =>
+                    hasCover(r) === false &&
+                    editionOf(r).toLowerCase() !== "loose",
+            ),
+        },
+        {
+            label: "Sealed, but marked completed",
+            level: "warn",
+            why: "You can't have finished a game that's still shrink-wrapped.",
+            rows: owned.filter(
+                (r) => isSealed(r) && isCompleted(r),
+            ),
+        },
+        {
+            label: "Sealed, but something's missing from the box",
+            level: "warn",
+            why: "A sealed copy should be complete.",
+            rows: owned.filter(
+                (r) =>
+                    isSealed(r) &&
+                    (hasCover(r) === false ||
+                        hasInsert(r) === false),
+            ),
+        },
+        {
+            label: "Purchase date is in the future",
+            level: "warn",
+            why: "Probably a typo in the year.",
+            rows: owned.filter((r) => {
+                const d = parseUkDate(r["Date Purchased"]);
+                return d && !isNaN(d) && d > today;
+            }),
+        },
+        {
+            label: "Date missing or not dd/mm/yyyy",
+            level: "warn",
+            why: "These drop out of the timeline and heatmap.",
+            rows: owned.filter((r) => {
+                const d = parseUkDate(r["Date Purchased"]);
+                return !d || isNaN(d);
+            }),
+        },
+        {
+            label: "Month column disagrees with the date",
+            level: "warn",
+            why: "One of the two has been edited without the other.",
+            rows: owned.filter((r) => {
+                const d = parseUkDate(r["Date Purchased"]);
+                const m = (r["Month"] || "").trim();
+                if (!d || isNaN(d) || !m) return false;
+                // The sheet writes "Sep-26"; monthLabel gives "Sep 26".
+                const flat = (x) =>
+                    x.replace(/[-\s]/g, "").toLowerCase();
+                return flat(monthLabel(monthKey(d))) !== flat(m);
+            }),
+        },
+        {
+            label: "No usable CeX listing",
+            level: "info",
+            why: "These can't be priced automatically — they fall back to the Current Price column.",
+            rows: owned.filter((r) => rowSkus(r).length === 0),
+        },
+        {
+            label: "Purchase price is £0.00",
+            level: "info",
+            why: "Fine if it was a gift or bundle — worth a look if it just wasn't filled in.",
+            rows: owned.filter((r) => rowPaid(r) === 0),
+        },
+        {
+            label: "Edition left blank",
+            level: "info",
+            why: "Treated as Standard.",
+            rows: owned.filter(
+                (r) => !(r["Edition"] || "").trim(),
+            ),
+        },
+        {
+            label: "Same game twice on the same console",
+            level: "info",
+            why: "Expected if you own two copies — check the dates and prices to be sure it isn't a double entry.",
+            rows: owned.filter((r) => dupCount[dupKey(r)] > 1),
+        },
+    ];
+    return checks.filter((c) => c.rows.length > 0);
+}
+
+function openHealth() {
+    const checks = healthChecks();
+    const warn = checks.filter((c) => c.level === "warn");
+    const flagged = checks.reduce((n, c) => n + c.rows.length, 0);
+    document.getElementById("healthSummary").textContent =
+        warn.length === 0
+            ? `${allData.length} rows checked · nothing to fix · ${flagged} noted for information`
+            : `${allData.length} rows checked · ${warn.reduce((n, c) => n + c.rows.length, 0)} to look at`;
+
+    document.getElementById("healthBody").innerHTML = checks.length
+        ? checks
+              .map(
+                  (c) => `
+            <div class="health-row ${c.level} bg-surface border border-white/8 rounded-lg p-4 pl-5">
+                <div class="flex items-baseline justify-between gap-4">
+                    <span class="text-sm font-semibold ${c.level === "warn" ? "text-amber-300" : "text-zinc-200"}">${escapeHtml(c.label)}</span>
+                    <span class="text-sm font-bold tabular-nums ${c.level === "warn" ? "text-amber-300" : "text-zinc-400"}">${c.rows.length}</span>
+                </div>
+                <div class="text-[11px] text-zinc-500 mt-1">${escapeHtml(c.why)}</div>
+                <div class="mt-2.5 flex flex-wrap gap-1.5">
+                    ${c.rows
+                        .slice(0, 40)
+                        .map(
+                            (r) =>
+                                `<span class="text-[11px] px-2 py-1 rounded border border-white/10 bg-white/5 text-zinc-300 cursor-pointer hover:border-accent/50" data-gamekey="${escapeHtml(rowKey(r))}">${escapeHtml(r["Game"])} <span class="text-zinc-600">${escapeHtml(normalizeConsole(r["Console Version"]))}</span></span>`,
+                        )
+                        .join("")}
+                    ${c.rows.length > 40 ? `<span class="text-[11px] text-zinc-600 px-2 py-1">+${c.rows.length - 40} more</span>` : ""}
+                </div>
+            </div>`,
+              )
+              .join("")
+        : `<p class="text-sm text-emerald-400">Nothing flagged — the sheet is clean.</p>`;
+
+    document
+        .getElementById("healthBody")
+        .querySelectorAll("[data-gamekey]")
+        .forEach((el) => {
+            el.onclick = () => {
+                closeOverlay("healthOverlay");
+                openModalByKey(el.dataset.gamekey);
+            };
+        });
+    openOverlay("healthOverlay");
+}
+
+// === PRINTABLE INVENTORY ===============================================
+function printInventory() {
+    if (!allData.length) return;
+    const owned = allData.filter((r) => !isTBC(r));
+    const t = collectionTotals(allData);
+    const now = new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    });
+
+    const byConsole = new Map();
+    for (const row of owned) {
+        const name = normalizeConsole(row["Console Version"]);
+        if (!byConsole.has(name))
+            byConsole.set(name, { n: 0, paid: 0, value: 0 });
+        const c = byConsole.get(name);
+        c.n++;
+        c.paid += rowPaid(row);
+        c.value += rowValue(row);
+    }
+
+    const sorted = [...owned].sort(
+        (a, b) =>
+            normalizeConsole(a["Console Version"]).localeCompare(
+                normalizeConsole(b["Console Version"]),
+            ) || (a["Game"] || "").localeCompare(b["Game"] || ""),
+    );
+    const notable = [...owned]
+        .filter((r) => rowValue(r) >= 10)
+        .sort((a, b) => rowValue(b) - rowValue(a));
+
+    const money = (n) =>
+        `£${(Number(n) || 0).toFixed(2)}`;
+
+    document.getElementById("printReport").innerHTML = `
+        <h1>Game Collection — Inventory</h1>
+        <p style="margin:4px 0 2px">${owned.length} items · prepared ${escapeHtml(now)}</p>
+        <p style="margin:0 0 4px;font-size:9px;color:#555">
+            Valuation is CeX's current retail price (replacement cost) where a listing exists,
+            otherwise the sheet's Current Price column.
+            ${t.priced} of ${owned.length} items priced from CeX.
+        </p>
+
+        <h2>Summary</h2>
+        <table>
+            <tr><td>Total items</td><td class="num">${owned.length}</td></tr>
+            <tr><td>Total paid</td><td class="num">${money(t.paid)}</td></tr>
+            <tr><td><strong>Estimated replacement value</strong></td><td class="num"><strong>${money(t.value)}</strong></td></tr>
+            <tr><td>Items valued at £10 or more</td><td class="num">${notable.length}</td></tr>
+            <tr><td>Sealed / unopened</td><td class="num">${owned.filter(isSealed).length}</td></tr>
+        </table>
+
+        <h2>By console</h2>
+        <table>
+            <thead><tr><th>Console</th><th class="num">Items</th><th class="num">Paid</th><th class="num">Value</th></tr></thead>
+            <tbody>
+            ${[...byConsole.entries()]
+                .sort((a, b) => b[1].value - a[1].value)
+                .map(
+                    ([name, c]) =>
+                        `<tr><td>${escapeHtml(name)}</td><td class="num">${c.n}</td><td class="num">${money(c.paid)}</td><td class="num">${money(c.value)}</td></tr>`,
+                )
+                .join("")}
+            <tr><td><strong>Total</strong></td><td class="num"><strong>${owned.length}</strong></td><td class="num"><strong>${money(t.paid)}</strong></td><td class="num"><strong>${money(t.value)}</strong></td></tr>
+            </tbody>
+        </table>
+
+        ${
+            notable.length
+                ? `<h2>Higher-value items (£10+)</h2>
+        <table>
+            <thead><tr><th>Title</th><th>Console</th><th>Edition</th><th class="num">Value</th></tr></thead>
+            <tbody>
+            ${notable
+                .map(
+                    (r) =>
+                        `<tr><td>${escapeHtml(r["Game"])}</td><td>${escapeHtml(normalizeConsole(r["Console Version"]))}</td><td>${escapeHtml(editionOf(r))}</td><td class="num">${money(rowValue(r))}</td></tr>`,
+                )
+                .join("")}
+            </tbody>
+        </table>`
+                : ""
+        }
+
+        <div class="page-break"></div>
+        <h2>Full inventory</h2>
+        <table>
+            <thead><tr><th>#</th><th>Title</th><th>Console</th><th>Edition</th><th>Purchased</th><th class="num">Paid</th><th class="num">Value</th></tr></thead>
+            <tbody>
+            ${sorted
+                .map(
+                    (r, i) =>
+                        `<tr><td>${i + 1}</td><td>${escapeHtml(r["Game"])}</td><td>${escapeHtml(normalizeConsole(r["Console Version"]))}</td><td>${escapeHtml(editionOf(r))}${isSealed(r) ? " (sealed)" : ""}</td><td>${escapeHtml(r["Date Purchased"] || "—")}</td><td class="num">${money(rowPaid(r))}</td><td class="num">${money(rowValue(r))}</td></tr>`,
+                )
+                .join("")}
+            </tbody>
+        </table>`;
+    window.print();
+}
+
+// === TOGGLES + EVENTS ==================================================
+function togglePanel(sectionId, iconId, otherId) {
+    const fs = document.getElementById(sectionId);
+    const ic = document.getElementById(iconId);
+    const other = document.getElementById(otherId);
+    if (other) other.classList.add("collapsed");
+    fs.classList.toggle("collapsed");
+    ic.style.transform = fs.classList.contains("collapsed")
+        ? "rotate(0deg)"
+        : "rotate(180deg)";
+}
+function toggleFilters() {
+    togglePanel(
+        "filtersSection",
+        "filterToggleIcon",
+        "breakdownSection",
+    );
+}
+function toggleBreakdown() {
+    togglePanel(
+        "breakdownSection",
+        "breakdownToggleIcon",
+        "filtersSection",
+    );
+}
+
+document.addEventListener("click", (e) => {
+    const dd = document.getElementById("sortDropdown");
+    const btn = document.getElementById("sortButton");
+    if (
+        dd &&
+        btn &&
+        !btn.contains(e.target) &&
+        !dd.contains(e.target)
+    ) {
+        dd.classList.add("hidden");
+    }
+});
+
+document.getElementById("modal").onclick = function (e) {
+    if (e.target === this) closeModal();
+};
+
+document.addEventListener("keydown", (e) => {
+    const modal = document.getElementById("modal");
+    const modalOpen = !modal.classList.contains("hidden");
+    const search = document.getElementById("searchBox");
+    const overlay = anyOverlayOpen();
+
+    // Always fed, so the code works from anywhere on the page.
+    if (document.activeElement !== search) pushKonami(e.key);
+
+    if (e.key === "Escape") {
+        if (overlay) return closeOverlay(overlay);
+        if (modalOpen) return closeModal();
+        if (document.activeElement === search) {
+            search.value = "";
+            onSearchInput();
+            search.blur();
+        }
+        return;
+    }
+    if (overlay === "wrappedOverlay") {
+        if (e.key === "ArrowLeft") wrappedStep(-1);
+        if (e.key === "ArrowRight" || e.key === " ") wrappedStep(1);
+        return;
+    }
+    if (overlay) return;
+    if (modalOpen) {
+        if (e.key === "ArrowLeft") navModal(-1);
+        if (e.key === "ArrowRight") navModal(1);
+        return;
+    }
+    if (e.key === "/" && document.activeElement !== search) {
+        e.preventDefault();
+        search.focus();
+    }
+    if (e.key === "r" && document.activeElement !== search)
+        rollRandomGame();
+});
+
+// Click the backdrop of a full-screen overlay to dismiss it.
+["rollOverlay", "wrappedOverlay", "guessOverlay"].forEach((id) => {
+    document.getElementById(id).addEventListener("click", (e) => {
+        if (e.target.id === id) closeOverlay(id);
+    });
+});
+
+// === INIT ==============================================================
+window.addEventListener("DOMContentLoaded", async () => {
+    cexCache = loadCexCache();
+    loadHistory();
+    try {
+        if (localStorage.getItem("crtMode") === "1")
+            document.body.classList.add("crt");
+    } catch (e) {}
+    readUrlState();
+    applyView();
+    buildSortDropdown();
+    const ok = await fetchDataFromSource(true);
+    if (ok && allData.length > 0) loadCexPrices(false);
+});

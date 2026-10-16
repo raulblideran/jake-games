@@ -1,0 +1,595 @@
+/* Shared styles for every collection page. Themes override the custom
+   properties below (and anything else) after this file loads. */
+:root {
+    --accent: #22d3ee;
+    --accent-rgb: 34, 211, 238;
+    --accent-dim: #0891b2;
+    --accent-soft: #67e8f9;
+    --accent-ink: #06212a;
+    --surface: #111111;
+    --ink: #0a0a0a;
+}
+html {
+    background: var(--ink);
+}
+body {
+    font-feature-settings: "ss01", "cv11";
+    letter-spacing: -0.005em;
+}
+#filtersSection.collapsed,
+#breakdownSection.collapsed {
+    max-height: 0 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top-width: 0 !important;
+}
+#filtersSection:not(.collapsed) {
+    max-height: 1400px;
+}
+#breakdownSection:not(.collapsed) {
+    max-height: 3000px;
+}
+#filtersSection::-webkit-scrollbar,
+.scroll-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+#filtersSection::-webkit-scrollbar-thumb,
+.scroll-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+}
+#filtersSection::-webkit-scrollbar-thumb:hover,
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.24);
+}
+.chip {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.02);
+    color: #d4d4d8;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.chip:hover {
+    border-color: rgba(var(--accent-rgb), 0.5);
+    color: #fff;
+}
+.chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+}
+.ghost-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.02);
+    color: #e4e4e7;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.ghost-btn:hover {
+    border-color: rgba(var(--accent-rgb), 0.5);
+    color: #fff;
+}
+.accent-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border: 1px solid rgba(var(--accent-rgb), 0.35);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: var(--accent-soft);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.accent-btn:hover {
+    background: rgba(var(--accent-rgb), 0.15);
+    color: #fff;
+}
+/* Grid / Table segmented control */
+.seg {
+    display: inline-flex;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.seg button {
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #a1a1aa;
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.seg button:hover {
+    color: #fff;
+}
+.seg button.active {
+    background: rgba(var(--accent-rgb), 0.14);
+    color: var(--accent-soft);
+}
+.card {
+    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition:
+        border-color 0.2s ease,
+        transform 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+.card:hover {
+    border-color: rgba(var(--accent-rgb), 0.55);
+    transform: translateY(-2px);
+}
+/* Not-yet-purchased (Date Purchased = TBC) cards */
+.card.tbc {
+    border-style: dashed;
+    border-color: rgba(168, 85, 247, 0.5);
+    background:
+        linear-gradient(
+            180deg,
+            rgba(168, 85, 247, 0.06),
+            rgba(168, 85, 247, 0) 60%
+        ),
+        var(--surface);
+}
+.card.tbc:hover {
+    border-color: rgba(192, 132, 252, 0.85);
+}
+.card.tbc img {
+    filter: grayscale(0.5) brightness(0.62);
+    transition: filter 0.2s ease;
+}
+.card.tbc:hover img {
+    filter: grayscale(0.15) brightness(0.85);
+}
+.tbc-stamp {
+    transform: rotate(-8deg);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+/* Sealed (Sealed = TRUE) — gold frame */
+.card.sealed {
+    border-width: 2px;
+    border-color: #d4af37;
+    box-shadow:
+        0 0 0 1px rgba(212, 175, 55, 0.35),
+        0 0 18px rgba(212, 175, 55, 0.25);
+}
+.card.sealed:hover {
+    border-color: #f5d774;
+    box-shadow:
+        0 0 0 1px rgba(245, 215, 116, 0.5),
+        0 0 22px rgba(245, 215, 116, 0.4);
+}
+#modalBox.sealed {
+    border-width: 2px;
+    border-color: #d4af37;
+    box-shadow:
+        0 0 0 1px rgba(212, 175, 55, 0.35),
+        0 0 30px rgba(212, 175, 55, 0.25);
+}
+.stat-tile {
+    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px 18px;
+    min-width: 130px;
+}
+.dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+/* Completeness pill: C = cover art, I = insert */
+.cond {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+}
+/* Dense table view */
+.gtable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.gtable th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #71717a;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 5;
+}
+.gtable th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+.gtable th.sortable:hover {
+    color: var(--accent);
+}
+.gtable td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #d4d4d8;
+    white-space: nowrap;
+}
+.gtable tbody tr {
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.gtable tbody tr:hover {
+    background: rgba(var(--accent-rgb), 0.06);
+}
+.gtable tbody tr.sealed td:first-child {
+    box-shadow: inset 3px 0 0 #d4af37;
+}
+/* Breakdown bar chart */
+.bar-track {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    overflow: hidden;
+    height: 8px;
+}
+.bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    border-radius: 4px;
+}
+.vbar {
+    background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: opacity 0.15s ease;
+}
+.vbar:hover {
+    opacity: 0.75;
+}
+/* ---- Cover wall ---------------------------------------------- */
+#wallView {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 2px;
+}
+.wall-tile {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    background: #0f0f0f;
+    overflow: hidden;
+    cursor: pointer;
+}
+.wall-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition:
+        transform 0.25s ease,
+        filter 0.25s ease;
+}
+.wall-tile:hover {
+    z-index: 10;
+}
+.wall-tile:hover img {
+    transform: scale(1.12);
+    filter: brightness(1.12);
+}
+.wall-tile .wall-label {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 16px 6px 5px;
+    font-size: 10px;
+    line-height: 1.2;
+    color: #fff;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.92));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.wall-tile:hover .wall-label {
+    opacity: 1;
+}
+.wall-tile.sealed::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid #d4af37;
+    pointer-events: none;
+}
+
+/* ---- Shelf view ------------------------------------------------ */
+#shelfView {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    padding: 8px 10px 0;
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent 178px,
+            #4a3728 178px,
+            #6b5139 182px,
+            #2a1f16 190px,
+            transparent 190px,
+            transparent 214px
+        ),
+        #141010;
+    border-radius: 12px;
+}
+.spine {
+    height: 170px;
+    margin: 0 2px 44px;
+    border-radius: 2px 2px 0 0;
+    cursor: pointer;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 8px 3px;
+    overflow: hidden;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    box-shadow:
+        inset -2px 0 4px rgba(0, 0, 0, 0.45),
+        inset 2px 0 2px rgba(255, 255, 255, 0.12);
+    transition:
+        transform 0.15s ease,
+        filter 0.15s ease;
+}
+.spine:hover {
+    transform: translateY(-10px);
+    filter: brightness(1.35);
+}
+.spine.sealed {
+    box-shadow:
+        inset -2px 0 4px rgba(0, 0, 0, 0.45),
+        0 0 0 1px #d4af37;
+}
+
+/* ---- Purchase heatmap ------------------------------------------ */
+.hm-cell {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.05);
+}
+.hm-cell[data-n="1"] { background: #0e4f5c; }
+.hm-cell[data-n="2"] { background: #12768a; }
+.hm-cell[data-n="3"] { background: #19a4bd; }
+.hm-cell[data-n="4"] { background: var(--accent); }
+
+/* ---- Trophies -------------------------------------------------- */
+.trophy {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px;
+    background: #131313;
+}
+.trophy.unlocked {
+    border-color: rgba(212, 175, 55, 0.5);
+    background: linear-gradient(
+        150deg,
+        rgba(212, 175, 55, 0.12),
+        rgba(212, 175, 55, 0) 60%
+    ), #131313;
+}
+.trophy.locked {
+    opacity: 0.55;
+    filter: grayscale(0.7);
+}
+
+/* ---- Wrapped --------------------------------------------------- */
+.wrap-slide {
+    animation: fadeInUp 0.5s ease;
+}
+
+/* ---- Konami / CRT mode ----------------------------------------- */
+body.crt::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(0, 0, 0, 0.28) 3px,
+        rgba(0, 0, 0, 0.28) 4px
+    );
+}
+body.crt::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9997;
+    pointer-events: none;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(0, 0, 0, 0) 45%,
+        rgba(0, 0, 0, 0.55) 100%
+    );
+    animation: flicker 5s infinite steps(1);
+}
+body.crt {
+    text-shadow: 0 0 3px rgba(var(--accent-rgb), 0.5);
+}
+body.crt img {
+    filter: saturate(1.35) contrast(1.12);
+}
+@keyframes flicker {
+    0%, 97%, 100% { opacity: 1; }
+    98% { opacity: 0.82; }
+    99% { opacity: 1; }
+}
+@keyframes bootIn {
+    0% { transform: scaleY(0.004) scaleX(1); opacity: 1; }
+    35% { transform: scaleY(0.004) scaleX(1); opacity: 1; }
+    60% { transform: scaleY(1) scaleX(1); opacity: 1; }
+    100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+}
+.booting {
+    animation: bootIn 0.6s ease-out;
+}
+
+/* ---- Print / inventory report ---------------------------------- */
+#printReport {
+    display: none;
+}
+@media print {
+    body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+    /* Everything but the report — covers every theme's layout. */
+    body > *:not(#printReport) {
+        display: none !important;
+    }
+    #printReport {
+        display: block !important;
+        color: #000;
+        font-size: 10px;
+    }
+    #printReport h1 {
+        font-size: 20px;
+        font-weight: 700;
+    }
+    #printReport h2 {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 18px 0 6px;
+        border-bottom: 1px solid #000;
+        padding-bottom: 3px;
+    }
+    #printReport table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    #printReport th {
+        text-align: left;
+        font-size: 9px;
+        text-transform: uppercase;
+        border-bottom: 1px solid #000;
+        padding: 3px 4px;
+    }
+    #printReport td {
+        padding: 2px 4px;
+        border-bottom: 1px solid #ddd;
+    }
+    #printReport tr {
+        page-break-inside: avoid;
+    }
+    #printReport .page-break {
+        page-break-before: always;
+    }
+    .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    @page {
+        margin: 14mm;
+    }
+}
+
+/* ---- Price-change arrows --------------------------------------- */
+.delta-up {
+    color: #34d399;
+}
+.delta-down {
+    color: #f87171;
+}
+
+/* ---- Health check ---------------------------------------------- */
+.health-row {
+    border-left: 3px solid transparent;
+}
+.health-row.warn {
+    border-left-color: #f59e0b;
+}
+.health-row.info {
+    border-left-color: var(--accent);
+}
+.health-row.ok {
+    border-left-color: #34d399;
+}
+
+/* ---- Sparkline -------------------------------------------------- */
+.spark {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 44px;
+}
+.spark div {
+    flex: 1;
+    background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+    border-radius: 2px 2px 0 0;
+    min-height: 2px;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+.spin {
+    animation: spin 0.9s linear infinite;
+    display: inline-block;
+}
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        #1a1a1a 0%,
+        #232323 50%,
+        #1a1a1a 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton 1.4s ease-in-out infinite;
+}
+@keyframes skeleton {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
