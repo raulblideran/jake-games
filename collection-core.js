@@ -4,8 +4,12 @@ const GOOGLE_SHEETS_URL =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM8N_x95reV1Y4vKQZfAyOfmJ0HqhRfcwEuCyIQLyYcmZWSxGCqFv1zJVGi-Q2wviNNl0gGzhd1MxG/pub?gid=1687075549&single=true&output=csv";
 const RAWG_API_KEY = "d6b5463dab6046898cccf5575f84f9d1";
 
-const PRIMARY_PROXY =
-    "https://cex-proxy.raul-blideran98.workers.dev";
+// Our CeX proxies on Deno Deploy: a local copy (localhost or a file opened
+// directly) uses the dev one, so testing doesn't eat the live site's quota.
+const PROXY_IS_LOCAL = ["localhost", "127.0.0.1", ""].includes(location.hostname);
+const PRIMARY_PROXY = PROXY_IS_LOCAL
+    ? "https://cex-proxy-jake-dev.bliraul.deno.net"
+    : "https://cex-proxy-jake-prod.bliraul.deno.net";
 
 // Only our own Worker: the free public proxies that used to follow it are
 // dead or rate-limited, and each one multiplied a failed CeX lookup.

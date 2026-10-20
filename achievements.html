@@ -537,8 +537,11 @@
             const tabUrl = (gid) =>
                 `${SHEET_PUB}?gid=${gid}&single=true&output=csv`;
 
-            const PRIMARY_PROXY =
-                "https://cex-proxy.raul-blideran98.workers.dev";
+            // Our proxies on Deno Deploy; a local copy uses the dev one.
+            const PROXY_IS_LOCAL = ["localhost", "127.0.0.1", ""].includes(location.hostname);
+            const PRIMARY_PROXY = PROXY_IS_LOCAL
+                ? "https://cex-proxy-jake-dev.bliraul.deno.net"
+                : "https://cex-proxy-jake-prod.bliraul.deno.net";
 
             const CORS_PROXIES = [
                 ...(PRIMARY_PROXY
