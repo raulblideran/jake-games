@@ -7,32 +7,14 @@ const RAWG_API_KEY = "d6b5463dab6046898cccf5575f84f9d1";
 const PRIMARY_PROXY =
     "https://cex-proxy.raul-blideran98.workers.dev";
 
+// Only our own Worker: the free public proxies that used to follow it are
+// dead or rate-limited, and each one multiplied a failed CeX lookup.
 const CORS_PROXIES = [
-    ...(PRIMARY_PROXY
-        ? [
-              {
-                  url: (url) =>
-                      `${PRIMARY_PROXY}/?url=${encodeURIComponent(url)}`,
-                  timeout: 12000,
-              },
-          ]
-        : []),
     {
         url: (url) =>
-            `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        timeout: 15000,
+            `${PRIMARY_PROXY}/?url=${encodeURIComponent(url)}`,
+        timeout: 12000,
     },
-    {
-        url: (url) =>
-            `https://corsproxy.io/?${encodeURIComponent(url)}`,
-        timeout: 8000,
-    },
-    {
-        url: (url) =>
-            `https://api.cors.lol/?url=${encodeURIComponent(url)}`,
-        timeout: 8000,
-    },
-    { url: (url) => `https://cors.eu.org/${url}`, timeout: 8000 },
 ];
 
 const CACHE_KEY = "gamesCSVCache";
@@ -51,7 +33,19 @@ const CEX_RETRIES = 2;
 // CeX rate-limits by IP, and every visitor shares the proxy's egress.
 // If it starts refusing, stop rather than pushing ~750 requests at a
 // wall and deepening the block.
-const CEX_FAILURE_LIMIT = 8;
+const CEX_FAILURE_LIMIT = 4;
+// After tripping, this browser leaves CeX alone for a while (a reload
+// would otherwise start another run straight away).
+const CEX_PAUSE_KEY = "cexPausedUntil";
+const CEX_PAUSE_MS = 6 * 60 * 60 * 1000;
+
+function cexPausedUntil() {
+    try {
+        return Number(localStorage.getItem(CEX_PAUSE_KEY)) || 0;
+    } catch (e) {
+        return 0;
+    }
+}
 
 const VIEW_KEY = "collectionView";
 
@@ -223,6 +217,17 @@ function escapeHtml(s) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // === FETCH WITH PROXY FALLBACK =========================================
+// The published CSV sends CORS headers, so try it directly first.
+async function fetchSheet(url) {
+    try {
+        const resp = await fetchWithTimeout(url, 12000);
+        if (resp.ok) return resp;
+    } catch (e) {
+        console.warn("Direct sheet fetch failed", e.message);
+    }
+    return fetchWithProxy(url);
+}
+
 function fetchWithTimeout(url, timeoutMs) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -343,10 +348,10 @@ async function fetchDataFromSource(useCache = true) {
     }
     showLoading(true);
     try {
-        const response = await fetchWithProxy(
+        const response = await fetchSheet(
             bustUrl(GOOGLE_SHEETS_URL),
         );
-        if (!response) throw new Error("All proxies failed");
+        if (!response) throw new Error("Couldn't reach the sheet");
         const csvText = await response.text();
         if (!parseCSV(csvText))
             throw new Error("Sheet returned no game rows");
@@ -363,7 +368,7 @@ async function fetchDataFromSource(useCache = true) {
 
 async function revalidateInBackground() {
     try {
-        const response = await fetchWithProxy(
+        const response = await fetchSheet(
             bustUrl(GOOGLE_SHEETS_URL),
         );
         if (!response) return;
@@ -810,6 +815,12 @@ async function loadCexPrices(force = false) {
           );
 
     updateValueStrip();
+    if (!force && pending.length > 0 && Date.now() < cexPausedUntil()) {
+        setCexStatus(
+            `<span class="text-amber-400">CeX was refusing requests</span> — showing cached prices (priced ${timeAgo(cexPricedAt)}). Prices will be tried again in ${timeUntil(cexPausedUntil())}, or press Refresh CeX prices.`,
+        );
+        return;
+    }
     if (pending.length === 0) {
         setCexStatus(
             `${skus.length} CeX prices cached · priced ${timeAgo(cexPricedAt)}`,
@@ -852,7 +863,15 @@ async function loadCexPrices(force = false) {
         }
     });
 
-    cexPricedAt = Date.now();
+    if (!tripped || cexFailures < done) cexPricedAt = Date.now();
+    try {
+        if (tripped)
+            localStorage.setItem(
+                CEX_PAUSE_KEY,
+                String(Date.now() + CEX_PAUSE_MS),
+            );
+        else localStorage.removeItem(CEX_PAUSE_KEY);
+    } catch (e) {}
     cexLoading = false;
     recordHistory(before);
     btn.disabled = false;
@@ -866,7 +885,7 @@ async function loadCexPrices(force = false) {
     if (modal.classList.contains("hidden")) render();
     if (tripped) {
         setCexStatus(
-            `<span class="text-amber-400">CeX is refusing requests right now</span> — stopped after ${CEX_FAILURE_LIMIT} failures in a row. Cached prices are kept; press Refresh CeX prices to try again later.`,
+            `<span class="text-amber-400">CeX is refusing requests right now</span> — stopped after ${CEX_FAILURE_LIMIT} failures in a row. Showing cached prices; they'll be tried again in ${timeUntil(cexPausedUntil())}.`,
         );
     } else {
         setCexStatus(
@@ -876,6 +895,11 @@ async function loadCexPrices(force = false) {
                     : ""),
         );
     }
+}
+
+function timeUntil(ts) {
+    const hrs = Math.max(1, Math.round((ts - Date.now()) / 3600000));
+    return hrs === 1 ? "about an hour" : `about ${hrs} hours`;
 }
 
 function timeAgo(ts) {

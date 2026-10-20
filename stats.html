@@ -496,22 +496,11 @@
             const tabUrl = (gid) => `${SHEET_PUB}?gid=${gid}&single=true&output=csv`;
 
             const PRIMARY_PROXY = "https://cex-proxy.raul-blideran98.workers.dev";
+            // Only our own Worker: the free public proxies are dead or rate-limited.
             const CORS_PROXIES = [
-                ...(PRIMARY_PROXY
-                    ? [
-                          {
-                              url: (url) => `${PRIMARY_PROXY}/?url=${encodeURIComponent(url)}`,
-                              timeout: 12000,
-                          },
-                      ]
-                    : []),
                 {
-                    url: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                    timeout: 15000,
-                },
-                {
-                    url: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-                    timeout: 8000,
+                    url: (url) => `${PRIMARY_PROXY}/?url=${encodeURIComponent(url)}`,
+                    timeout: 12000,
                 },
             ];
             const CSV_CACHE_DURATION = 5 * 60 * 1000;
@@ -526,7 +515,10 @@
             const CEX_TTL = 24 * 60 * 60 * 1000;
             const CEX_CONCURRENCY = 2;
             const CEX_RETRIES = 2;
-            const CEX_FAILURE_LIMIT = 8;
+            const CEX_FAILURE_LIMIT = 4;
+            // Shared with the collection page: after CeX refuses a run, neither page tries for a while.
+            const CEX_PAUSE_KEY = "cexPausedUntil";
+            const CEX_PAUSE_MS = 6 * 60 * 60 * 1000;
 
             const GREEN = "#4ade80";
             const RED = "#f87171";
@@ -841,6 +833,13 @@
                 if (cexRunning) return;
                 const { all } = cexSummary();
                 const todo = all.filter((s) => force || !cex[s] || Date.now() - cex[s].ts > CEX_TTL);
+                const pausedUntil = Number(readJSON(CEX_PAUSE_KEY, 0)) || 0;
+                if (!force && todo.length && Date.now() < pausedUntil) {
+                    const { full } = cexSummary();
+                    const hrs = Math.max(1, Math.round((pausedUntil - Date.now()) / 3600000));
+                    setCexStatus(1, 1, `CeX was refusing requests. ${full}/${all.length} priced from cache, trying again in about ${hrs}h`);
+                    return;
+                }
                 if (!todo.length) {
                     const { full } = cexSummary();
                     setCexStatus(1, 1, `CeX: ${full}/${all.length} games priced`);
@@ -874,6 +873,11 @@
                 };
                 await Promise.all(Array.from({ length: CEX_CONCURRENCY }, worker));
                 persist();
+                if (failures >= CEX_FAILURE_LIMIT) writeJSON(CEX_PAUSE_KEY, Date.now() + CEX_PAUSE_MS);
+                else
+                    try {
+                        localStorage.removeItem(CEX_PAUSE_KEY);
+                    } catch {}
                 cexRunning = false;
                 document.getElementById("cexRefresh").disabled = false;
                 const { full } = cexSummary();
