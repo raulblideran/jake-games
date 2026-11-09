@@ -1,7 +1,6 @@
 // === CONFIG ============================================================
-// Published-to-web CSV of the MASTER tab (gid pins the tab).
-const GOOGLE_SHEETS_URL =
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM8N_x95reV1Y4vKQZfAyOfmJ0HqhRfcwEuCyIQLyYcmZWSxGCqFv1zJVGi-Q2wviNNl0gGzhd1MxG/pub?gid=1687075549&single=true&output=csv";
+// The sheet source (one tab per console) lives in sheet-config.js, which
+// must load before this file.
 const RAWG_API_KEY = "d6b5463dab6046898cccf5575f84f9d1";
 
 // Our CeX proxies on Deno Deploy: a local copy (localhost or a file opened
@@ -21,8 +20,9 @@ const CORS_PROXIES = [
     },
 ];
 
-const CACHE_KEY = "gamesCSVCache";
-const CACHE_TIMESTAMP_KEY = "gamesCSVCacheTimestamp";
+// JSON array of { name, text } — one entry per console tab.
+const CACHE_KEY = "gamesSheetCache_v2";
+const CACHE_TIMESTAMP_KEY = "gamesSheetCacheTimestamp_v2";
 const CACHE_DURATION = 5 * 60 * 1000;
 
 // Persisted CeX prices. The endpoint rate-limits bursts, so re-fetching
@@ -97,12 +97,10 @@ let modalList = [];
 let modalIndex = -1;
 // Every filter group holds a Set; empty Set means "All".
 let activeFilters = {
-    status: new Set(),
     console: new Set(),
-    completeness: new Set(),
+    condition: new Set(),
     edition: new Set(),
-    completed: new Set(),
-    sealed: new Set(),
+    progress: new Set(),
     price: new Set(),
 };
 let coverCache = {};
@@ -121,8 +119,10 @@ let duplicateKeys = new Set();
 
 const SORT_OPTIONS = [
     ["title", "Title (A–Z)"],
+    ["title-desc", "Title (Z–A)"],
     ["console", "Console"],
     ["value-desc", "CeX value (high → low)"],
+    ["value-asc", "CeX value (low → high)"],
     ["gain-desc", "Biggest gain"],
     ["gain-asc", "Biggest loss"],
     ["paid-desc", "Price paid (high → low)"],
@@ -130,7 +130,11 @@ const SORT_OPTIONS = [
     ["date-newest", "Date purchased (newest)"],
     ["date-oldest", "Date purchased (oldest)"],
     ["edition", "Edition"],
+    ["condition-best", "Condition (best first)"],
+    ["condition-worst", "Condition (worst first)"],
 ];
+// Best to worst; anything not recorded sorts after Loose either way.
+const CONDITION_RANK = { sealed: 0, cib: 1, "no-manual": 2, loose: 3 };
 
 // === UTILS =============================================================
 function normalizeConsole(c) {
@@ -146,25 +150,35 @@ function parsePrice(str) {
     return parseFloat(cleaned) || 0;
 }
 
-// The sheet's checkbox columns export as TRUE/FALSE; "N/A" comes through
-// as an empty cell via gviz, which we read as "doesn't apply".
-function triState(v) {
-    const s = String(v ?? "").trim().toUpperCase();
-    if (s === "TRUE" || s === "Y" || s === "YES") return true;
-    if (s === "FALSE" || s === "N" || s === "NO") return false;
-    return null;
-}
-
+// Unpurchased (wishlist) rows: the sheet no longer has any, but a "TBC"
+// date still marks one if it ever comes back.
 function isTBC(row) {
     return (
         (row["Date Purchased"] || "").trim().toUpperCase() === "TBC"
     );
 }
+// Condition column: cib | sealed | no-manual | loose | unknown.
+function conditionOf(row) {
+    return conditionKey(row["Condition"]);
+}
+function conditionLabel(row) {
+    return CONDITIONS[conditionOf(row)].label;
+}
+// Game Progression column: complete | in-progress | not-started.
+function progressOf(row) {
+    return progressKey(row["Progress"]);
+}
+function progressLabel(row) {
+    return PROGRESS[progressOf(row)].label;
+}
 function isSealed(row) {
-    return triState(row["Sealed"]) === true;
+    return conditionOf(row) === "sealed";
 }
 function isCompleted(row) {
-    return triState(row["Completed"]) === true;
+    return progressOf(row) === "complete";
+}
+function isInProgress(row) {
+    return progressOf(row) === "in-progress";
 }
 function isDuplicate(row) {
     return duplicateKeys.has(
@@ -174,26 +188,25 @@ function isDuplicate(row) {
 function editionOf(row) {
     return (row["Edition"] || "").trim() || "Standard";
 }
+// Derived from Condition: true / false, or null when it isn't recorded.
+// "Box" is everything but Loose; "manual" is lost on No-manual and Loose.
 function hasCover(row) {
-    return triState(row["Cover Art"]);
+    const c = conditionOf(row);
+    return c === "unknown" ? null : c !== "loose";
 }
 function hasInsert(row) {
-    return triState(row["Insert"]);
+    const c = conditionOf(row);
+    return c === "unknown" ? null : c === "cib" || c === "sealed";
 }
-// "Complete" = nothing that applies to this release is missing.
+// "Complete" = complete in box (sealed copies count).
 function isComplete(row) {
-    return hasCover(row) !== false && hasInsert(row) !== false;
+    const c = conditionOf(row);
+    return c === "cib" || c === "sealed";
 }
 
+// dd/mm/yy or dd/mm/yyyy (see sheet-config.js).
 function parseUkDate(str) {
-    if (!str) return null;
-    const m = String(str)
-        .trim()
-        .match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (!m) return null;
-    return new Date(
-        `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`,
-    );
+    return parseSheetDate(str);
 }
 
 function fmtMoney(n) {
@@ -223,11 +236,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // === FETCH WITH PROXY FALLBACK =========================================
 // The published CSV sends CORS headers, so try it directly first.
 async function fetchSheet(url) {
-    try {
-        const resp = await fetchWithTimeout(url, 12000);
-        if (resp.ok) return resp;
-    } catch (e) {
-        console.warn("Direct sheet fetch failed", e.message);
+    if (!OPENED_FROM_FILE) {
+        try {
+            const resp = await fetchWithTimeout(url, 12000);
+            if (resp.ok) return resp;
+        } catch (e) {
+            console.warn("Direct sheet fetch failed", e.message);
+        }
     }
     return fetchWithProxy(url);
 }
@@ -339,10 +354,42 @@ function bustUrl(url) {
     return `${url}${url.includes("?") ? "&" : "?"}_=${Date.now()}`;
 }
 
+// Every console tab, fetched in parallel. Resolves to
+// { tabs: [{ name, text }], failed: [names] }; tabs keep the sheet's order.
+async function fetchAllTabs() {
+    const list = await discoverTabs(async (url) => {
+        const r = await fetchSheet(url);
+        return r ? r.text() : "";
+    });
+    const results = await Promise.all(
+        list.map(async (tab) => {
+            try {
+                const r = await fetchSheet(bustUrl(tabCsvUrl(tab.gid)));
+                return r ? { name: tab.name, text: await r.text() } : null;
+            } catch (e) {
+                return null;
+            }
+        }),
+    );
+    return {
+        tabs: results.filter(Boolean),
+        failed: list.filter((_, i) => !results[i]).map((t) => t.name),
+    };
+}
+
+function readCachedTabs(raw) {
+    try {
+        const tabs = JSON.parse(raw);
+        return Array.isArray(tabs) ? tabs : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 async function fetchDataFromSource(useCache = true) {
     if (useCache) {
-        const cached = getCachedData();
-        if (cached && parseCSV(cached)) {
+        const cached = readCachedTabs(getCachedData());
+        if (cached && parseSheets(cached)) {
             showSuccess(
                 `Loaded ${allData.length} games from cache`,
             );
@@ -352,14 +399,14 @@ async function fetchDataFromSource(useCache = true) {
     }
     showLoading(true);
     try {
-        const response = await fetchSheet(
-            bustUrl(GOOGLE_SHEETS_URL),
-        );
-        if (!response) throw new Error("Couldn't reach the sheet");
-        const csvText = await response.text();
-        if (!parseCSV(csvText))
+        const { tabs, failed } = await fetchAllTabs();
+        if (!tabs.length) throw new Error("Couldn't reach the sheet");
+        if (!parseSheets(tabs))
             throw new Error("Sheet returned no game rows");
-        setCachedData(csvText);
+        // A partial load isn't cached, so the next visit tries again.
+        if (failed.length)
+            showError(`Couldn't load: ${failed.join(", ")} — showing the rest`);
+        else setCachedData(JSON.stringify(tabs));
         showSuccess(`Loaded ${allData.length} games from sheet`);
         return true;
     } catch (err) {
@@ -372,16 +419,14 @@ async function fetchDataFromSource(useCache = true) {
 
 async function revalidateInBackground() {
     try {
-        const response = await fetchSheet(
-            bustUrl(GOOGLE_SHEETS_URL),
-        );
-        if (!response) return;
-        const csvText = await response.text();
-        if (localStorage.getItem(CACHE_KEY) === csvText) return;
+        const { tabs, failed } = await fetchAllTabs();
+        if (!tabs.length || failed.length) return;
+        const payload = JSON.stringify(tabs);
+        if (localStorage.getItem(CACHE_KEY) === payload) return;
         const modal = document.getElementById("modal");
-        setCachedData(csvText);
+        setCachedData(payload);
         if (modal && !modal.classList.contains("hidden")) return;
-        if (parseCSV(csvText)) {
+        if (parseSheets(tabs)) {
             showSuccess(`Sheet updated — ${allData.length} games`);
             loadCexPrices(false);
         }
@@ -451,24 +496,20 @@ function splitCsvRows(text) {
     return rows;
 }
 
-// The sheet's headers arrive in two shapes: the raw export keeps the
-// "Game Collection Tracker" title on its own row, while gviz folds that
-// title into the first header cell. Matching on meaning rather than exact
-// text keeps both working (and survives the next rename).
+// Headers are matched on meaning rather than exact text, so a small
+// rename in the sheet ("Game Title" → "Game") doesn't break the site.
+// The internal names on the right are what the rest of the code reads.
 const HEADER_ALIASES = [
-    [/console/i, "Console Version"],
-    [/cover\s*art/i, "Cover Art"],
-    [/^insert/i, "Insert"],
-    [/^sealed/i, "Sealed"],
-    [/complete/i, "Completed"],
+    [/^(game\s*)?title$|^game$/i, "Game"],
+    [/condition/i, "Condition"],
+    [/progress/i, "Progress"],
     [/^edition/i, "Edition"],
     [/^notes?$/i, "Notes"],
     [/date\s*purchas/i, "Date Purchased"],
-    [/^month/i, "Month"],
     [/(purchase|paid)\s*price|price\s*purchased/i, "Purchase Price"],
     [/current\s*price/i, "Current Price"],
-    [/cex|listing/i, "CEX Listing"],
-    [/^game$/i, "Game"],
+    [/cex|listing|link/i, "CEX Listing"],
+    [/console/i, "Console Version"],
 ];
 
 function canonHeader(h) {
@@ -480,23 +521,15 @@ function canonHeader(h) {
     return n;
 }
 
-function parseCSV(csvText) {
-    const rows = splitCsvRows(csvText);
-    if (rows.length < 2) {
-        showError("Not enough data in sheet");
-        return false;
-    }
-
-    // Find the real header row: the first one that names both a game
-    // and a console column.
+// One console tab → rows, each tagged with the tab name as its console.
+// Returns null when the tab has no game-title header (not a games tab).
+function parseTab(name, csvText) {
+    const rows = splitCsvRows(csvText || "");
     let headerRowIdx = -1;
     let cols = null;
     for (let i = 0; i < Math.min(rows.length, 6); i++) {
         const canon = parseCSVLine(rows[i]).map(canonHeader);
-        if (
-            canon.includes("Game") &&
-            canon.includes("Console Version")
-        ) {
+        if (canon.includes("Game")) {
             headerRowIdx = i;
             cols = canon
                 .map((h, idx) => ({ h, idx }))
@@ -507,15 +540,9 @@ function parseCSV(csvText) {
             break;
         }
     }
-    if (headerRowIdx === -1) {
-        showError(
-            "Could not find the MASTER header row — is the sheet still published?",
-        );
-        return false;
-    }
+    if (headerRowIdx === -1) return null;
 
-    headers = cols.map((c) => c.h);
-    const parsed = [];
+    const out = [];
     for (let i = headerRowIdx + 1; i < rows.length; i++) {
         const values = parseCSVLine(rows[i]);
         if (!values.some((v) => v.trim() !== "")) continue;
@@ -523,13 +550,31 @@ function parseCSV(csvText) {
         cols.forEach(({ h, idx }) => {
             row[h] = (values[idx] ?? "").trim();
         });
-        if (row["Game"]) parsed.push(row);
+        // The tab is the console, whatever the row says.
+        row["Console Version"] = name;
+        if (row["Game"]) out.push(row);
+    }
+    return { cols: cols.map((c) => c.h), rows: out };
+}
+
+// tabs: [{ name, text }] — one per console tab.
+function parseSheets(tabs) {
+    const parsed = [];
+    const seenHeaders = new Set(["Console Version"]);
+    for (const tab of tabs || []) {
+        const res = parseTab(tab.name, tab.text);
+        if (!res) continue;
+        res.cols.forEach((h) => seenHeaders.add(h));
+        parsed.push(...res.rows);
     }
 
     if (parsed.length === 0) {
-        showError("No game rows found");
+        showError(
+            "No games found — is the sheet still published to the web?",
+        );
         return false;
     }
+    headers = [...seenHeaders];
 
     allData = parsed;
     // Titles owned more than once on the same console: the cards show a
@@ -952,6 +997,7 @@ function displayStats() {
         owned.map((r) => normalizeConsole(r["Console Version"])),
     ).size;
     const completed = owned.filter(isCompleted).length;
+    const inProgress = owned.filter(isInProgress).length;
     const sealed = owned.filter(isSealed).length;
     const completedPct = owned.length
         ? Math.round((completed / owned.length) * 100)
@@ -993,6 +1039,7 @@ function displayStats() {
             "text-amber-300",
             `${completedPct}% of collection`,
         ) +
+        tile("In progress", inProgress, "text-sky-300", "being played now") +
         tile("Sealed", sealed, "text-[#e9c85a]") +
         (toBuy > 0 ? tile("To buy", toBuy, "text-purple-300") : "");
 }
@@ -1017,6 +1064,8 @@ function setBreakdownMode(mode) {
 
 function renderBreakdown() {
     const el = document.getElementById("breakdownSection");
+    // Pages may leave the breakdown out (the home page does).
+    if (!el) return;
     if (!allData.length) {
         el.innerHTML = "";
         return;
@@ -1254,27 +1303,6 @@ const PRICE_BANDS = {
     free: (p) => p === 0,
 };
 
-const FILTER_MATCHERS = {
-    status: {
-        owned: (r) => !isTBC(r),
-        tbc: (r) => isTBC(r),
-    },
-    completeness: {
-        complete: (r) => isComplete(r),
-        "no-cover": (r) => hasCover(r) === false,
-        "no-insert": (r) => hasInsert(r) === false,
-        loose: (r) => editionOf(r).toLowerCase() === "loose",
-    },
-    completed: {
-        yes: (r) => isCompleted(r),
-        no: (r) => !isCompleted(r),
-    },
-    sealed: {
-        yes: (r) => isSealed(r),
-        no: (r) => !isSealed(r),
-    },
-};
-
 function rowMatchesFilter(row, group, value) {
     if (group === "console")
         return (
@@ -1285,8 +1313,9 @@ function rowMatchesFilter(row, group, value) {
         return editionOf(row).toLowerCase() === value;
     if (group === "price")
         return (PRICE_BANDS[value] || (() => true))(rowPaid(row));
-    const fn = FILTER_MATCHERS[group]?.[value];
-    return fn ? fn(row) : true;
+    if (group === "condition") return conditionOf(row) === value;
+    if (group === "progress") return progressOf(row) === value;
+    return true;
 }
 
 function makeChip(label, value, group) {
@@ -1321,20 +1350,17 @@ function createFilters() {
     const cont = document.getElementById("filterGroups");
     cont.innerHTML = "";
 
-    // Only offered while the sheet actually has unpurchased rows.
-    if (allData.some(isTBC))
-        addFilterGroup(cont, "Status", "status", [
-            ["Owned", "owned"],
-            ["To buy", "tbc"],
-        ]);
-
+    // Sheet (tab) order: Xbox, then PlayStation, then the rest.
     const consoles = [
         ...new Set(
             allData.map((r) =>
                 normalizeConsole(r["Console Version"]),
             ),
         ),
-    ].sort((a, b) => a.localeCompare(b));
+    ];
+    // Pages with their own console tabs (the home page) set this to leave
+    // the group out of the panel; the console filter itself still applies.
+    if (!window.HIDE_CONSOLE_FILTER)
     addFilterGroup(
         cont,
         "Console",
@@ -1342,12 +1368,16 @@ function createFilters() {
         consoles.map((c) => [c, c.toLowerCase()]),
     );
 
-    addFilterGroup(cont, "Completeness", "completeness", [
-        ["Complete", "complete"],
-        ["No cover art", "no-cover"],
-        ["No insert", "no-insert"],
-        ["Loose", "loose"],
-    ]);
+    // Only the conditions that actually appear in the sheet.
+    const present = new Set(allData.map(conditionOf));
+    addFilterGroup(
+        cont,
+        "Condition",
+        "condition",
+        Object.keys(CONDITIONS)
+            .filter((k) => present.has(k))
+            .map((k) => [CONDITIONS[k].label, k]),
+    );
 
     const editions = [
         ...new Set(allData.map(editionOf)),
@@ -1359,14 +1389,10 @@ function createFilters() {
         editions.map((e) => [e, e.toLowerCase()]),
     );
 
-    addFilterGroup(cont, "Completed", "completed", [
-        ["Completed", "yes"],
-        ["Not completed", "no"],
-    ]);
-
-    addFilterGroup(cont, "Sealed", "sealed", [
-        ["Sealed", "yes"],
-        ["Not sealed", "no"],
+    addFilterGroup(cont, "Progress", "progress", [
+        ["Not started", "not-started"],
+        ["In progress", "in-progress"],
+        ["Completed", "complete"],
     ]);
 
     addFilterGroup(cont, "Price paid", "price", [
@@ -1437,6 +1463,8 @@ function searchableText(row) {
         normalizeConsole(row["Console Version"]),
         row["Notes"],
         editionOf(row),
+        conditionLabel(row),
+        progressLabel(row),
     ]
         .join(" ")
         .toLowerCase();
@@ -1496,8 +1524,17 @@ function sortCards() {
                         normalizeConsole(b["Console Version"]),
                     ) || byTitle(a, b)
                 );
+            case "title-desc":
+                return byTitle(b, a);
             case "value-desc":
                 return rowValue(b) - rowValue(a) || byTitle(a, b);
+            case "value-asc": {
+                // Unpriced games go last, not first.
+                const va = rowValue(a);
+                const vb = rowValue(b);
+                if (!va !== !vb) return va ? -1 : 1;
+                return va - vb || byTitle(a, b);
+            }
             case "gain-desc":
                 return rowGain(b) - rowGain(a) || byTitle(a, b);
             case "gain-asc":
@@ -1521,6 +1558,16 @@ function sortCards() {
                     editionOf(a).localeCompare(editionOf(b)) ||
                     byTitle(a, b)
                 );
+            case "condition-best":
+            case "condition-worst": {
+                const ra = CONDITION_RANK[conditionOf(a)] ?? 9;
+                const rb = CONDITION_RANK[conditionOf(b)] ?? 9;
+                if (ra === 9 || rb === 9) return ra - rb || byTitle(a, b);
+                return (
+                    (currentSort === "condition-best" ? ra - rb : rb - ra) ||
+                    byTitle(a, b)
+                );
+            }
             default:
                 return byTitle(a, b);
         }
@@ -1618,12 +1665,9 @@ const VIEWS = {
 function applyView() {
     for (const [name, [paneId, btnId]] of Object.entries(VIEWS)) {
         const on = currentView === name;
-        document
-            .getElementById(paneId)
-            .classList.toggle("hidden", !on);
-        document
-            .getElementById(btnId)
-            .classList.toggle("active", on);
+        // A page may leave a view out (the home page has no Table button).
+        document.getElementById(paneId)?.classList.toggle("hidden", !on);
+        document.getElementById(btnId)?.classList.toggle("active", on);
     }
     // #wallView is display:grid, so "hidden" needs help winning.
     const wall = document.getElementById("wallView");
@@ -1641,30 +1685,31 @@ function setView(view) {
     render();
 }
 
-// Cover art / insert presence, shown as two initials.
+// The box's condition as one short pill (CIB / Sealed / No manual / Loose).
+// The name is kept from when this was two cover/insert dots: every theme
+// renders it through kit.card().pills.
+const CONDITION_PILL_CLS = {
+    cib: "bg-emerald-400 text-black/80",
+    sealed: "bg-[#d4af37] text-black",
+    "no-manual": "bg-amber-400/90 text-black/80",
+    loose: "bg-red-500/80 text-white",
+    unknown: "bg-zinc-700 text-zinc-300",
+};
 function completenessPills(row) {
-    return [
-        ["C", "Cover art", hasCover(row)],
-        ["I", "Insert", hasInsert(row)],
-    ]
-        .map(([abbr, label, state]) => {
-            const cls =
-                state === true
-                    ? "bg-emerald-400 text-black/80"
-                    : state === false
-                      ? "bg-red-500/80 text-white"
-                      : "bg-zinc-700 text-zinc-400";
-            const word =
-                state === true
-                    ? "present"
-                    : state === false
-                      ? "missing"
-                      : "not applicable";
-            return `<span class="cond ${cls}" title="${escapeHtml(
-                `${label}: ${word}`,
-            )}">${state === false ? "✕" : abbr}</span>`;
-        })
-        .join("");
+    const c = conditionOf(row);
+    return `<span class="cond cond-${c} ${CONDITION_PILL_CLS[c]}" title="${escapeHtml(
+        `Condition: ${CONDITIONS[c].label}`,
+    )}">${escapeHtml(CONDITIONS[c].short)}</span>`;
+}
+
+// Small progress marker for cards: ✓ Completed / ▶ In progress.
+function progressPill(row) {
+    const p = progressOf(row);
+    if (p === "complete")
+        return `<span class="prog prog-complete" title="Completed">✓</span>`;
+    if (p === "in-progress")
+        return `<span class="prog prog-in-progress" title="In progress">▶</span>`;
+    return "";
 }
 
 function displayCards(data) {
@@ -1680,6 +1725,7 @@ function displayCards(data) {
         const tbc = isTBC(row);
         const sealed = isSealed(row);
         const completed = isCompleted(row);
+        const playing = isInProgress(row);
         const edition = editionOf(row);
         const card = document.createElement("div");
         card.className =
@@ -1705,7 +1751,9 @@ function displayCards(data) {
                       ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#d4af37] text-black border border-[#f5d774] z-10">Sealed</span>`
                       : completed
                         ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/90 text-black border border-emerald-300 z-10">✓ Done</span>`
-                        : ""
+                        : playing
+                          ? `<span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-400/90 text-black border border-sky-200 z-10">▶ Playing</span>`
+                          : ""
             }
             ${edition !== "Standard" ? `<span class="absolute bottom-2 left-2 right-2 text-[10px] font-medium px-2 py-0.5 rounded bg-black/75 text-zinc-200 border border-white/15 z-10 truncate text-center">${escapeHtml(edition)}</span>` : ""}
             ${tbc ? `<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10"><span class="tbc-stamp px-3 py-1 rounded-md bg-purple-600/85 text-white text-xs font-bold uppercase tracking-[0.15em] border border-purple-200/60">Not owned</span></div>` : ""}
@@ -1776,10 +1824,8 @@ const TABLE_COLUMNS = [
     ["Game", "title"],
     ["Console", "console"],
     ["Edition", "edition"],
-    ["Cover", null],
-    ["Insert", null],
-    ["Sealed", null],
-    ["Done", null],
+    ["Condition", null],
+    ["Progress", null],
     ["Purchased", "date-newest"],
     ["Paid", "paid-desc"],
     ["CeX sell", "value-desc"],
@@ -1802,12 +1848,11 @@ function renderTable(data) {
             }</th>`,
     ).join("");
 
-    const yn = (state) =>
-        state === true
-            ? `<span class="text-emerald-400">✓</span>`
-            : state === false
-              ? `<span class="text-red-400">✕</span>`
-              : `<span class="text-zinc-600">–</span>`;
+    const PROGRESS_CLS = {
+        complete: "text-emerald-400",
+        "in-progress": "text-sky-300",
+        "not-started": "text-zinc-500",
+    };
 
     const body = data
         .map((row, index) => {
@@ -1829,10 +1874,8 @@ function renderTable(data) {
                 <td class="text-zinc-100 font-medium max-w-[320px] truncate">${escapeHtml(row["Game"])}</td>
                 <td class="text-zinc-400">${escapeHtml(normalizeConsole(row["Console Version"]))}</td>
                 <td class="text-zinc-400">${escapeHtml(editionOf(row))}</td>
-                <td>${yn(hasCover(row))}</td>
-                <td>${yn(hasInsert(row))}</td>
-                <td>${isSealed(row) ? `<span class="text-[#e9c85a]">✓</span>` : `<span class="text-zinc-600">–</span>`}</td>
-                <td>${isCompleted(row) ? `<span class="text-emerald-400">✓</span>` : `<span class="text-zinc-600">–</span>`}</td>
+                <td>${completenessPills(row)}</td>
+                <td class="${PROGRESS_CLS[progressOf(row)]} whitespace-nowrap">${escapeHtml(progressLabel(row))}</td>
                 <td class="text-zinc-400">${escapeHtml(row["Date Purchased"] || "—")}</td>
                 <td>${paid > 0 ? fmtMoney(paid) : "—"}</td>
                 <td class="text-emerald-400">${priced ? fmtMoney(value) : value > 0 ? fmtMoney(value) : "—"} ${deltaBadge(row)}</td>
@@ -1886,16 +1929,6 @@ async function openModal(row, index) {
             <span class="text-sm text-zinc-100">${valueHtml}</span>
         </div>`;
 
-    const stateRow = (label, state, trueWord = "Present", falseWord = "Missing") =>
-        infoRow(
-            label,
-            state === true
-                ? `<span class="flex items-center gap-2"><span class="dot bg-emerald-400"></span>${trueWord}</span>`
-                : state === false
-                  ? `<span class="flex items-center gap-2"><span class="dot bg-red-500"></span>${falseWord}</span>`
-                  : `<span class="flex items-center gap-2"><span class="dot bg-zinc-700"></span>N/A</span>`,
-        );
-
     const badge = (text, cls) =>
         `<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${cls}">${escapeHtml(text)}</span>`;
 
@@ -1908,14 +1941,13 @@ async function openModal(row, index) {
             ${tbc ? badge("To buy · not owned", "bg-purple-500/10 text-purple-300 border border-purple-500/40") : ""}
             ${sealed ? badge("Sealed", "bg-[#d4af37]/15 text-[#f5d774] border border-[#d4af37]/50") : ""}
             ${isCompleted(row) ? badge("Completed", "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30") : ""}
+            ${isInProgress(row) ? badge("In progress", "bg-sky-500/10 text-sky-300 border border-sky-500/30") : ""}
         </div>
         <h2 class="text-3xl font-semibold text-white tracking-tight pr-12 mb-5">${escapeHtml(row["Game"] || "")}</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-6">
-            ${stateRow("Cover art", hasCover(row))}
-            ${stateRow("Insert", hasInsert(row))}
-            ${stateRow("Sealed", isSealed(row) ? true : false, "Yes", "No")}
-            ${stateRow("Completed", isCompleted(row) ? true : false, "Yes", "Not yet")}
+            ${infoRow("Condition", `<span class="flex items-center gap-2"><span class="dot ${{ cib: "bg-emerald-400", sealed: "bg-[#d4af37]", "no-manual": "bg-amber-400", loose: "bg-red-500" }[conditionOf(row)] || "bg-zinc-700"}"></span>${escapeHtml(conditionLabel(row))}</span>`)}
+            ${infoRow("Progress", `<span class="flex items-center gap-2"><span class="dot ${isCompleted(row) ? "bg-emerald-400" : isInProgress(row) ? "bg-sky-400" : "bg-zinc-700"}"></span>${escapeHtml(progressLabel(row))}</span>`)}
             ${infoRow("Edition", escapeHtml(editionOf(row)))}
             ${infoRow("Date purchased", escapeHtml(row["Date Purchased"] || "—"))}
         </div>
@@ -2088,7 +2120,9 @@ const CONSOLE_HUE = {
     "PlayStation 4": 204,
     PSP: 192,
     Wii: 184,
+    DS: 348,
     "Nintendo DS": 348,
+    GBA: 280,
     "Gameboy Advance": 280,
     PC: 28,
 };
@@ -2261,15 +2295,17 @@ function closeOverlay(id) {
         document.body.style.overflow = "auto";
 }
 function anyOverlayOpen() {
+    // Overlays a page doesn't include are simply never open.
     return [
         "rollOverlay",
         "trophyOverlay",
         "wrappedOverlay",
         "guessOverlay",
-    ].find(
-        (id) =>
-            !document.getElementById(id).classList.contains("hidden"),
-    );
+        "healthOverlay",
+    ].find((id) => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains("hidden");
+    });
 }
 
 // === COLLECTION FACTS (shared by trophies + wrapped) ===================
@@ -2280,6 +2316,8 @@ function collectionFacts() {
     const months = {};
     const editions = {};
     const titles = {};
+    let loose = 0;
+    let goty = 0;
     let spend = 0;
     let free = 0;
     let cheap = 0;
@@ -2291,6 +2329,10 @@ function collectionFacts() {
         consoles[name] = (consoles[name] || 0) + 1;
         editions[editionOf(row)] =
             (editions[editionOf(row)] || 0) + 1;
+        if (conditionOf(row) === "loose") loose++;
+        // GOTY now lives in Notes ("GOTYE") rather than Edition.
+        if (/\bgoty|game of the year/i.test(`${editionOf(row)} ${row["Notes"] || ""}`))
+            goty++;
         const key = `${row["Game"]}|${name}`.toLowerCase();
         titles[key] = (titles[key] || 0) + 1;
 
@@ -2349,6 +2391,9 @@ function collectionFacts() {
         completed: owned.filter(isCompleted).length,
         sealed: owned.filter(isSealed).length,
         complete: owned.filter(isComplete).length,
+        inProgress: owned.filter(isInProgress).length,
+        loose,
+        goty,
     };
 }
 
@@ -2360,7 +2405,7 @@ function buildAchievements() {
     for (const name of Object.keys(f.consoles)) {
         if (/xbox/i.test(name)) families.add("ms");
         else if (/playstation|psp/i.test(name)) families.add("sony");
-        else if (/wii|nintendo|gameboy|ds/i.test(name))
+        else if (/wii|nintendo|gameboy|gba|\bds\b/i.test(name))
             families.add("nintendo");
     }
     const oldestYears = f.oldest
@@ -2386,8 +2431,8 @@ function buildAchievements() {
         { icon: "⏳", name: "Time Capsule", desc: "Still own something bought 15 years ago", value: Math.floor(oldestYears), target: 15, unit: "y" },
         { icon: "👯", name: "Double Dipper", desc: "Own the same game twice", value: f.dupes, target: 1 },
         { icon: "🗡️", name: "Steel Reserve", desc: "Own a Steelcase edition", value: f.editions["Steelcase"] || 0, target: 1 },
-        { icon: "🥇", name: "GOTY Hunter", desc: "Own 4 Game of the Year editions", value: f.editions["GOTY"] || 0, target: 4 },
-        { icon: "🃏", name: "Loose Cannon", desc: "15 loose, boxless games", value: f.editions["Loose"] || 0, target: 15 },
+        { icon: "🥇", name: "GOTY Hunter", desc: "Own 4 Game of the Year editions", value: f.goty, target: 4 },
+        { icon: "🃏", name: "Loose Cannon", desc: "15 loose, boxless games", value: f.loose, target: 15 },
         { icon: "📈", name: "In the Black", desc: "Collection worth more than you paid", value: Math.round(f.totals.value), target: Math.max(1, Math.round(f.totals.paid)), unit: "£" },
     ];
 }
@@ -2528,7 +2573,7 @@ function buildWrapped() {
         lead("Still to play") +
             big(`${f.n - f.completed}`) +
             sub(
-                `you've finished <span class="text-white font-semibold">${f.completed}</span>. No pressure.`,
+                `you've finished <span class="text-white font-semibold">${f.completed}</span>${f.inProgress ? ` and have <span class="text-white font-semibold">${f.inProgress}</span> on the go` : ""}. No pressure.`,
             ),
     );
 
@@ -2951,6 +2996,54 @@ function filterToSeries(name) {
 }
 
 // === DATA HEALTH =======================================================
+// Which console a CeX categoryName slug belongs to, as a family key that
+// can be compared with the tab name (e.g. XBOX-360-GAMES → "xbox360").
+function cexSlugFamily(slug) {
+    const s = String(slug || "").toUpperCase();
+    if (/XBOX-360/.test(s)) return "xbox360";
+    if (/XBOX-ONE|SMART-DELIVERY/.test(s)) return "xboxone";
+    if (/XBOX-SERIES/.test(s)) return "xboxseries";
+    if (/^XBOX-/.test(s)) return "xbox";
+    const ps = s.match(/PLAYSTATION(\d)/);
+    if (ps) return `ps${ps[1]}`;
+    if (/PSP/.test(s)) return "psp";
+    if (/GAMEBOY-ADVANCE|GBA/.test(s)) return "gba";
+    if (/(^|-)DS-|NINTENDO-DS/.test(s)) return "ds";
+    if (/WII-U/.test(s)) return "wiiu";
+    if (/WII/.test(s)) return "wii";
+    if (/^PC-/.test(s)) return "pc";
+    return null;
+}
+function consoleFamily(name) {
+    const s = String(name || "").toLowerCase();
+    if (/360/.test(s)) return "xbox360";
+    if (/xbox\s*one/.test(s)) return "xboxone";
+    if (/xbox\s*series/.test(s)) return "xboxseries";
+    if (/^xbox$/.test(s)) return "xbox";
+    const ps = s.match(/playstation\s*(\d)|^ps(\d)$/);
+    if (ps) return `ps${ps[1] || ps[2]}`;
+    if (/psp/.test(s)) return "psp";
+    if (/gba|game\s*boy\s*advance/.test(s)) return "gba";
+    if (/\bds\b|nintendo ds/.test(s)) return "ds";
+    if (/wii\s*u/.test(s)) return "wiiu";
+    if (/wii/.test(s)) return "wii";
+    if (/^pc$/.test(s)) return "pc";
+    return null;
+}
+// Smart Delivery discs are sold under one slug but play on One and Series.
+function cexConsoleMismatch(row) {
+    const tab = consoleFamily(row["Console Version"]);
+    if (!tab) return false;
+    return parseCexLinks(row["CEX Listing"]).some((url) => {
+        const slug = extractCexParam(url, "categoryName");
+        const fam = cexSlugFamily(slug);
+        if (!fam) return false;
+        if (/SMART-DELIVERY/i.test(slug) && /^xbox(one|series)$/.test(tab))
+            return false;
+        return fam !== tab;
+    });
+}
+
 function healthChecks() {
     const owned = allData.filter((r) => !isTBC(r));
     const dupKey = (r) =>
@@ -2963,42 +3056,34 @@ function healthChecks() {
 
     const checks = [
         {
-            label: "Loose, but cover art is ticked",
+            label: "Sealed, but played",
             level: "warn",
-            why: "A loose game shouldn't have its box.",
+            why: "You can't have played a game that's still shrink-wrapped — either the Condition or the Game Progression looks wrong.",
             rows: owned.filter(
-                (r) =>
-                    editionOf(r).toLowerCase() === "loose" &&
-                    hasCover(r) === true,
+                (r) => isSealed(r) && progressOf(r) !== "not-started",
             ),
         },
         {
-            label: "No cover art, but not marked Loose",
+            label: "CeX link is for a different console",
             level: "warn",
-            why: "Either the edition or the cover-art tick looks wrong.",
-            rows: owned.filter(
-                (r) =>
-                    hasCover(r) === false &&
-                    editionOf(r).toLowerCase() !== "loose",
-            ),
+            why: "The link's CeX category doesn't match the tab the game is on, so the price and box art are for another platform's copy.",
+            rows: owned.filter((r) => cexConsoleMismatch(r)),
         },
         {
-            label: "Sealed, but marked completed",
+            label: "Condition missing or not recognised",
             level: "warn",
-            why: "You can't have finished a game that's still shrink-wrapped.",
-            rows: owned.filter(
-                (r) => isSealed(r) && isCompleted(r),
-            ),
+            why: "Expected Complete In Box, Sealed In Box, Boxed + No Manual or Loose.",
+            rows: owned.filter((r) => conditionOf(r) === "unknown"),
         },
         {
-            label: "Sealed, but something's missing from the box",
-            level: "warn",
-            why: "A sealed copy should be complete.",
+            label: "Game Progression missing or not recognised",
+            level: "info",
+            why: "Expected Not Started, In Progress or Complete — read as Not Started.",
             rows: owned.filter(
                 (r) =>
-                    isSealed(r) &&
-                    (hasCover(r) === false ||
-                        hasInsert(r) === false),
+                    !/^(not\s*started|in\s*progress|complete[d]?)$/i.test(
+                        (r["Progress"] || "").trim(),
+                    ),
             ),
         },
         {
@@ -3011,7 +3096,7 @@ function healthChecks() {
             }),
         },
         {
-            label: "Date missing or not dd/mm/yyyy",
+            label: "Date missing or not dd/mm/yy",
             level: "warn",
             why: "These drop out of the timeline and heatmap.",
             rows: owned.filter((r) => {
@@ -3020,24 +3105,14 @@ function healthChecks() {
             }),
         },
         {
-            label: "Month column disagrees with the date",
-            level: "warn",
-            why: "One of the two has been edited without the other.",
-            rows: owned.filter((r) => {
-                const d = parseUkDate(r["Date Purchased"]);
-                const m = (r["Month"] || "").trim();
-                if (!d || isNaN(d) || !m) return false;
-                // The sheet writes "Sep-26"; monthLabel gives "Sep 26".
-                const flat = (x) =>
-                    x.replace(/[-\s]/g, "").toLowerCase();
-                return flat(monthLabel(monthKey(d))) !== flat(m);
-            }),
-        },
-        {
             label: "No usable CeX listing",
             level: "info",
             why: "These can't be priced automatically — they fall back to the Current Price column.",
-            rows: owned.filter((r) => rowSkus(r).length === 0),
+            rows: owned.filter(
+                (r) =>
+                    rowSkus(r).length === 0 &&
+                    editionOf(r).toLowerCase() !== "digital",
+            ),
         },
         {
             label: "Purchase price is £0.00",
@@ -3160,6 +3235,9 @@ function printInventory() {
             <tr><td><strong>Estimated replacement value</strong></td><td class="num"><strong>${money(t.value)}</strong></td></tr>
             <tr><td>Items valued at £10 or more</td><td class="num">${notable.length}</td></tr>
             <tr><td>Sealed / unopened</td><td class="num">${owned.filter(isSealed).length}</td></tr>
+            <tr><td>Complete in box (incl. sealed)</td><td class="num">${owned.filter(isComplete).length}</td></tr>
+            <tr><td>Boxed, no manual</td><td class="num">${owned.filter((r) => conditionOf(r) === "no-manual").length}</td></tr>
+            <tr><td>Loose</td><td class="num">${owned.filter((r) => conditionOf(r) === "loose").length}</td></tr>
         </table>
 
         <h2>By console</h2>
@@ -3292,8 +3370,8 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Click the backdrop of a full-screen overlay to dismiss it.
-["rollOverlay", "wrappedOverlay", "guessOverlay"].forEach((id) => {
-    document.getElementById(id).addEventListener("click", (e) => {
+["rollOverlay", "wrappedOverlay", "guessOverlay", "healthOverlay"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("click", (e) => {
         if (e.target.id === id) closeOverlay(id);
     });
 });

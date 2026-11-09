@@ -61,7 +61,8 @@
             rel="stylesheet"
         />
         <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+        <script src="sheet-config.js"></script>
+        <link rel="stylesheet" href="site.css" />
         <style>
             html {
                 background: #0a0a0a;
@@ -216,29 +217,39 @@
         </style>
     </head>
     <body class="min-h-screen bg-ink text-zinc-100 font-sans antialiased">
-        <nav class="sticky top-0 z-40 bg-ink/85 backdrop-blur border-b border-white/5">
-            <div class="px-4 md:px-10 py-3 flex items-center gap-3 flex-wrap">
-                <a href="index.html" class="accent-btn">← Collection</a>
-                <a href="achievements.html" class="accent-btn">🏆 Achievements</a>
-                <select id="focusSelect" class="field" aria-label="Focus on a console">
-                    <option value="">All consoles</option>
-                </select>
-                <button
-                    id="focusPill"
-                    class="hidden items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-profit/15 text-profit border border-profit/40 hover:bg-profit/25"
-                    title="Clear focus"
-                >
-                    <span id="focusPillText"></span><span aria-hidden="true">✕</span>
-                </button>
-                <div class="flex items-center gap-3 ml-auto min-w-0">
-                    <div class="min-w-[140px]">
-                        <div id="cexStatus" class="text-[11px] text-zinc-500 truncate">CeX: waiting…</div>
-                        <div class="bar-track mt-1"><div id="cexBar" class="bar-fill" style="width: 0%"></div></div>
-                    </div>
-                    <button id="cexRefresh" class="accent-btn" title="Re-fetch every CeX price, ignoring the cache">↻ CeX</button>
+        <!-- Header: the three sections as tabs -->
+        <header class="site-head">
+            <div class="site-bar">
+                <a href="index.html" class="site-brand"><span class="site-dot"></span><span><small>Jake's</small>Game Collection</span></a>
+                <nav class="site-tabs" aria-label="Sections">
+                    <a href="index.html" class="site-tab"><span class="site-tab-ico" aria-hidden="true">🎮</span>Collection</a>
+                    <a href="achievements.html" class="site-tab"><span class="site-tab-ico" aria-hidden="true">🏆</span>Achievements</a>
+                    <a href="stats.html" class="site-tab on" aria-current="page"><span class="site-tab-ico" aria-hidden="true">📈</span>Stats</a>
+                </nav>
+                <div class="site-tools">
+                    <button
+                        id="focusPill"
+                        class="hidden items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-profit/15 text-profit border border-profit/40 hover:bg-profit/25"
+                        title="Clear focus"
+                    >
+                        <span id="focusPillText"></span><span aria-hidden="true">✕</span>
+                    </button>
+                    <select id="focusSelect" class="field" aria-label="Focus on a console">
+                        <option value="">All consoles</option>
+                    </select>
                 </div>
             </div>
-        </nav>
+            <div class="site-sub">
+                <span><b>Stats</b> &nbsp;·&nbsp; the money, the market and the backlog</span>
+                <span class="site-sub-tools">
+                    <span class="min-w-[150px]">
+                        <span id="cexStatus" class="block text-[11px] text-zinc-500 truncate">CeX: waiting…</span>
+                        <span class="bar-track mt-1 block"><span id="cexBar" class="bar-fill block" style="width: 0%"></span></span>
+                    </span>
+                    <button id="cexRefresh" class="accent-btn" title="Re-fetch every CeX price, ignoring the cache">↻ CeX</button>
+                </span>
+            </div>
+        </header>
 
         <div id="loading" class="fixed inset-0 z-50 bg-ink flex flex-col items-center justify-center gap-4">
             <div class="spinner"></div>
@@ -317,7 +328,7 @@
 
             <section class="card">
                 <h2>📈 Spend vs Worth, Over Time</h2>
-                <p class="sub">Running total of money spent against the current CeX value of everything bought up to that date. Drag the slider to travel back to 2007.</p>
+                <p class="sub">Running total of money spent against the current CeX value of everything bought up to that date. Drag the slider to travel back to the first purchase.</p>
                 <div id="timeline" class="h-[420px] mt-2"></div>
             </section>
 
@@ -370,27 +381,14 @@
                 </section>
             </div>
 
-            <section class="card">
-                <h2>🔀 From Price Paid to Price Now</h2>
-                <p class="sub">How games flow from console to the price band they were bought at, then to the band CeX puts them in today.</p>
-                <div id="sankey" class="h-[560px] mt-2"></div>
-            </section>
-
             <!-- CEX MARKET -->
             <div class="section-title">🏪 The CeX market</div>
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <section class="card">
-                    <h2>📉 The Depreciation Cliff</h2>
-                    <p class="sub">CeX's first-ever price for each game (red) against today's price (gold), for the 20 games that launched highest. The red bar is the value that has evaporated.</p>
-                    <div id="cliff" class="h-[560px] mt-2"></div>
-                </section>
-                <section class="card">
-                    <h2>🧊 How Much Value Survived</h2>
-                    <p class="sub">Today's CeX price as a percentage of its first CeX price, across every game.</p>
-                    <div id="cliffNote" class="text-sm text-zinc-300 mt-2"></div>
-                    <div id="retained" class="h-[480px] mt-2"></div>
-                </section>
-            </div>
+            <section class="card">
+                <h2>📉 The Depreciation Cliff</h2>
+                <p class="sub">CeX's first-ever price for each game (red) against today's price (gold), for the 20 games that launched highest. The red bar is the value that has evaporated.</p>
+                <div id="cliffNote" class="text-sm text-zinc-300 mt-2"></div>
+                <div id="cliff" class="h-[560px] mt-2"></div>
+            </section>
 
             <div class="grid grid-cols-1 xl:grid-cols-[1fr_1.5fr] gap-6">
                 <section class="card">
@@ -423,30 +421,17 @@
             <!-- CONSOLES -->
             <div class="section-title">🎮 Console showdown</div>
             <section class="card">
-                <h2>🕸️ Console DNA</h2>
-                <p class="sub">Parallel coordinates where every line is a console and every axis is a different stat. Hover a line to light it up.</p>
-                <div id="parallel" class="h-[460px] mt-2"></div>
+                <h2>🌧️ Price Rainclouds</h2>
+                <p class="sub">Box plots of CeX value per console, with every game scattered alongside.</p>
+                <div id="boxplot" class="h-[440px] mt-2"></div>
             </section>
-
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <section class="card">
-                    <h2>🌧️ Price Rainclouds</h2>
-                    <p class="sub">Box plots of CeX value per console, with every game scattered alongside.</p>
-                    <div id="boxplot" class="h-[440px] mt-2"></div>
-                </section>
-                <section class="card">
-                    <h2>🏙️ Haul Skyline (3D)</h2>
-                    <p class="sub">Games bought per console per month for the last 12 months with purchases. Drag to spin it.</p>
-                    <div id="skyline" class="h-[440px] mt-2"></div>
-                </section>
-            </div>
 
             <!-- CONDITION -->
             <div class="section-title">📦 Condition &amp; backlog</div>
             <div class="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
                 <section class="card">
                     <h2>📦 Box Condition by Console</h2>
-                    <p class="sub">Share of each console's games that are complete, missing an insert, missing a cover, or sealed.</p>
+                    <p class="sub">Share of each console's games that are sealed, complete in box, boxed without a manual, or loose.</p>
                     <div id="condition" class="h-[420px] mt-2"></div>
                 </section>
                 <section class="card">
@@ -458,19 +443,9 @@
 
             <section class="card">
                 <h2>🎮 The Backlog</h2>
-                <p class="sub">Completed versus not completed, per console.</p>
+                <p class="sub">Completed, in progress and not started, per console.</p>
                 <div id="backlogNote" class="text-sm text-zinc-300 mt-2"></div>
                 <div id="backlog" class="h-[360px] mt-2"></div>
-            </section>
-
-            <!-- HARDWARE -->
-            <div class="section-title">🕹️ Hardware</div>
-            <section class="card">
-                <h2>🕹️ The Machines</h2>
-                <p class="sub">Each console's purchase price against Jake's estimated value, from the Console tab.</p>
-                <div id="hwNote" class="text-sm text-zinc-300 mt-2"></div>
-                <div id="hardware" class="h-[420px] mt-2"></div>
-                <div id="hwCards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mt-4"></div>
             </section>
 
             <section class="card" id="historyCard">
@@ -490,10 +465,7 @@
 
         <script>
             // === CONFIG ============================================================
-            const SHEET_PUB =
-                "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM8N_x95reV1Y4vKQZfAyOfmJ0HqhRfcwEuCyIQLyYcmZWSxGCqFv1zJVGi-Q2wviNNl0gGzhd1MxG/pub";
-            const TABS = { master: "1687075549", hardware: "1234472947" };
-            const tabUrl = (gid) => `${SHEET_PUB}?gid=${gid}&single=true&output=csv`;
+            // The sheet (one tab per console) is described in sheet-config.js.
 
             // Our proxies on Deno Deploy; a local copy uses the dev one.
             const PROXY_IS_LOCAL = ["localhost", "127.0.0.1", ""].includes(location.hostname);
@@ -541,7 +513,9 @@
                 "PlayStation 4": "#818cf8",
                 PSP: "#a78bfa",
                 Wii: "#f472b6",
+                DS: "#f87171",
                 "Nintendo DS": "#f87171",
+                GBA: "#fb923c",
                 "Gameboy Advance": "#fb923c",
                 PC: "#fbbf24",
             };
@@ -611,17 +585,31 @@
                     } catch {}
                     return text;
                 };
-                const url = `${tabUrl(gid)}&_=${Date.now()}`;
-                try {
-                    const r = await fetchWithTimeout(url, 12000);
-                    if (r.ok) return save(await r.text());
-                } catch (e) {
-                    console.warn("Direct sheet fetch failed", e.message);
-                }
+                const url = `${tabCsvUrl(gid)}&_=${Date.now()}`;
+                if (!OPENED_FROM_FILE)
+                    try {
+                        const r = await fetchWithTimeout(url, 12000);
+                        if (r.ok) return save(await r.text());
+                    } catch (e) {
+                        console.warn("Direct sheet fetch failed", e.message);
+                    }
                 const r = await fetchWithProxy(url);
                 if (r) return save(await r.text());
                 if (cached) return cached.text;
                 throw new Error(`Could not load sheet tab ${gid}`);
+            }
+
+            // Plain text fetch (direct, then proxy) for the tab list.
+            async function fetchText(url) {
+                if (!OPENED_FROM_FILE)
+                    try {
+                        const r = await fetchWithTimeout(url, 12000);
+                        if (r.ok) return r.text();
+                    } catch (e) {
+                        console.warn("Direct fetch failed", e.message);
+                    }
+                const r = await fetchWithProxy(url);
+                return r ? r.text() : "";
             }
 
             // === CSV ===============================================================
@@ -707,16 +695,8 @@
                 const n = parseFloat(String(str ?? "").replace(/[^0-9.]/g, ""));
                 return Number.isFinite(n) ? n : null;
             }
-            function triState(v) {
-                const s = String(v ?? "").trim().toUpperCase();
-                if (s === "TRUE" || s === "Y" || s === "YES") return true;
-                if (s === "FALSE" || s === "N" || s === "NO") return false;
-                return null;
-            }
-            function parseUkDate(str) {
-                const m = String(str ?? "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-                return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
-            }
+            // dd/mm/yy or dd/mm/yyyy (see sheet-config.js).
+            const parseUkDate = (str) => parseSheetDate(str);
             const isoDay = (d) =>
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
             const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -898,7 +878,7 @@
 
             // === DATA ==============================================================
             let ROWS = [];
-            let HARDWARE = [];
+            let TAB_COUNT = 0;
             let focus = null;
             let ledgerSort = { k: "value", dir: -1 };
             let calYear = null;
@@ -912,23 +892,21 @@
                 return Object.keys(by).sort((a, b) => by[b] - by[a]);
             };
 
-            function parseMaster(text) {
-                const t = tableFrom(text, (c) => c.some((h) => /^game$/i.test(h)) && c.some((h) => /console/i.test(h)));
-                if (!t) throw new Error("Could not find the MASTER header row");
+            // One console tab → rows; the tab name is the console.
+            function parseTab(name, text, startId) {
+                const t = tableFrom(text, (c) => c.some((h) => /^(game\s*)?title$|^game$/i.test(h)));
+                if (!t) return null;
                 const h = t.headers;
                 const ci = {
-                    console: colIndex(h, /console/i),
-                    game: colIndex(h, /^game$/i),
-                    cover: colIndex(h, /cover\s*art/i),
-                    insert: colIndex(h, /^insert/i),
-                    sealed: colIndex(h, /^sealed/i),
-                    completed: colIndex(h, /complete/i),
+                    game: colIndex(h, /^(game\s*)?title$|^game$/i),
+                    condition: colIndex(h, /condition/i),
+                    progress: colIndex(h, /progress/i),
                     edition: colIndex(h, /^edition/i),
                     notes: colIndex(h, /^notes?$/i),
                     date: colIndex(h, /date\s*purchas/i),
                     paid: colIndex(h, /(purchase|paid)\s*price|price\s*purchased/i),
                     current: colIndex(h, /current\s*price/i),
-                    links: colIndex(h, /cex|listing/i),
+                    links: colIndex(h, /cex|listing|link/i),
                 };
                 const cell = (r, k) => (ci[k] >= 0 ? (r[ci[k]] ?? "").trim() : "");
                 return t.rows
@@ -936,14 +914,17 @@
                     .filter((r) => cell(r, "date").toUpperCase() !== "TBC")
                     .map((r, i) => {
                         const date = parseUkDate(cell(r, "date"));
+                        const condition = conditionKey(cell(r, "condition"));
+                        const progress = progressKey(cell(r, "progress"));
                         return {
-                            id: i,
+                            id: startId + i,
                             game: cell(r, "game"),
-                            console: normalizeConsole(cell(r, "console")),
-                            cover: triState(cell(r, "cover")),
-                            insert: triState(cell(r, "insert")),
-                            sealed: triState(cell(r, "sealed")) === true,
-                            completed: triState(cell(r, "completed")) === true,
+                            console: normalizeConsole(name),
+                            condition,
+                            progress,
+                            sealed: condition === "sealed",
+                            cib: condition === "cib" || condition === "sealed",
+                            completed: progress === "complete",
                             edition: cell(r, "edition") || "Standard",
                             notes: cell(r, "notes"),
                             date,
@@ -953,35 +934,6 @@
                             skus: skusFrom(cell(r, "links")),
                         };
                     });
-            }
-
-            function parseHardware(text) {
-                const t = tableFrom(text, (c) => c.includes("Console") && c.some((h) => /estimated/i.test(h)));
-                if (!t) return [];
-                const h = t.headers;
-                const ci = {
-                    console: colIndex(h, /^console$/i),
-                    version: colIndex(h, /version/i),
-                    model: colIndex(h, /model/i),
-                    condition: colIndex(h, /condition/i),
-                    date: colIndex(h, /date/i),
-                    paid: colIndex(h, /purchase\s*price/i),
-                    est: colIndex(h, /estimated/i),
-                    notes: colIndex(h, /notes/i),
-                };
-                const cell = (r, k) => (ci[k] >= 0 ? (r[ci[k]] ?? "").trim() : "");
-                return t.rows
-                    .filter((r) => cell(r, "console"))
-                    .map((r) => ({
-                        console: cell(r, "console"),
-                        version: cell(r, "version"),
-                        model: cell(r, "model"),
-                        condition: cell(r, "condition"),
-                        date: parseUkDate(cell(r, "date")),
-                        paid: parsePrice(cell(r, "paid")) ?? 0,
-                        est: parsePrice(cell(r, "est")) ?? 0,
-                        notes: cell(r, "notes"),
-                    }));
             }
 
             // Folds CeX data into each row. A row can list several SKUs (bundles,
@@ -1018,11 +970,19 @@
             }
 
             async function init() {
-                const [master, hw] = await Promise.allSettled([loadTab(TABS.master), loadTab(TABS.hardware)]);
-                if (master.status !== "fulfilled") throw master.reason;
-                ROWS = parseMaster(master.value);
-                if (!ROWS.length) throw new Error("MASTER has no game rows");
-                HARDWARE = hw.status === "fulfilled" ? parseHardware(hw.value) : [];
+                const tabs = await discoverTabs(fetchText);
+                const loaded = await Promise.allSettled(tabs.map((t) => loadTab(t.gid)));
+                ROWS = [];
+                TAB_COUNT = 0;
+                const failed = [];
+                loaded.forEach((res, i) => {
+                    if (res.status !== "fulfilled") return failed.push(tabs[i].name);
+                    const rows = parseTab(tabs[i].name, res.value, ROWS.length);
+                    if (!rows) return;
+                    TAB_COUNT++;
+                    ROWS.push(...rows);
+                });
+                if (!ROWS.length) throw new Error("The sheet has no game rows");
                 rebuildCex();
 
                 const sel = document.getElementById("focusSelect");
@@ -1036,7 +996,9 @@
                 const byYear = (y) => ROWS.filter((r) => r.date && r.date.getFullYear() === y).length;
                 calYear = years.reduce((best, y) => (byYear(y) > byYear(best) ? y : best), years[years.length - 1]);
                 document.getElementById("footer").textContent =
-                    `${ROWS.length} games from MASTER and ${HARDWARE.length} machines from the Console tab. Values are CeX retail prices; games without a CeX listing use the sheet's Current Price.`;
+                    `${ROWS.length} games across ${TAB_COUNT} console tabs.` +
+                    (failed.length ? ` Couldn't load: ${failed.join(", ")}.` : "") +
+                    ` Values are CeX retail prices; games without a CeX listing use the sheet's Current Price.`;
             }
 
             // === ECHARTS ===========================================================
@@ -1118,13 +1080,11 @@
                 const gain = value - paidPriced;
                 const roi = paidPriced ? (gain / paidPriced) * 100 : 0;
                 const cash = sum(v, (r) => r.cex?.cash);
-                const hwPaid = focus ? 0 : sum(HARDWARE, (h) => h.paid);
-                const hwEst = focus ? 0 : sum(HARDWARE, (h) => h.est);
 
                 document.getElementById("heroTitle").textContent = focus ? `${focus} by the numbers` : "The Numbers";
                 document.getElementById("heroSub").textContent = focus
                     ? `${v.length} ${focus} games, every pound accounted for.`
-                    : `${v.length} games across ${consolesOf(v).length} consoles, plus ${HARDWARE.length} machines. Every pound accounted for.`;
+                    : `${v.length} games across ${consolesOf(v).length} consoles. Every pound accounted for.`;
                 countUp(document.getElementById("heroValue"), value, (n) => gbp(n, 0));
                 const g = document.getElementById("heroGain");
                 g.innerHTML = `<span style="color:${gain >= 0 ? GREEN : RED}">${gain >= 0 ? "▲" : "▼"} ${signedGbp(gain, 0)}</span> <span class="text-zinc-500 text-base">(${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%)</span>`;
@@ -1140,7 +1100,7 @@
                     ["Avg paid", gbp(v.length ? paid / v.length : 0)],
                     ["Avg worth", gbp(p.length ? value / p.length : 0)],
                     ["Freebies", `${free.length} 🎁`],
-                    focus ? ["In profit", `${p.filter((r) => r.gain > 0).length} / ${p.length}`] : ["Games + hardware", gbp(value + hwEst, 0)],
+                    ["In profit", `${p.filter((r) => r.gain > 0).length} / ${p.length}`],
                 ];
                 document.getElementById("heroTiles").innerHTML = tiles
                     .map(([k, val]) => `<div class="tile"><div class="k">${k}</div><div class="v">${val}</div></div>`)
@@ -1725,67 +1685,6 @@
                 );
             }
 
-            // === SANKEY ============================================================
-            const VALUE_BANDS = [
-                { label: "£0–2", test: (p) => p <= 2 },
-                { label: "£2–5", test: (p) => p > 2 && p <= 5 },
-                { label: "£5–10", test: (p) => p > 5 && p <= 10 },
-                { label: "£10–20", test: (p) => p > 10 && p <= 20 },
-                { label: "£20+", test: (p) => p > 20 },
-            ];
-            const PAID_BANDS = [{ label: "Free", test: (p) => p === 0 }, ...VALUE_BANDS.map((b, i) => (i === 0 ? { label: "£0.01–2", test: (p) => p > 0 && p <= 2 } : b))];
-            function renderSankey() {
-                const p = priced(view());
-                if (!p.length) return emptyChart("sankey", "No CeX prices yet");
-                const links = new Map();
-                const add = (s, t) => links.set(`${s}→${t}`, (links.get(`${s}→${t}`) || 0) + 1);
-                p.forEach((r) => {
-                    const pb = `Paid ${PAID_BANDS.find((b) => b.test(r.paid)).label}`;
-                    const vb = `Worth ${VALUE_BANDS.find((b) => b.test(r.value)).label}`;
-                    add(r.console, pb);
-                    add(pb, vb);
-                });
-                const used = new Set([...links.keys()].flatMap((k) => k.split("→")));
-                const bandColor = (i, n) => `hsl(${190 - (i / Math.max(1, n - 1)) * 140}, 75%, 58%)`;
-                const nodes = [
-                    ...consolesOf(p).map((c) => ({ name: c, itemStyle: { color: consoleColor(c) } })),
-                    ...PAID_BANDS.map((b, i) => ({ name: `Paid ${b.label}`, itemStyle: { color: bandColor(i, PAID_BANDS.length) } })),
-                    ...VALUE_BANDS.map((b, i) => ({ name: `Worth ${b.label}`, itemStyle: { color: bandColor(i + 1, PAID_BANDS.length) } })),
-                ].filter((n) => used.has(n.name));
-                chart("sankey").setOption(
-                    {
-                        ...base(),
-                        tooltip: {
-                            ...TOOLTIP,
-                            formatter: (q) =>
-                                q.dataType === "edge"
-                                    ? `${escapeHtml(q.data.source)} → ${escapeHtml(q.data.target)}<br><b>${q.data.value} games</b>`
-                                    : `<b>${escapeHtml(q.name)}</b><br>${q.value} games`,
-                        },
-                        series: [
-                            {
-                                type: "sankey",
-                                left: 4,
-                                right: 100,
-                                top: 8,
-                                bottom: 8,
-                                nodeGap: 8,
-                                nodeWidth: 14,
-                                emphasis: { focus: "adjacency" },
-                                data: nodes,
-                                links: [...links].map(([k, value]) => {
-                                    const [source, target] = k.split("→");
-                                    return { source, target, value };
-                                }),
-                                lineStyle: { color: "gradient", opacity: 0.35, curveness: 0.5 },
-                                label: { color: "#e4e4e7", fontSize: 12 },
-                            },
-                        ],
-                    },
-                    true,
-                );
-            }
-
             // === DEPRECIATION ======================================================
             function renderCliff() {
                 const list = view()
@@ -1835,40 +1734,15 @@
                 );
             }
 
-            function renderRetained() {
+            // The headline under the cliff: how much CeX value has gone overall.
+            function renderCliffNote() {
                 const list = view().filter((r) => r.first && r.cex);
                 const note = document.getElementById("cliffNote");
-                if (!list.length) {
-                    note.textContent = "";
-                    return emptyChart("retained", "Waiting for full CeX data…");
-                }
-                const pcts = list.map((r) => Math.min(150, (r.cex.sell / r.first) * 100));
-                const bins = Array.from({ length: 11 }, (_, i) => i * 10);
-                const counts = bins.map((b, i) => pcts.filter((x) => (i === 10 ? x >= 100 : x >= b && x < b + 10)).length);
+                if (!list.length) return (note.textContent = "");
                 const launch = sum(list, (r) => r.first);
                 const now = sum(list, (r) => r.cex.sell);
-                note.innerHTML = `💸 These games once cost <b class="text-loss">${gbp(launch, 0)}</b> at CeX. Today they're <b class="text-gold">${gbp(now, 0)}</b>, so <b class="text-white">${((1 - now / launch) * 100).toFixed(0)}%</b> of the value has gone. ${counts[10] ? `${counts[10]} game${counts[10] > 1 ? "s are" : " is"} worth more than at launch. 🚀` : ""}`;
-                chart("retained").setOption(
-                    {
-                        ...base(),
-                        grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
-                        tooltip: { ...TOOLTIP, formatter: (q) => `${q.name}: <b>${q.value}</b> games` },
-                        xAxis: { type: "category", data: bins.map((b, i) => (i === 10 ? "100%+" : `${b}–${b + 10}%`)), axisLabel: { interval: 0, rotate: 40, color: "#a1a1aa" } },
-                        yAxis: { type: "value" },
-                        series: [
-                            {
-                                type: "bar",
-                                data: counts.map((c, i) => ({
-                                    value: c,
-                                    itemStyle: { color: `hsl(${(i / 10) * 120}, 75%, 55%)`, borderRadius: [6, 6, 0, 0] },
-                                })),
-                                label: { show: true, position: "top", color: "#e4e4e7", formatter: (q) => q.value || "" },
-                                animationDelay: (i) => i * 60,
-                            },
-                        ],
-                    },
-                    true,
-                );
+                const up = list.filter((r) => r.cex.sell >= r.first).length;
+                note.innerHTML = `💸 These games once cost <b class="text-loss">${gbp(launch, 0)}</b> at CeX. Today they're <b class="text-gold">${gbp(now, 0)}</b>, so <b class="text-white">${((1 - now / launch) * 100).toFixed(0)}%</b> of the value has gone. ${up ? `${up} game${up > 1 ? "s are" : " is"} worth as much as at launch or more. 🚀` : ""}`;
             }
 
             // === MOMENTUM ==========================================================
@@ -2046,76 +1920,7 @@
                 );
             }
 
-            // === CONSOLE DNA =======================================================
-            function consoleStats(list) {
-                return consolesOf(list).map((c) => {
-                    const rows = list.filter((r) => r.console === c);
-                    const p = priced(rows);
-                    const paid = sum(rows, (r) => r.paid);
-                    const pPaid = sum(p, (r) => r.paid);
-                    const val = sum(p, (r) => r.value);
-                    const ratings = rows.map((r) => r.rating).filter(Boolean);
-                    return {
-                        c,
-                        n: rows.length,
-                        paid: round2(paid),
-                        value: round2(val),
-                        avg: round2(rows.length ? paid / rows.length : 0),
-                        gain: round2(val - pPaid),
-                        roi: pPaid ? Math.round((val / pPaid - 1) * 100) : 0,
-                        cib: Math.round((rows.filter((r) => r.cover !== false && r.insert !== false).length / rows.length) * 100),
-                        done: Math.round((rows.filter((r) => r.completed).length / rows.length) * 100),
-                        rating: ratings.length ? +(ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2) : null,
-                    };
-                });
-            }
-
-            function renderParallel() {
-                const stats = consoleStats(ROWS);
-                const dims = [
-                    ["Games", "n"],
-                    ["Spent £", "paid"],
-                    ["Worth £", "value"],
-                    ["Avg paid £", "avg"],
-                    ["Gain £", "gain"],
-                    ["ROI %", "roi"],
-                    ["Complete in box %", "cib"],
-                    ["Completed %", "done"],
-                ];
-                const consoles = stats.map((s) => s.c);
-                chart("parallel").setOption(
-                    {
-                        ...base(),
-                        tooltip: {
-                            ...TOOLTIP,
-                            formatter: (q) => {
-                                const s = stats[q.dataIndex];
-                                return `<b style="color:${consoleColor(s.c)}">${escapeHtml(s.c)}</b><br>` + dims.map(([n, k]) => `${n}: <b>${s[k] ?? "—"}</b>`).join("<br>");
-                            },
-                        },
-                        parallel: { left: 110, right: 60, top: 40, bottom: 20, parallelAxisDefault: { nameTextStyle: { color: "#a1a1aa", fontSize: 11 }, axisLine: { lineStyle: { color: "#3f3f46" } }, axisLabel: { color: "#71717a", fontSize: 10 }, splitLine: { show: false } } },
-                        parallelAxis: [
-                            { dim: 0, name: "Console", type: "category", data: consoles, axisLabel: { color: "#d4d4d8", fontSize: 11 } },
-                            ...dims.map(([name], i) => ({ dim: i + 1, name })),
-                        ],
-                        series: [
-                            {
-                                type: "parallel",
-                                smooth: true,
-                                lineStyle: { width: 3, opacity: 0.55 },
-                                emphasis: { lineStyle: { width: 5, opacity: 1 } },
-                                inactiveOpacity: 0.05,
-                                data: stats.map((s) => ({
-                                    value: [s.c, ...dims.map(([, k]) => s[k] ?? 0)],
-                                    lineStyle: { color: consoleColor(s.c), opacity: focus && s.c !== focus ? 0.08 : 0.6, width: focus === s.c ? 5 : 3 },
-                                })),
-                            },
-                        ],
-                    },
-                    true,
-                );
-            }
-
+            // === PRICE RAINCLOUDS ================================================
             function renderBoxplot() {
                 const p = priced(ROWS).filter((r) => r.value > 0);
                 const consoles = consolesOf(p).filter((c) => p.filter((r) => r.console === c).length >= 3);
@@ -2165,66 +1970,25 @@
                 );
             }
 
-            // === SKYLINE ===========================================================
-            function renderSkyline() {
-                if (!window["echarts-gl"]) {
-                    document.getElementById("skyline").closest(".card").style.display = "none";
-                    return;
-                }
-                const v = view().filter((r) => r.date);
-                const months = [...new Set(v.map((r) => monthKey(r.date)))].sort().slice(-12);
-                const consoles = consolesOf(v);
-                const data = [];
-                consoles.forEach((c, xi) =>
-                    months.forEach((m, yi) => {
-                        const rows = v.filter((r) => r.console === c && monthKey(r.date) === m);
-                        if (rows.length) data.push({ value: [xi, yi, rows.length], spent: sum(rows, (r) => r.paid), itemStyle: { color: consoleColor(c) } });
-                    }),
-                );
-                const axisText = { color: "#a1a1aa", fontSize: 10 };
-                try {
-                    chart("skyline").setOption(
-                        {
-                            tooltip: {
-                                ...TOOLTIP,
-                                formatter: (q) => `<b style="color:${consoleColor(consoles[q.value[0]])}">${escapeHtml(consoles[q.value[0]])}</b><br>${monthLabel(months[q.value[1]])}: <b>${q.value[2]}</b> games · ${gbp(q.data.spent ?? 0, 0)}`,
-                            },
-                            xAxis3D: { type: "category", data: consoles.map((c) => short(c, 12)), axisLabel: { ...axisText, interval: 0 }, name: "" },
-                            yAxis3D: { type: "category", data: months.map(monthLabel), axisLabel: axisText, name: "" },
-                            zAxis3D: { type: "value", axisLabel: axisText, name: "" },
-                            grid3D: {
-                                boxWidth: 160,
-                                boxDepth: 110,
-                                boxHeight: 70,
-                                axisLine: { lineStyle: { color: "#3f3f46" } },
-                                axisPointer: { lineStyle: { color: GOLD } },
-                                splitLine: { lineStyle: { color: "rgba(255,255,255,0.06)" } },
-                                environment: "none",
-                                viewControl: { autoRotate: !REDUCED, autoRotateSpeed: 6, distance: 230, alpha: 24, beta: 40 },
-                                light: { main: { intensity: 1.3, shadow: true, alpha: 40, beta: 30 }, ambient: { intensity: 0.35 } },
-                            },
-                            series: [{ type: "bar3D", data, shading: "lambert", bevelSize: 0.3 }],
-                        },
-                        true,
-                    );
-                } catch (e) {
-                    console.warn("3D skyline unavailable", e);
-                    document.getElementById("skyline").closest(".card").style.display = "none";
-                }
-            }
-
             // === CONDITION / EDITIONS / BACKLOG ===================================
+            // Condition keys come from sheet-config.js (conditionKey).
+            const BOX_CONDITION_NAMES = {
+                sealed: "Sealed",
+                cib: "Complete in box",
+                "no-manual": "No manual",
+                loose: "Loose",
+                unknown: "Not recorded",
+            };
             function conditionOf(r) {
-                if (r.sealed) return "Sealed";
-                if (r.cover === false) return "No cover";
-                if (r.insert === false) return "No insert";
-                return "Complete";
+                return BOX_CONDITION_NAMES[r.condition] || BOX_CONDITION_NAMES.unknown;
             }
-            const CONDITIONS = [
+            // Only the conditions that actually occur, in this order.
+            const BOX_CONDITIONS_ALL = [
                 ["Sealed", "#e879f9"],
-                ["Complete", GREEN],
-                ["No insert", GOLD],
-                ["No cover", RED],
+                ["Complete in box", GREEN],
+                ["No manual", GOLD],
+                ["Loose", RED],
+                ["Not recorded", SLATE],
             ];
             function renderCondition() {
                 const v = view();
@@ -2246,7 +2010,7 @@
                         },
                         xAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
                         yAxis: { type: "category", data: consoles, axisTick: { show: false }, axisLabel: { color: "#d4d4d8" } },
-                        series: CONDITIONS.map(([name, color]) => ({
+                        series: BOX_CONDITIONS_ALL.filter(([name]) => v.some((r) => conditionOf(r) === name)).map(([name, color]) => ({
                             name,
                             type: "bar",
                             stack: "c",
@@ -2304,12 +2068,13 @@
             function renderBacklog() {
                 const v = view();
                 const consoles = consolesOf(v);
-                const done = v.filter((r) => r.completed).length;
+                const done = v.filter((r) => r.progress === "complete").length;
+                const playing = v.filter((r) => r.progress === "in-progress").length;
                 const left = v.length - done;
                 const finish = new Date();
                 finish.setDate(finish.getDate() + left * 7);
                 document.getElementById("backlogNote").innerHTML =
-                    `🎮 <b class="text-gold">${done}</b> completed and <b class="text-white">${left}</b> not yet. At one game a week, the backlog clears on <b class="text-gold">${prettyDate(finish)}</b>. Good luck. 🫡`;
+                    `🎮 <b class="text-gold">${done}</b> completed, <b class="text-sky-300">${playing}</b> in progress and <b class="text-white">${left - playing}</b> not started. At one game a week, the backlog clears on <b class="text-gold">${prettyDate(finish)}</b>. Good luck. 🫡`;
                 chart("backlog").setOption(
                     {
                         ...base(),
@@ -2327,70 +2092,23 @@
                                 itemStyle: { color: GOLD },
                             },
                             {
-                                name: "Not completed",
+                                name: "In progress",
                                 type: "bar",
                                 stack: "b",
-                                data: consoles.map((c) => v.filter((r) => r.console === c && !r.completed).length),
+                                data: consoles.map((c) => v.filter((r) => r.console === c && r.progress === "in-progress").length),
+                                itemStyle: { color: "#38bdf8" },
+                            },
+                            {
+                                name: "Not started",
+                                type: "bar",
+                                stack: "b",
+                                data: consoles.map((c) => v.filter((r) => r.console === c && r.progress === "not-started").length),
                                 itemStyle: { color: SLATE, borderRadius: [6, 6, 0, 0] },
                             },
                         ],
                     },
                     true,
                 );
-            }
-
-            // === HARDWARE ==========================================================
-            function renderHardware() {
-                const hw = HARDWARE;
-                if (!hw.length) {
-                    document.getElementById("hwNote").textContent = "Couldn't load the Console tab.";
-                    return emptyChart("hardware", "No hardware data");
-                }
-                const paid = sum(hw, (h) => h.paid);
-                const est = sum(hw, (h) => h.est);
-                const free = hw.filter((h) => h.paid === 0);
-                document.getElementById("hwNote").innerHTML =
-                    `Paid <b class="text-white">${gbp(paid, 0)}</b> for machines now worth about <b class="text-profit">${gbp(est, 0)}</b> (<b style="color:${est >= paid ? GREEN : RED}">${signedGbp(est - paid, 0)}</b>).` +
-                    (free.length ? ` ${free.length} were gifts 🎁` : "");
-                const label = (h) => `${h.console}${h.version && h.version !== "Original" ? ` ${h.version}` : ""}`;
-                chart("hardware").setOption(
-                    {
-                        ...base(),
-                        legend: { top: 0, data: ["Paid", "Estimated value"] },
-                        grid: { left: 8, right: 8, top: 36, bottom: 8, containLabel: true },
-                        tooltip: {
-                            ...TOOLTIP,
-                            trigger: "axis",
-                            axisPointer: { type: "shadow" },
-                            formatter: (ps) => {
-                                const h = hw[ps[0].dataIndex];
-                                return `<b>${escapeHtml(label(h))}</b>${h.model ? ` <span style="color:#71717a">${escapeHtml(h.model)}</span>` : ""}<br>${escapeHtml(h.condition)} · bought ${prettyDate(h.date)}<br>Paid ${gbp(h.paid)} → est. <b>${gbp(h.est)}</b><br><b style="color:${h.est >= h.paid ? GREEN : RED}">${signedGbp(h.est - h.paid)}</b>`;
-                            },
-                        },
-                        xAxis: { type: "category", data: hw.map((h) => label(h)), axisLabel: { interval: 0, rotate: 25, color: "#a1a1aa", formatter: (s) => short(s, 18) } },
-                        yAxis: { type: "value", axisLabel: { formatter: "£{value}" } },
-                        series: [
-                            { name: "Paid", type: "bar", data: hw.map((h) => h.paid), itemStyle: { color: CYAN, borderRadius: [6, 6, 0, 0] } },
-                            {
-                                name: "Estimated value",
-                                type: "bar",
-                                data: hw.map((h) => h.est),
-                                itemStyle: { color: GREEN, borderRadius: [6, 6, 0, 0] },
-                                label: { show: true, position: "top", color: "#e4e4e7", fontSize: 11, formatter: (q) => signedGbp(hw[q.dataIndex].est - hw[q.dataIndex].paid, 0) },
-                            },
-                        ],
-                    },
-                    true,
-                );
-                document.getElementById("hwCards").innerHTML = [...hw]
-                    .sort((a, b) => (a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0))
-                    .map(
-                        (h) => `<div class="tile">
-                            <div class="flex justify-between gap-2"><div class="text-white font-semibold">${escapeHtml(label(h))}</div><div class="text-xs text-zinc-500 shrink-0">${prettyDate(h.date)}</div></div>
-                            <div class="text-xs text-zinc-500 mt-0.5">${escapeHtml(h.condition)}${h.model ? ` · ${escapeHtml(h.model)}` : ""}</div>
-                            ${h.notes ? `<div class="text-xs text-zinc-400 mt-2">${escapeHtml(h.notes)}</div>` : ""}</div>`,
-                    )
-                    .join("");
             }
 
             function renderHistory() {
@@ -2501,15 +2219,11 @@
             function renderAll(first) {
                 const steps = [
                     renderHero, renderWaterfall, renderFunnel, renderTimeline, renderCalendar, renderRoiScatter,
-                    renderGainers, renderTreemap, renderPareto, renderPriceHist, renderSankey, renderCliff,
-                    renderRetained, renderMomentum, renderMovers, renderRating, renderScarce, renderParallel,
-                    renderBoxplot, renderCondition, renderEditions, renderBacklog, renderHardware, renderHistory,
+                    renderGainers, renderTreemap, renderPareto, renderPriceHist, renderCliff,
+                    renderCliffNote, renderMomentum, renderMovers, renderRating, renderScarce,
+                    renderBoxplot, renderCondition, renderEditions, renderBacklog, renderHistory,
                     renderFacts, renderLedger,
                 ];
-                if (first || focus !== lastSkylineFocus) {
-                    lastSkylineFocus = focus;
-                    steps.push(renderSkyline);
-                }
                 // One broken chart shouldn't take the rest of the page with it.
                 steps.forEach((fn) => {
                     try {
@@ -2519,16 +2233,13 @@
                     }
                 });
             }
-            let lastSkylineFocus;
 
             function wireEvents() {
                 const consoleClick = (name) => name && consolesOf(ROWS).includes(name) && setFocus(name);
                 chart("waterfall").on("click", (q) => consoleClick(q.name));
                 chart("treemap").on("click", (q) => q.data?.isConsole && !focus && consoleClick(q.name));
-                chart("sankey").on("click", (q) => q.dataType === "node" && consoleClick(q.name));
                 chart("condition").on("click", (q) => consoleClick(q.name));
                 chart("backlog").on("click", (q) => consoleClick(q.name));
-                chart("parallel").on("click", (q) => consoleClick(q.data?.value?.[0]));
 
                 document.getElementById("focusSelect").addEventListener("change", (e) => setFocus(e.target.value || null));
                 document.getElementById("focusPill").addEventListener("click", () => setFocus(null));

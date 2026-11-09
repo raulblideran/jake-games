@@ -309,7 +309,7 @@
             .lc-rar { font-family: "Share Tech Mono", monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--rc); text-transform: uppercase; }
             .lc-val { font-family: "Black Ops One", cursive; font-size: 20px; color: #fff; line-height: 1; text-align: right; }
             .lc-val small { display: block; font-family: "Share Tech Mono", monospace; font-size: 10px; color: #8d9680; }
-            .cond { width: 18px; height: 18px; font-size: 9px; border-radius: 0; }
+            .cond { height: 18px; padding: 0 5px; font-size: 9px; border-radius: 0; }
             .lc.tbc .lc-art img { filter: grayscale(1) brightness(0.35); }
             .lock {
                 position: absolute;
@@ -436,7 +436,7 @@
                     <div>
                         <div class="classified" id="typer"></div>
                         <h1 class="op-title">OPERATION:<br /><span>COLLECTION</span></h1>
-                        <div class="op-sub">Physical games · completeness · live CeX valuation</div>
+                        <div class="op-sub">Physical games · condition · live CeX valuation</div>
                         <div class="op-links">
                             <a class="tac-btn" href="achievements.html">🏆 Achievements</a>
                             <a class="tac-btn" href="stats.html">📈 Stats</a>
@@ -487,7 +487,7 @@
             window.THEME = {
                 sfxDemo: "hit",
                 labels: {
-                    search: "> SEARCH INTEL: TITLE / PLATFORM / EDITION  [ / ]",
+                    search: "> SEARCH INTEL: TITLE / PLATFORM / CONDITION  [ / ]",
                     grid: "Loadout",
                     table: "Manifest",
                     wall: "Recon",
@@ -514,6 +514,7 @@
             };
         </script>
         <script src="theme-kit.js"></script>
+        <script src="sheet-config.js"></script>
         <script src="collection-core.js"></script>
         <script>
             (function () {
@@ -642,6 +643,7 @@
                         rec("NET GAIN", fmtSigned(s.gain), `${s.gainPct >= 0 ? "+" : "−"}${Math.abs(s.gainPct)}%`, s.gain >= 0 ? "gr" : "rd") +
                         rec("MISSIONS WON", s.completed, `${s.completedPct}% complete`) +
                         rec("ACCURACY", `${s.games ? Math.round((s.complete / s.games) * 100) : 0}%`, "complete in box") +
+                        rec("ACTIVE OPS", s.inProgress, "in progress") +
                         rec("MINT CONDITION", s.sealed, "sealed", "or") +
                         (s.toBuy > 0 ? rec("TARGETS", s.toBuy, "to acquire", "rd") : "");
 
@@ -675,13 +677,14 @@
                         el.style.animationDelay = `${Math.min(index * 0.012, 0.35)}s`;
                         const bar = (label, pct) => `<div class="sbar"><span>${label}</span><div><span style="width:${Math.max(3, Math.min(100, pct))}%"></span></div></div>`;
                         const roi = c.paid > 0 ? 50 + c.gainPct / 4 : c.value > 0 ? 100 : 50;
+                        // Box 34 + manual 33 + campaign finished 33.
                         const comp = (c.hasCoverArt !== false ? 34 : 0) + (c.hasInsert !== false ? 33 : 0) + (c.completed ? 33 : 0);
                         el.innerHTML = `
                             <div class="lc-art">
                                 ${c.cover ? kit.img(c.cover, "", c.title) : `<div class="noart">?</div>`}
                                 <div class="target"><i></i><i></i><i></i><i></i><b></b></div>
                                 <span class="lc-tag tl">${RARITY[c.tier]}</span>
-                                ${c.completed ? `<span class="lc-tag tr">✓ Complete</span>` : ""}
+                                ${c.completed ? `<span class="lc-tag tr">✓ Complete</span>` : c.inProgress ? `<span class="lc-tag tr">▶ In progress</span>` : ""}
                                 ${c.edition !== "Standard" ? `<span class="lc-tag bl">${escapeHtml(c.edition)}</span>` : ""}
                                 ${c.tbc ? `<div class="lock"><span>🔒</span><span>LOCKED</span><span class="mono" style="font-size:11px;letter-spacing:.2em">NOT ACQUIRED</span></div>` : ""}
                             </div>

@@ -62,6 +62,20 @@
         location.href = file + location.search;
     };
 
+    // Pages with their own header (the home page) offer a compact picker in
+    // a [data-theme-picker] slot instead of the full-width bar.
+    const slot = document.querySelector("[data-theme-picker]");
+    if (slot) {
+        slot.innerHTML =
+            `<label class="theme-picker"><span>Theme</span><select aria-label="Page theme">` +
+            THEMES.map(
+                ([file, label, icon], i) =>
+                    `<option value="${file}"${i === current ? " selected" : ""}>${icon}  ${label}</option>`,
+            ).join("") +
+            `</select></label>`;
+        slot.querySelector("select").onchange = (e) => go(e.target.value);
+    }
+
     const nav = document.createElement("nav");
     nav.className = "tnav";
     nav.setAttribute("aria-label", "Page theme");
@@ -80,7 +94,7 @@
             go(a.dataset.file);
         };
     });
-    document.body.insertBefore(nav, document.body.firstChild);
+    if (!slot) document.body.insertBefore(nav, document.body.firstChild);
 
     document.addEventListener("keydown", (e) => {
         const t = e.target;

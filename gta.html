@@ -428,7 +428,7 @@
             .gc-hover.down { color: #ff3b3b; }
             .gc.tbc img { filter: grayscale(1) contrast(1.2) brightness(0.6); }
             .gc.sealed { border-color: #d4af37; box-shadow: 7px 7px 0 rgba(0, 0, 0, 0.55), 0 0 22px rgba(245, 215, 116, 0.55); }
-            .cond { width: 18px; height: 18px; font-size: 9px; }
+            .cond { height: 18px; padding: 0 6px; font-size: 9px; }
             .delta-up { color: var(--money); }
             .delta-down { color: #ff5a5a; }
 
@@ -591,7 +591,7 @@
                 <div class="logo">
                     <div class="logo-script">Jake's</div>
                     <div class="logo-main">Grand Theft<br />Collection</div>
-                    <div class="logo-sub">Physical games · completeness · live CeX value</div>
+                    <div class="logo-sub">Physical games · condition · live CeX value</div>
                     <div class="logo-links">
                         <a class="neon-btn" href="achievements.html">🏆 Achievements</a>
                         <a class="neon-btn" href="stats.html">📈 Stats</a>
@@ -645,7 +645,7 @@
             window.THEME = {
                 sfxDemo: "pass",
                 labels: {
-                    search: "Search missions: title, console, edition…  ( / )",
+                    search: "Search missions: title, console, condition…  ( / )",
                     grid: "Missions",
                     table: "Stats",
                     wall: "Wall",
@@ -670,6 +670,7 @@
             };
         </script>
         <script src="theme-kit.js"></script>
+        <script src="sheet-config.js"></script>
         <script src="collection-core.js"></script>
         <script>
             (function () {
@@ -697,6 +698,7 @@
                         row("Profit from heists", fmtSigned(s.gain), s.gain >= 0 ? "money" : "red") +
                         row("Return on investment", `${s.gainPct >= 0 ? "+" : "−"}${Math.abs(s.gainPct)}%`, s.gain >= 0 ? "money" : "red") +
                         row("Missions passed", `${s.completed} (${s.completedPct}%)`) +
+                        row("Missions in progress", s.inProgress) +
                         row("Mint condition (sealed)", s.sealed, "pink") +
                         row("Average purchase", fmtMoney(avg)) +
                         row("Priced on the street", `${s.priced} / ${s.games}`) +
@@ -753,7 +755,9 @@
                               ? `<span class="gc-tag" style="background:#ffd33d;color:#000">Mint</span>`
                               : c.completed
                                 ? `<span class="gc-tag" style="background:#7cd96b;color:#000">100% ✓</span>`
-                                : "";
+                                : c.inProgress
+                                  ? `<span class="gc-tag" style="background:#5ab4ff;color:#000">In progress</span>`
+                                  : "";
                         const hover = c.tbc
                             ? `<div class="gc-hover up">Wanted</div>`
                             : c.priced || c.value > 0

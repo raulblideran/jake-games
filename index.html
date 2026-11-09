@@ -22,15 +22,7 @@
                             surface: "#111111",
                         },
                         fontFamily: {
-                            sans: [
-                                "Inter",
-                                "ui-sans-serif",
-                                "system-ui",
-                                "-apple-system",
-                                "Segoe UI",
-                                "Roboto",
-                                "sans-serif",
-                            ],
+                            sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
                         },
                         animation: {
                             fadeIn: "fadeIn 0.25s ease",
@@ -38,29 +30,14 @@
                             slideUp: "slideUp 0.25s ease",
                         },
                         keyframes: {
-                            fadeIn: {
-                                "0%": { opacity: "0" },
-                                "100%": { opacity: "1" },
-                            },
+                            fadeIn: { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
                             fadeInUp: {
-                                "0%": {
-                                    opacity: "0",
-                                    transform: "translateY(12px)",
-                                },
-                                "100%": {
-                                    opacity: "1",
-                                    transform: "translateY(0)",
-                                },
+                                "0%": { opacity: "0", transform: "translateY(12px)" },
+                                "100%": { opacity: "1", transform: "translateY(0)" },
                             },
                             slideUp: {
-                                "0%": {
-                                    opacity: "0",
-                                    transform: "translateY(24px)",
-                                },
-                                "100%": {
-                                    opacity: "1",
-                                    transform: "translateY(0)",
-                                },
+                                "0%": { opacity: "0", transform: "translateY(24px)" },
+                                "100%": { opacity: "1", transform: "translateY(0)" },
                             },
                         },
                     },
@@ -69,319 +46,850 @@
         </script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-            rel="stylesheet"
-        />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="collection-base.css" />
+        <link rel="stylesheet" href="site.css" />
+        <style>
+            /* Tokens: the Original palette, unchanged. */
+            :root {
+                --head-h: 0px;
+                --tabs-h: 0px;
+                --line: rgba(255, 255, 255, 0.07);
+                --muted: #71717a;
+                --faint: #52525b;
+                --text: #e4e4e7;
+                --gain: #34d399;
+                --loss: #f87171;
+                --gold: #e9c85a;
+            }
+            .home {
+                padding: 14px 32px 64px;
+            }
+            @media (max-width: 900px) {
+                .home {
+                    padding: 12px 14px 48px;
+                }
+            }
+            .panel {
+                background: #111111;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+            }
+            :focus-visible {
+                outline: 2px solid #22d3ee;
+                outline-offset: 2px;
+            }
+
+            /* ---- Summary: one line. The worth figure is the only loud thing. -- */
+            .sum {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 10px 28px;
+                padding: 4px 2px 14px;
+                border-bottom: 1px solid var(--line);
+                font-variant-numeric: tabular-nums;
+            }
+            .sum-worth {
+                display: flex;
+                align-items: baseline;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .sum-big {
+                font-size: 30px;
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                line-height: 1;
+                color: #fff;
+            }
+            .sum-big small {
+                font-size: 13px;
+                font-weight: 500;
+                letter-spacing: 0;
+                color: var(--muted);
+                margin-left: 6px;
+            }
+            .sum-gain {
+                font-size: 13px;
+                font-weight: 700;
+                padding: 3px 8px;
+                border-radius: 999px;
+            }
+            .sum-gain.up {
+                color: var(--gain);
+                background: rgba(52, 211, 153, 0.1);
+            }
+            .sum-gain.down {
+                color: var(--loss);
+                background: rgba(248, 113, 113, 0.1);
+            }
+            .sum-paid {
+                font-size: 13px;
+                color: var(--muted);
+            }
+            .sum-paid b {
+                color: var(--text);
+                font-weight: 600;
+            }
+            .sum-sep {
+                width: 1px;
+                height: 26px;
+                background: var(--line);
+            }
+            .sum-figs {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px 18px;
+                font-size: 13px;
+                color: var(--muted);
+            }
+            .sum-figs b {
+                color: var(--text);
+                font-weight: 600;
+                margin-right: 4px;
+            }
+            .sum-figs .c-acc b {
+                color: #67e8f9;
+            }
+            .sum-figs .c-gold b {
+                color: var(--gold);
+            }
+            .sum-figs .c-done b {
+                color: #fcd34d;
+            }
+            .sum-figs .c-play b {
+                color: #7dd3fc;
+            }
+            .sum-cex {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px 10px;
+                margin-left: auto;
+            }
+            .sum-cex .sum-figs b {
+                color: #d4d4d8;
+            }
+            .cex-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 10px;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                color: #67e8f9;
+                border: 1px solid rgba(34, 211, 238, 0.3);
+                background: rgba(34, 211, 238, 0.06);
+                white-space: nowrap;
+            }
+            .cex-btn:hover {
+                background: rgba(34, 211, 238, 0.14);
+                color: #fff;
+            }
+            #cexStatus {
+                font-size: 11px;
+                color: var(--faint);
+                max-width: 270px;
+                line-height: 1.3;
+            }
+            @media (max-width: 1100px) {
+                .sum-cex {
+                    margin-left: 0;
+                }
+            }
+            @media (max-width: 640px) {
+                .sum-sep {
+                    display: none;
+                }
+                .sum-big {
+                    font-size: 26px;
+                }
+                #sumTrade {
+                    width: 100%;
+                }
+            }
+
+            /* ---- Toolbar: one row ---------------------------------------------- */
+            .toolbar {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 12px 0 10px;
+            }
+            .toolbar .search {
+                flex: 1 1 260px;
+                min-width: 200px;
+            }
+            .toolbar .ghost-btn,
+            .toolbar .seg button {
+                padding: 7px 12px;
+                border-radius: 8px;
+            }
+            .toolbar .seg {
+                border-radius: 8px;
+            }
+            .toolbar .seg button {
+                border-radius: 0;
+            }
+            .toolbar .icon-btn {
+                padding: 7px 9px;
+            }
+            .tools {
+                display: flex;
+                gap: 4px;
+            }
+            .drawer {
+                padding: 0 14px;
+            }
+            .drawer:not(.collapsed) {
+                padding: 14px;
+                margin-bottom: 10px;
+            }
+            #filtersSection {
+                border-top: 0 !important;
+            }
+
+            /* ---- Console tabs: sticky, sit right above the results ---------- */
+            .ctabs {
+                position: sticky;
+                top: var(--head-h);
+                z-index: 20;
+                display: flex;
+                gap: 2px;
+                overflow-x: auto;
+                scrollbar-width: none;
+                background: rgba(10, 10, 10, 0.94);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid var(--line);
+                margin-bottom: 10px;
+            }
+            .ctabs::-webkit-scrollbar {
+                display: none;
+            }
+            .ctab {
+                flex: none;
+                padding: 9px 12px 10px;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--muted);
+                border-bottom: 2px solid transparent;
+                margin-bottom: -1px;
+                white-space: nowrap;
+            }
+            .ctab span {
+                margin-left: 6px;
+                font-weight: 500;
+                letter-spacing: 0;
+                color: var(--faint);
+                font-variant-numeric: tabular-nums;
+            }
+            .ctab:hover {
+                color: var(--text);
+            }
+            .ctab.on {
+                color: #67e8f9;
+                border-bottom-color: #22d3ee;
+            }
+            .ctab.on span {
+                color: #0891b2;
+            }
+
+            /* ---- INV: list + detail ------------------------------------------- */
+            #cardsGrid.inv {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 16px;
+                align-items: start;
+            }
+            @media (min-width: 1024px) {
+                #cardsGrid.inv {
+                    grid-template-columns: minmax(0, 1.2fr) minmax(420px, 1fr);
+                    gap: 20px;
+                }
+            }
+            .inv-list {
+                overflow: clip;
+            }
+            .inv-head,
+            .inv-row {
+                display: grid;
+                grid-template-columns: 34px minmax(0, 1fr) 104px 76px 84px;
+                gap: 14px;
+                align-items: center;
+                padding: 0 16px;
+            }
+            /* Column labels: stay at the top of the list while it scrolls. */
+            .inv-head {
+                position: sticky;
+                top: calc(var(--head-h) + var(--tabs-h));
+                z-index: 3;
+                height: 36px;
+                background: rgba(17, 17, 17, 0.97);
+                backdrop-filter: blur(8px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+                border-radius: 12px 12px 0 0;
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--muted);
+            }
+            .inv-head .r {
+                text-align: right;
+                justify-self: end;
+            }
+            .inv-head button {
+                font: inherit;
+                color: inherit;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                border-radius: 4px;
+            }
+            .inv-head button:hover {
+                color: var(--text);
+            }
+            .inv-head button.on {
+                color: #67e8f9;
+            }
+            .inv-head button .arr {
+                font-size: 9px;
+                opacity: 0.8;
+            }
+            .inv-row {
+                position: relative;
+                height: 54px;
+                cursor: pointer;
+                border-top: 1px solid rgba(255, 255, 255, 0.035);
+                scroll-margin-top: calc(var(--head-h) + var(--tabs-h) + 44px);
+                scroll-margin-bottom: 12px;
+                font-variant-numeric: tabular-nums;
+            }
+            .inv-row:first-child {
+                border-top: 0;
+            }
+            .inv-row::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                top: 5px;
+                bottom: 5px;
+                width: 3px;
+                border-radius: 0 3px 3px 0;
+            }
+            .inv-row:hover {
+                background: rgba(255, 255, 255, 0.025);
+            }
+            .inv-row.sel {
+                background: linear-gradient(90deg, rgba(34, 211, 238, 0.13), rgba(34, 211, 238, 0.02) 70%);
+            }
+            .inv-row.sel::before {
+                background: #22d3ee;
+                box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+            }
+            .inv-thumb {
+                width: 34px;
+                height: 44px;
+                border-radius: 4px;
+                overflow: hidden;
+                position: relative;
+                background: #1a1a1a;
+                box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+            }
+            .inv-thumb img {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .inv-name {
+                min-width: 0;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-size: 15px;
+            }
+            .inv-t {
+                font-weight: 600;
+                color: var(--text);
+            }
+            .inv-row.sel .inv-t {
+                color: #fff;
+            }
+            .inv-s {
+                color: var(--faint);
+                font-size: 12.5px;
+                margin-left: 10px;
+            }
+            .inv-flags {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 6px;
+            }
+            .inv-flags .cond {
+                height: 18px;
+                font-size: 9.5px;
+                padding: 0 6px;
+            }
+            .inv-flags .prog {
+                width: 18px;
+                height: 18px;
+                font-size: 9px;
+            }
+            .inv-paid {
+                text-align: right;
+                font-size: 12px;
+                color: var(--faint);
+            }
+            .inv-v {
+                text-align: right;
+                font-size: 15px;
+                font-weight: 600;
+                color: #67e8f9;
+            }
+            .inv-v.none {
+                color: var(--faint);
+                font-weight: 500;
+            }
+            @media (max-width: 640px) {
+                .inv-head,
+                .inv-row {
+                    grid-template-columns: 30px minmax(0, 1fr) 70px;
+                    gap: 10px;
+                    padding: 0 10px;
+                }
+                .inv-row {
+                    height: 50px;
+                }
+                .inv-head .h-cond,
+                .inv-head .h-paid {
+                    display: none;
+                }
+                .inv-thumb {
+                    width: 30px;
+                    height: 39px;
+                }
+                .inv-flags,
+                .inv-paid,
+                .inv-s {
+                    display: none;
+                }
+            }
+            .inv-empty {
+                padding: 48px 20px;
+                text-align: center;
+                color: var(--muted);
+                font-size: 14px;
+            }
+            .inv-empty button {
+                margin-top: 12px;
+            }
+
+            /* Detail: cover beside the headline numbers, facts in two columns */
+            .inv-detail {
+                display: none;
+            }
+            @media (min-width: 1024px) {
+                .inv-detail {
+                    display: block;
+                    position: sticky;
+                    top: calc(var(--head-h) + var(--tabs-h) + 10px);
+                    max-height: calc(100vh - var(--head-h) - var(--tabs-h) - 20px);
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                }
+            }
+            .d-top {
+                position: relative;
+                display: grid;
+                grid-template-columns: clamp(170px, 34%, 280px) minmax(0, 1fr);
+                gap: 26px;
+                padding: 26px;
+                overflow: hidden;
+                border-radius: 12px 12px 0 0;
+                background: radial-gradient(circle at 15% 30%, hsla(var(--hue, 190), 70%, 45%, 0.22), transparent 60%);
+            }
+            .d-top .bg {
+                position: absolute;
+                inset: -40px;
+                background-size: cover;
+                background-position: center;
+                filter: blur(36px) saturate(1.4) brightness(0.35);
+                transform: scale(1.15);
+                pointer-events: none;
+            }
+            .d-top::after {
+                content: "";
+                position: absolute;
+                inset: auto 0 0 0;
+                height: 40px;
+                background: linear-gradient(transparent, #111111);
+                pointer-events: none;
+            }
+            .d-cover {
+                position: relative;
+                z-index: 1;
+                width: 100%;
+                aspect-ratio: 3 / 4;
+                border-radius: 10px;
+                overflow: hidden;
+                background: #1a1a1a;
+                box-shadow:
+                    0 14px 30px rgba(0, 0, 0, 0.6),
+                    0 0 0 1px rgba(255, 255, 255, 0.08);
+            }
+            .d-cover img {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .d-cover .noart {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                padding: 14px;
+                font-size: 13px;
+                font-weight: 700;
+                color: var(--faint);
+            }
+            .d-head {
+                position: relative;
+                z-index: 1;
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            .d-badges {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            .d-badge {
+                font-size: 12px;
+                font-weight: 600;
+                padding: 3px 10px;
+                border-radius: 999px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: rgba(255, 255, 255, 0.05);
+                color: #d4d4d8;
+            }
+            .d-badge.ed {
+                color: #67e8f9;
+                border-color: rgba(34, 211, 238, 0.35);
+                background: rgba(34, 211, 238, 0.08);
+            }
+            .d-badge.sealed {
+                color: #f5d774;
+                border-color: rgba(212, 175, 55, 0.5);
+                background: rgba(212, 175, 55, 0.12);
+            }
+            .d-badge.done {
+                color: #6ee7b7;
+                border-color: rgba(16, 185, 129, 0.35);
+                background: rgba(16, 185, 129, 0.1);
+            }
+            .d-badge.playing {
+                color: #7dd3fc;
+                border-color: rgba(56, 189, 248, 0.35);
+                background: rgba(56, 189, 248, 0.1);
+            }
+            .d-title {
+                margin: 12px 0 auto;
+                font-size: clamp(24px, 2vw, 32px);
+                font-weight: 700;
+                line-height: 1.15;
+                letter-spacing: -0.02em;
+                color: #fff;
+            }
+            .d-money {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 14px 28px;
+                margin-top: 18px;
+                font-variant-numeric: tabular-nums;
+            }
+            .d-money div {
+                min-width: 0;
+            }
+            .d-money span {
+                display: block;
+                font-size: 12px;
+                color: var(--muted);
+            }
+            .d-money b {
+                display: block;
+                font-size: clamp(22px, 1.7vw, 28px);
+                font-weight: 700;
+                white-space: nowrap;
+            }
+            .d-money small {
+                display: block;
+                font-size: 12px;
+                color: var(--faint);
+                white-space: nowrap;
+            }
+            .d-body {
+                padding: 6px 26px 24px;
+            }
+            .d-facts {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px 12px;
+            }
+            .d-facts div {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                font-size: 14px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.025);
+                min-width: 0;
+            }
+            .d-facts dt {
+                color: var(--muted);
+            }
+            .d-facts dd {
+                color: var(--text);
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                text-align: right;
+                min-width: 0;
+            }
+            .d-notes {
+                margin-top: 12px;
+                padding: 10px 12px;
+                font-size: 14px;
+                line-height: 1.45;
+                color: #d4d4d8;
+                white-space: pre-wrap;
+                background: rgba(255, 255, 255, 0.03);
+                border-left: 2px solid rgba(34, 211, 238, 0.5);
+                border-radius: 0 6px 6px 0;
+            }
+            .d-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 16px;
+            }
+            .d-actions .accent-btn,
+            .d-actions .ghost-btn {
+                padding: 10px 16px;
+                font-size: 14px;
+                border-radius: 9px;
+            }
+            .d-keys {
+                margin-top: 16px;
+                font-size: 12px;
+                color: var(--faint);
+            }
+            .d-keys kbd {
+                display: inline-block;
+                min-width: 18px;
+                padding: 0 5px;
+                margin-right: 2px;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-bottom-width: 2px;
+                border-radius: 4px;
+                font: inherit;
+                font-size: 10px;
+                text-align: center;
+                color: #a1a1aa;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                * {
+                    transition: none !important;
+                    animation: none !important;
+                }
+            }
+            .toast-pos {
+                top: calc(var(--head-h) + 12px) !important;
+            }
+
+            /* ---- Desktop: the page fits the window and only the results scroll
+                    (the list, the wall or the shelf). */
+            @media (min-width: 1024px) and (min-height: 600px) {
+                body.fit-mode {
+                    height: 100vh;
+                    height: 100dvh;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                }
+                body.fit-mode .site-head {
+                    flex: none;
+                }
+                body.fit-mode .home {
+                    flex: 1;
+                    min-height: 0;
+                    display: flex;
+                    flex-direction: column;
+                    padding-bottom: 16px;
+                }
+                body.fit-mode .home > * {
+                    flex: none;
+                }
+                body.fit-mode #cardsGrid.inv {
+                    flex: 1;
+                    min-height: 0;
+                    grid-template-rows: minmax(0, 1fr);
+                }
+                body.fit-mode .ctabs {
+                    position: static;
+                }
+                body.fit-mode .inv-list {
+                    height: 100%;
+                    overflow-y: auto;
+                    overscroll-behavior: contain;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+                }
+                body.fit-mode .inv-list::-webkit-scrollbar {
+                    width: 8px;
+                }
+                body.fit-mode .inv-list::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.14);
+                    border-radius: 999px;
+                }
+                body.fit-mode .inv-head {
+                    top: 0;
+                }
+                body.fit-mode .inv-row {
+                    scroll-margin: 42px 0 6px;
+                }
+                body.fit-mode .inv-detail {
+                    position: static;
+                    max-height: 100%;
+                    overflow-y: auto;
+                }
+                body.fit-mode .inv-empty {
+                    align-self: start;
+                }
+                body.fit-mode #wallView,
+                body.fit-mode #shelfView {
+                    flex: 1 1 auto;
+                    min-height: 0;
+                    overflow-y: auto;
+                    overscroll-behavior: contain;
+                    border-radius: 12px;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+                }
+                /* In a fixed-height box an "auto" grid row would shrink to share
+                   the height out; max-content keeps every tile its full size. */
+                body.fit-mode #wallView {
+                    align-content: start;
+                    grid-auto-rows: max-content;
+                }
+                /* The shelf planks are a background; they scroll with the games. */
+                body.fit-mode #shelfView {
+                    background-attachment: local;
+                }
+                /* An open Filters drawer scrolls inside itself rather than
+                   pushing the list off the bottom of the window. */
+                body.fit-mode #filtersSection:not(.collapsed) {
+                    max-height: 42vh !important;
+                    overflow-y: auto;
+                }
+            }
+        </style>
     </head>
     <body class="min-h-screen bg-ink text-zinc-100 font-sans antialiased">
-        <div class="w-full px-6 md:px-10 py-10">
-            <!-- Header -->
-            <header class="mb-8 animate-fadeInUp">
-                <div class="flex items-center gap-3 mb-2">
-                    <div
-                        class="w-2 h-2 rounded-full bg-accent shadow-[0_0_12px_rgba(34,211,238,0.6)]"
-                    ></div>
-                    <span
-                        class="text-xs uppercase tracking-[0.2em] text-zinc-500 font-medium"
-                        >Collection</span
-                    >
-                </div>
-                <h1
-                    class="text-4xl md:text-5xl font-bold tracking-tight text-white"
-                >
-                    Game Collection
-                </h1>
-                <p class="text-zinc-500 mt-2 text-sm">
-                    Physical games, completeness, and live CeX valuation.
-                </p>
-                <div class="flex gap-3 flex-wrap mt-4">
-                    <a href="achievements.html" class="accent-btn">
-                        🏆 Achievements →
-                    </a>
-                    <a href="stats.html" class="accent-btn">📈 Stats →</a>
-                </div>
-            </header>
-
-            <!-- Stats -->
-            <div
-                id="stats"
-                class="flex gap-3 flex-wrap mb-6 animate-fadeInUp"
-            ></div>
-
-            <!-- CeX value strip -->
-            <div
-                class="bg-surface border border-white/8 rounded-xl px-5 py-4 mb-6 animate-fadeInUp"
-            >
-                <div class="flex items-center gap-4 flex-wrap mb-3">
-                    <button
-                        id="calcCexBtn"
-                        onclick="loadCexPrices(true)"
-                        class="accent-btn"
-                        title="Re-fetch every CeX price, ignoring the local cache"
-                    >
-                        <span id="calcCexIcon">£</span>
-                        <span>Refresh CeX prices</span>
-                    </button>
-                    <div id="cexStatus" class="text-xs text-zinc-500">
-                        Waiting for collection data…
-                    </div>
-                </div>
-                <div id="cexTotals" class="flex flex-wrap items-center gap-6">
-                    <div title="What CeX charges for these games — the basis for Current value and Gain / loss">
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            CeX retail
-                        </div>
-                        <div
-                            class="text-lg font-semibold text-white"
-                            id="totalSell"
-                        >
-                            —
-                        </div>
-                    </div>
-                    <div title="What CeX would pay YOU in cash to take the lot — trade-in value, always well below retail">
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            Trade-in cash
-                        </div>
-                        <div
-                            class="text-lg font-semibold text-emerald-400"
-                            id="totalCash"
-                        >
-                            —
-                        </div>
-                    </div>
-                    <div title="What CeX would pay you in store vouchers — usually a little above the cash offer">
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            Trade-in voucher
-                        </div>
-                        <div
-                            class="text-lg font-semibold text-amber-400"
-                            id="totalVoucher"
-                        >
-                            —
-                        </div>
-                    </div>
-                    <div
-                        class="border-l border-white/10 pl-6"
-                        title="Games with no usable CeX SKU, valued from the sheet's Current Price column"
-                    >
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            No CeX price
-                        </div>
-                        <div
-                            class="text-lg font-semibold text-cyan-300"
-                            id="totalNoLink"
-                        >
-                            —
-                        </div>
-                    </div>
-                    <div class="border-l border-white/10 pl-6">
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            Total paid
-                        </div>
-                        <div
-                            class="text-lg font-semibold text-amber-300"
-                            id="totalPaidAll"
-                        >
-                            —
-                        </div>
-                    </div>
-                    <div
-                        title="What CeX sells it for, where known — otherwise the sheet's Current Price"
-                    >
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            Current value
-                        </div>
-                        <div
-                            class="text-lg font-semibold text-emerald-300"
-                            id="totalCurrentValue"
-                        >
-                            —
-                        </div>
-                    </div>
-                    <div>
-                        <div
-                            class="text-[10px] uppercase tracking-wider text-zinc-500"
-                        >
-                            Gain / loss
-                        </div>
-                        <div class="text-lg font-semibold" id="totalGain">—</div>
-                    </div>
-                </div>
+        <!-- Header: the three sections as tabs -->
+        <header class="site-head" id="siteHead">
+            <div class="site-bar">
+                <a href="index.html" class="site-brand"><span class="site-dot"></span><span><small>Jake's</small>Game Collection</span></a>
+                <nav class="site-tabs" aria-label="Sections">
+                    <a href="index.html" class="site-tab on" aria-current="page"><span class="site-tab-ico" aria-hidden="true">🎮</span>Collection</a>
+                    <a href="achievements.html" class="site-tab"><span class="site-tab-ico" aria-hidden="true">🏆</span>Achievements</a>
+                    <a href="stats.html" class="site-tab"><span class="site-tab-ico" aria-hidden="true">📈</span>Stats</a>
+                </nav>
+                <div class="site-tools"><span data-theme-picker></span></div>
             </div>
+        </header>
+
+        <main class="home">
+            <!-- Summary: the collection's worth, then the supporting counts -->
+            <section class="sum" aria-label="Collection summary">
+                <div class="sum-worth">
+                    <div class="sum-big" id="sumWorth">—<small>current value</small></div>
+                    <span class="sum-gain up" id="sumGain"></span>
+                    <span class="sum-paid" id="sumPaid"></span>
+                </div>
+                <div class="sum-sep"></div>
+                <div class="sum-figs" id="sumCounts"></div>
+                <div class="sum-cex">
+                    <div class="sum-figs" id="sumTrade"></div>
+                    <button id="calcCexBtn" onclick="loadCexPrices(true)" class="cex-btn" title="Re-fetch every CeX price, ignoring the local cache">
+                        <span id="calcCexIcon">↻</span><span>CeX prices</span>
+                    </button>
+                    <div id="cexStatus">Waiting for collection data…</div>
+                </div>
+            </section>
 
             <!-- Controls -->
-            <div
-                class="bg-surface border border-white/8 rounded-xl p-4 mb-8 animate-fadeInUp"
-            >
-                <div class="flex gap-3 items-center flex-wrap">
-                    <div class="flex-1 min-w-[240px] relative">
-                        <input
-                            type="text"
-                            id="searchBox"
-                            placeholder="Search title, console, edition, notes…   ( / )"
-                            oninput="onSearchInput()"
-                            class="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition"
-                        />
-                    </div>
-                    <div class="seg">
-                        <button
-                            id="viewGridBtn"
-                            class="active"
-                            onclick="setView('grid')"
-                        >
-                            Grid
-                        </button>
-                        <button id="viewTableBtn" onclick="setView('table')">
-                            Table
-                        </button>
-                        <button id="viewWallBtn" onclick="setView('wall')">
-                            Wall
-                        </button>
-                        <button id="viewShelfBtn" onclick="setView('shelf')">
-                            Shelf
-                        </button>
-                    </div>
-                    <button
-                        id="refreshButton"
-                        onclick="refreshData()"
-                        class="ghost-btn"
-                        title="Refresh from Google Sheets"
-                    >
-                        <span id="refreshIcon">↻</span>
-                        <span>Refresh</span>
-                    </button>
-                    <div class="relative">
-                        <button
-                            id="sortButton"
-                            onclick="toggleSortDropdown()"
-                            class="ghost-btn min-w-[220px] justify-between"
-                        >
-                            <span id="sortButtonText">Title (A–Z)</span>
-                            <span class="text-xs text-zinc-500">▾</span>
-                        </button>
-                        <div
-                            id="sortDropdown"
-                            class="hidden absolute right-0 mt-2 w-[260px] bg-[#161616] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50"
-                        ></div>
-                    </div>
-                    <button class="ghost-btn" onclick="toggleBreakdown()">
-                        <span>Breakdown</span>
-                        <span
-                            id="breakdownToggleIcon"
-                            class="text-xs text-zinc-500 transition-transform"
-                            >▾</span
-                        >
-                    </button>
-                    <button class="ghost-btn" onclick="toggleFilters()">
-                        <span>Filters</span>
-                        <span
-                            id="filterCount"
-                            class="hidden text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-accent text-black"
-                            >0</span
-                        >
-                        <span
-                            id="filterToggleIcon"
-                            class="text-xs text-zinc-500 transition-transform"
-                            >▾</span
-                        >
-                    </button>
-                    <div class="flex gap-2 items-center">
-                        <button
-                            class="ghost-btn"
-                            onclick="rollRandomGame()"
-                            title="Pick something to play"
-                        >
-                            🎲
-                        </button>
-                        <button
-                            class="ghost-btn"
-                            onclick="openTrophies()"
-                            title="Trophy cabinet"
-                        >
-                            🏆
-                        </button>
-                        <button
-                            class="ghost-btn"
-                            onclick="openWrapped()"
-                            title="Collection Wrapped"
-                        >
-                            🎁
-                        </button>
-                        <button
-                            class="ghost-btn"
-                            onclick="openGuess()"
-                            title="Guess the price"
-                        >
-                            💷
-                        </button>
-                        <button
-                            class="ghost-btn"
-                            onclick="openHealth()"
-                            title="Data health check"
-                        >
-                            🩺
-                        </button>
-                        <button
-                            class="ghost-btn"
-                            onclick="printInventory()"
-                            title="Printable inventory / insurance report"
-                        >
-                            🖨
-                        </button>
-                    </div>
+            <div class="toolbar">
+                <input
+                    type="text"
+                    id="searchBox"
+                    placeholder="Search title, console, condition, notes…   ( / )"
+                    oninput="onSearchInput()"
+                    class="search px-3.5 py-2 bg-black/40 border border-white/10 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition"
+                />
+                <div class="seg">
+                    <button id="viewGridBtn" class="active" onclick="setView('grid')">List</button>
+                    <button id="viewWallBtn" onclick="setView('wall')">Wall</button>
+                    <button id="viewShelfBtn" onclick="setView('shelf')">Shelf</button>
                 </div>
-
-                <!-- Breakdown panel -->
-                <div
-                    id="breakdownSection"
-                    class="transition-all duration-300 overflow-hidden collapsed mt-4 pt-4 border-t border-white/8"
-                ></div>
-
-                <!-- Filters panel -->
-                <div
-                    id="filtersSection"
-                    class="transition-all duration-300 overflow-hidden collapsed mt-4 pt-4 border-t border-white/8"
-                >
-                    <div
-                        id="filterGroups"
-                        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-5"
-                    ></div>
-                    <div class="mt-4 flex items-center gap-3">
-                        <button class="ghost-btn" onclick="clearAllFilters()">
-                            Clear all filters
-                        </button>
-                        <span id="filterSummary" class="text-xs text-zinc-500"
-                        ></span>
-                    </div>
+                <div class="relative">
+                    <button id="sortButton" onclick="toggleSortDropdown()" class="ghost-btn min-w-[180px] justify-between">
+                        <span id="sortButtonText">Title (A–Z)</span>
+                        <span class="text-xs text-zinc-500">▾</span>
+                    </button>
+                    <div id="sortDropdown" class="hidden absolute right-0 mt-2 w-[260px] bg-[#161616] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50"></div>
+                </div>
+                <button class="ghost-btn" onclick="toggleFilters()">
+                    <span>Filters</span>
+                    <span id="filterCount" class="hidden text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-accent text-black">0</span>
+                    <span id="filterToggleIcon" class="text-xs text-zinc-500 transition-transform">▾</span>
+                </button>
+                <div class="tools">
+                    <button id="refreshButton" onclick="refreshData()" class="ghost-btn icon-btn" title="Reload the sheet" aria-label="Reload the sheet"><span id="refreshIcon">⟳</span></button>
+                    <button class="ghost-btn icon-btn" onclick="rollRandomGame()" title="Pick something to play (R)" aria-label="Pick something to play">🎲</button>
+                    <button class="ghost-btn icon-btn" onclick="openGuess()" title="Guess the price" aria-label="Guess the price">💷</button>
+                    <button class="ghost-btn icon-btn" onclick="openHealth()" title="Data health check" aria-label="Data health check">🩺</button>
+                    <button class="ghost-btn icon-btn" onclick="printInventory()" title="Printable inventory / insurance report" aria-label="Print inventory">🖨</button>
                 </div>
             </div>
 
-            <!-- Results -->
-            <div
-                id="cardsGrid"
-                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4"
-            ></div>
-            <div
-                id="tableWrap"
-                class="hidden bg-surface border border-white/8 rounded-xl overflow-x-auto scroll-thin"
-            ></div>
+            <!-- Filters drawer -->
+            <div id="filtersSection" class="panel drawer transition-all duration-300 overflow-hidden collapsed">
+                <div id="filterGroups" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-8 gap-y-5"></div>
+                <div class="mt-4 flex items-center gap-3">
+                    <button class="ghost-btn" onclick="clearAllFilters()">Clear all filters</button>
+                    <span id="filterSummary" class="text-xs text-zinc-500"></span>
+                </div>
+            </div>
+
+            <!-- Console tabs (sticky), then the results -->
+            <nav class="ctabs" id="consoleTabs" aria-label="Consoles"></nav>
+            <div id="cardsGrid" class="inv"></div>
             <div id="wallView" class="hidden"></div>
             <div id="shelfView" class="hidden"></div>
-        </div>
+        </main>
 
         <!-- Random picker -->
         <div
@@ -406,67 +914,10 @@
             </div>
         </div>
 
-        <!-- Trophy cabinet -->
-        <div
-            id="trophyOverlay"
-            class="hidden fixed inset-0 z-[450] bg-black/90 overflow-y-auto scroll-thin p-6 md:p-10"
-        >
-            <div class="max-w-6xl mx-auto">
-                <div class="flex items-center justify-between mb-8">
-                    <div>
-                        <h2 class="text-3xl font-bold text-white">
-                            Trophy cabinet
-                        </h2>
-                        <p id="trophyScore" class="text-zinc-500 text-sm mt-1"></p>
-                    </div>
-                    <button class="ghost-btn" onclick="closeOverlay('trophyOverlay')">
-                        Close
-                    </button>
-                </div>
-                <div
-                    id="trophyGrid"
-                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
-                ></div>
-            </div>
-        </div>
-
-        <!-- Wrapped -->
-        <div
-            id="wrappedOverlay"
-            class="hidden fixed inset-0 z-[460] bg-black items-center justify-center p-6"
-        >
-            <button
-                class="absolute top-5 right-5 ghost-btn z-10"
-                onclick="closeOverlay('wrappedOverlay')"
-            >
-                Close
-            </button>
-            <div
-                id="wrappedDots"
-                class="absolute top-6 left-1/2 -translate-x-1/2 flex gap-1.5"
-            ></div>
-            <button
-                class="absolute left-4 top-1/2 -translate-y-1/2 text-4xl text-zinc-600 hover:text-white transition"
-                onclick="wrappedStep(-1)"
-            >
-                ‹
-            </button>
-            <button
-                class="absolute right-4 top-1/2 -translate-y-1/2 text-4xl text-zinc-600 hover:text-white transition"
-                onclick="wrappedStep(1)"
-            >
-                ›
-            </button>
-            <div
-                id="wrappedSlide"
-                class="max-w-2xl w-full text-center"
-            ></div>
-        </div>
-
         <!-- Guess the price -->
         <div
             id="guessOverlay"
-            class="hidden fixed inset-0 z-[450] bg-black/92 items-center justify-center p-6"
+            class="hidden fixed inset-0 z-[450] bg-black/90 backdrop-blur-sm items-center justify-center p-6"
         >
             <div
                 class="bg-surface border border-white/10 rounded-2xl max-w-md w-full p-7 relative"
@@ -489,7 +940,7 @@
         <!-- Data health -->
         <div
             id="healthOverlay"
-            class="hidden fixed inset-0 z-[450] bg-black/92 overflow-y-auto scroll-thin p-6 md:p-10"
+            class="hidden fixed inset-0 z-[450] bg-black/90 backdrop-blur-sm overflow-y-auto scroll-thin p-6 md:p-10"
         >
             <div class="max-w-4xl mx-auto">
                 <div class="flex items-center justify-between mb-8">
@@ -545,7 +996,7 @@
                         style="animation-delay: 0.3s"
                     ></div>
                 </div>
-                <p class="text-zinc-500 text-xs">Loading MASTER sheet…</p>
+                <p class="text-zinc-500 text-xs">Loading collection…</p>
             </div>
         </div>
 
@@ -594,7 +1045,339 @@
             </div>
         </div>
 
+
+        <script src="sheet-config.js"></script>
         <script src="collection-core.js"></script>
+        <script>
+            // Home page: the Pip-Boy INV layout in the Original look, kept dense.
+            // One-line list on the left, the selected game pinned on the right,
+            // consoles as sticky tabs above. Table / Wall / Shelf still come
+            // from collection-core.js unchanged.
+            (function () {
+                // Consoles are the tabs above the list, so the Filters panel skips them.
+                window.HIDE_CONSOLE_FILTER = true;
+
+                const root = document.documentElement;
+                const head = document.getElementById("siteHead");
+                const tabsEl = document.getElementById("consoleTabs");
+                const measure = () => {
+                    const sticky = getComputedStyle(head).position === "sticky";
+                    root.style.setProperty("--head-h", `${sticky ? head.offsetHeight : 0}px`);
+                    root.style.setProperty("--tabs-h", `${tabsEl.offsetHeight}px`);
+                };
+                measure();
+                new ResizeObserver(measure).observe(head);
+                new ResizeObserver(measure).observe(tabsEl);
+                ["error", "success"].forEach((id) => document.getElementById(id).classList.add("toast-pos"));
+
+                const wide = window.matchMedia("(min-width: 1024px)");
+                let rows = [];
+                let sel = 0;
+                let selKey = null;
+                let lastSig = "";
+
+                // ---- Summary: replaces both the stat tiles and the CeX strip ----------
+                function renderSummary() {
+                    const t = collectionTotals(allData);
+                    const owned = allData.filter((r) => !isTBC(r));
+                    const consoles = new Set(owned.map((r) => normalizeConsole(r["Console Version"]))).size;
+                    const pct = t.paid > 0 ? Math.round((t.gain / t.paid) * 100) : 0;
+                    document.getElementById("sumWorth").innerHTML = `${fmtMoney(t.value)}<small>current value</small>`;
+                    const g = document.getElementById("sumGain");
+                    g.className = `sum-gain ${t.gain >= 0 ? "up" : "down"}`;
+                    g.textContent = `${fmtSigned(t.gain)}${t.paid > 0 ? ` (${pct >= 0 ? "+" : "−"}${Math.abs(pct)}%)` : ""}`;
+                    document.getElementById("sumPaid").innerHTML = `on <b>${fmtMoney(t.paid)}</b> paid, ${t.priced} of ${owned.length} priced by CeX`;
+                    const fig = (n, label, cls = "") => `<span class="${cls}"><b>${n}</b>${label}</span>`;
+                    document.getElementById("sumCounts").innerHTML =
+                        fig(owned.length, "games") +
+                        fig(consoles, "consoles", "c-acc") +
+                        fig(owned.filter(isCompleted).length, "completed", "c-done") +
+                        fig(owned.filter(isInProgress).length, "playing", "c-play") +
+                        fig(owned.filter(isSealed).length, "sealed", "c-gold");
+                    document.getElementById("sumTrade").innerHTML =
+                        `<span title="What CeX charges for these games"><b>${fmtMoney(t.sell)}</b>retail</span>` +
+                        `<span title="What CeX would pay you in cash for the lot"><b>${fmtMoney(t.cash)}</b>cash</span>` +
+                        `<span title="What CeX would pay you in store vouchers"><b>${fmtMoney(t.voucher)}</b>voucher</span>` +
+                        (t.noPrice ? `<span title="Games with no CeX listing, valued from the sheet's Current Price"><b>${fmtMoney(t.noPrice)}</b>unlisted</span>` : "");
+                }
+                window.displayStats = renderSummary;
+                window.updateValueStrip = renderSummary;
+
+                // ---- Console tabs ----------------------------------------------------------
+                function updateConsoleTabs() {
+                    const counts = {};
+                    allData.forEach((r) => {
+                        const c = normalizeConsole(r["Console Version"]);
+                        counts[c] = (counts[c] || 0) + 1;
+                    });
+                    const active = activeFilters.console;
+                    const shown = visibleData.length;
+                    tabsEl.innerHTML =
+                        `<button class="ctab${active.size === 0 ? " on" : ""}" data-c="">All<span>${active.size === 0 && shown !== allData.length ? `${shown} of ` : ""}${allData.length}</span></button>` +
+                        Object.entries(counts)
+                            .map(([c, n]) => {
+                                const on = active.size === 1 && active.has(c.toLowerCase());
+                                return `<button class="ctab${on ? " on" : ""}" data-c="${escapeHtml(c)}">${escapeHtml(c)}<span>${on && shown !== n ? `${shown} of ` : ""}${n}</span></button>`;
+                            })
+                            .join("");
+                }
+                tabsEl.addEventListener("click", (e) => {
+                    const b = e.target.closest(".ctab");
+                    if (!b) return;
+                    activeFilters.console = b.dataset.c ? new Set([b.dataset.c.toLowerCase()]) : new Set();
+                    refreshChipStates();
+                    applyFilters();
+                });
+                // Every view here gets the fixed-height layout (see body.fit-mode).
+                // There's no Table view on this page: a saved or linked "table"
+                // view opens the list instead.
+                const coreApplyView = window.applyView;
+                window.applyView = function () {
+                    if (currentView === "table") currentView = "grid";
+                    coreApplyView.apply(this, arguments);
+                    if (!document.body.classList.contains("fit-mode")) window.scrollTo(0, 0);
+                    document.body.classList.add("fit-mode");
+                };
+
+                const coreRender = window.render;
+                window.render = function () {
+                    coreRender.apply(this, arguments);
+                    updateConsoleTabs();
+                };
+
+                // ---- List rows: one line each -------------------------------------------
+                function rowHTML(r, i) {
+                    const thumb = coverFromRow(r, "s");
+                    const value = rowValue(r);
+                    const paid = rowPaid(r);
+                    const ed = editionOf(r);
+                    const sub = [normalizeConsole(r["Console Version"]), ed !== "Standard" ? ed : "", isDuplicate(r) ? r["Date Purchased"] : ""].filter(Boolean).join(" · ");
+                    return `<div class="inv-row" data-i="${i}" role="option" aria-selected="false">
+                        <div class="inv-thumb">${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy" decoding="async" onerror="this.remove()" />` : ""}</div>
+                        <div class="inv-name"><span class="inv-t">${escapeHtml(r["Game"] || "Untitled")}</span><span class="inv-s">${escapeHtml(sub)}</span></div>
+                        <div class="inv-flags">${progressPill(r)}${completenessPills(r)}</div>
+                        <div class="inv-paid">${paid > 0 ? fmtMoney(paid) : "free"}</div>
+                        <div class="inv-v${value > 0 ? "" : " none"}">${value > 0 ? fmtMoney(value) : "—"}</div>
+                    </div>`;
+                }
+
+                // ---- Detail pane ------------------------------------------------------------
+                const CONDITION_DOT = { cib: "bg-emerald-400", sealed: "bg-[#d4af37]", "no-manual": "bg-amber-400", loose: "bg-red-500" };
+                function detailHTML(r) {
+                    const consoleName = normalizeConsole(r["Console Version"]);
+                    const value = rowValue(r);
+                    const paid = rowPaid(r);
+                    const gain = value - paid;
+                    const priced = rowCexValue(r) !== null;
+                    const cover = coverFromRow(r, "l");
+                    const cex = parseCexLinks(r["CEX Listing"]);
+                    const other = parseOtherLinks(r["CEX Listing"]);
+                    const notes = (r["Notes"] || "").trim();
+                    const ed = editionOf(r);
+                    const host = (u) => {
+                        try {
+                            return new URL(u).hostname.replace(/^www\./, "");
+                        } catch (e) {
+                            return "Listing";
+                        }
+                    };
+                    const badges = [
+                        `<span class="d-badge">${escapeHtml(consoleName)}</span>`,
+                        ed !== "Standard" ? `<span class="d-badge ed">${escapeHtml(ed)}</span>` : "",
+                        isSealed(r) ? `<span class="d-badge sealed">Sealed</span>` : "",
+                        isCompleted(r) ? `<span class="d-badge done">✓ Completed</span>` : "",
+                        isInProgress(r) ? `<span class="d-badge playing">▶ Playing</span>` : "",
+                    ].join("");
+                    const fact = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+                    return `
+                        <div class="panel">
+                            <div class="d-top" style="--hue:${consoleHue(consoleName)}">
+                                ${cover ? `<div class="bg" style="background-image:url('${escapeHtml(cover)}')"></div>` : ""}
+                                <div class="d-cover">${cover ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(r["Game"] || "")}" onerror="this.remove()" />` : `<div class="noart">${escapeHtml(consoleName)}</div>`}</div>
+                                <div class="d-head">
+                                    <div class="d-badges">${badges}</div>
+                                    <h2 class="d-title">${escapeHtml(r["Game"] || "Untitled")}</h2>
+                                    <div class="d-money">
+                                        <div><span>${priced || cex.length ? "CeX price" : "Value"}</span><b class="text-accent">${value > 0 ? fmtMoney(value) : "—"}</b><small>${priced ? "what CeX sells it for" : cex.length ? "fetching…" : value > 0 ? "from your sheet" : "not priced"} ${deltaBadge(r, "text-[10px]")}</small></div>
+                                        <div><span>Paid</span><b class="text-white">${paid > 0 ? fmtMoney(paid) : "—"}</b><small>${paid > 0 ? "" : "free"}</small></div>
+                                        <div><span>Gain</span><b class="${gain >= 0 ? "text-emerald-400" : "text-red-400"}">${value > 0 || paid > 0 ? fmtSigned(gain) : "—"}</b><small>${paid > 0 ? `${gain >= 0 ? "+" : "−"}${Math.abs(Math.round((gain / paid) * 100))}%` : ""}</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-body">
+                                <dl class="d-facts">
+                                    ${fact("Condition", `<span class="dot ${CONDITION_DOT[conditionOf(r)] || "bg-zinc-600"}"></span>${escapeHtml(conditionLabel(r))}`)}
+                                    ${fact("Progress", `<span class="dot ${isCompleted(r) ? "bg-emerald-400" : isInProgress(r) ? "bg-sky-400" : "bg-zinc-600"}"></span>${escapeHtml(progressLabel(r))}`)}
+                                    ${fact("Edition", escapeHtml(ed))}
+                                    ${fact("Bought", escapeHtml(r["Date Purchased"] || "—"))}
+                                </dl>
+                                ${isDuplicate(r) ? `<div class="d-notes">You own more than one copy on ${escapeHtml(consoleName)}.</div>` : ""}
+                                ${notes ? `<div class="d-notes">${escapeHtml(notes)}</div>` : ""}
+                                <div class="d-actions">
+                                    <button class="accent-btn" data-act="open">Full details</button>
+                                    ${cex[0] ? `<a class="ghost-btn" href="${escapeHtml(cex[0])}" target="_blank" rel="noopener">Open on CeX ↗</a>` : other[0] ? `<a class="ghost-btn" href="${escapeHtml(other[0])}" target="_blank" rel="noopener">Open on ${escapeHtml(host(other[0]))} ↗</a>` : ""}
+                                    <button class="ghost-btn" data-act="console">Show all ${escapeHtml(consoleName)}</button>
+                                </div>
+                                <div class="d-keys"><kbd>↑</kbd><kbd>↓</kbd> browse &nbsp; <kbd>↵</kbd> full details &nbsp; <kbd>/</kbd> search &nbsp; <kbd>R</kbd> random game</div>
+                            </div>
+                        </div>`;
+                }
+
+                function showDetail(r) {
+                    const d = document.getElementById("invDetail");
+                    if (!d || !r) return;
+                    d.innerHTML = detailHTML(r);
+                    d.querySelector('[data-act="open"]').onclick = () => openModal(rows[sel], sel);
+                    d.querySelector('[data-act="console"]').onclick = () => {
+                        activeFilters.console = new Set([normalizeConsole(r["Console Version"]).toLowerCase()]);
+                        refreshChipStates();
+                        applyFilters();
+                    };
+                    // No CeX box art: try RAWG, as the cards used to.
+                    if (!coverFromRow(r, "l")) {
+                        const key = rowKey(r);
+                        fetchGameCover(r["Game"], normalizeConsole(r["Console Version"])).then((url) => {
+                            if (!url || selKey !== key) return;
+                            const top = d.querySelector(".d-top");
+                            if (!top) return;
+                            top.insertAdjacentHTML("afterbegin", `<div class="bg" style="background-image:url('${escapeHtml(url)}')"></div>`);
+                            top.querySelector(".d-cover").innerHTML = `<img src="${escapeHtml(url)}" alt="" onerror="this.remove()" />`;
+                        });
+                    }
+                }
+
+                function select(i, scroll) {
+                    if (!rows.length) return;
+                    sel = Math.max(0, Math.min(rows.length - 1, i));
+                    selKey = rowKey(rows[sel]);
+                    document.querySelectorAll("#invList .inv-row.sel").forEach((el) => {
+                        el.classList.remove("sel");
+                        el.setAttribute("aria-selected", "false");
+                    });
+                    const el = document.querySelector(`#invList .inv-row[data-i="${sel}"]`);
+                    if (el) {
+                        el.classList.add("sel");
+                        el.setAttribute("aria-selected", "true");
+                        if (scroll) el.scrollIntoView({ block: "nearest" });
+                    }
+                    showDetail(rows[sel]);
+                }
+
+                // ---- Column sorting ---------------------------------------------------------
+                // [ascending, descending] sort keys per column.
+                const SORT_DIRS = {
+                    game: ["title", "title-desc"],
+                    // ▼ = best condition first (sealed at the top).
+                    cond: ["condition-worst", "condition-best"],
+                    paid: ["paid-asc", "paid-desc"],
+                    value: ["value-asc", "value-desc"],
+                };
+                // Game: A–Z (the default) ↔ Z–A. Condition and prices: best/high
+                // first, then reversed, then back to the default.
+                const SORT_CYCLE = {
+                    game: ["title", "title-desc"],
+                    cond: ["condition-best", "condition-worst", "title"],
+                    paid: ["paid-desc", "paid-asc", "title"],
+                    value: ["value-desc", "value-asc", "title"],
+                };
+                function nextSort(col) {
+                    const cycle = SORT_CYCLE[col];
+                    const i = cycle.indexOf(currentSort);
+                    return i < 0 ? cycle[0] : cycle[(i + 1) % cycle.length];
+                }
+
+                // ---- The List view --------------------------------------------------------
+                window.displayCards = function (data) {
+                    const grid = document.getElementById("cardsGrid");
+                    rows = data;
+                    if (!data.length) {
+                        grid.innerHTML = `<div class="panel inv-empty">No games match these filters.<br /><button class="ghost-btn" onclick="clearAllFilters()">Clear filters</button></div>`;
+                        return;
+                    }
+                    // Keep the same game selected through re-sorts and refreshes, and
+                    // the list where it was (re-renders happen as CeX prices land).
+                    let idx = selKey ? data.findIndex((r) => rowKey(r) === selKey) : -1;
+                    if (idx < 0) idx = Math.min(sel, data.length - 1);
+                    // Same games in the same order (a price refresh): stay put.
+                    // A new sort, filter or search starts at the top.
+                    const sig = `${data.length}|${data.map((r) => r["Game"]).join("¦")}`;
+                    const prevList = grid.querySelector(".inv-list");
+                    const prevTop = prevList && sig === lastSig ? prevList.scrollTop : 0;
+                    lastSig = sig;
+                    // Each header cycles: first direction → reverse → back to the
+                    // default (title A–Z). ▲ ascending, ▼ descending.
+                    const sortBtn = (col, label) => {
+                        const [asc, desc] = SORT_DIRS[col];
+                        const dir = currentSort === asc ? "ascending" : currentSort === desc ? "descending" : null;
+                        return `<button data-col="${col}" class="${dir ? "on" : ""}" aria-sort="${dir || "none"}" title="Sort by ${label.toLowerCase()} — click again to reverse">${label}${dir ? `<span class="arr">${dir === "ascending" ? "▲" : "▼"}</span>` : ""}</button>`;
+                    };
+                    grid.innerHTML = `
+                        <div class="panel inv-list">
+                            <div class="inv-head" role="presentation">
+                                <span></span>
+                                <span>${sortBtn("game", "Game")}</span>
+                                <span class="h-cond r">${sortBtn("cond", "Condition")}</span>
+                                <span class="h-paid r">${sortBtn("paid", "Paid")}</span>
+                                <span class="r">${sortBtn("value", "CeX price")}</span>
+                            </div>
+                            <div id="invList" role="listbox" aria-label="Games">${data.map(rowHTML).join("")}</div>
+                        </div>
+                        <aside class="inv-detail" id="invDetail" aria-live="polite"></aside>`;
+                    grid.querySelectorAll(".inv-head [data-col]").forEach((b) => (b.onclick = () => selectSort(nextSort(b.dataset.col))));
+                    grid.querySelector(".inv-list").scrollTop = prevTop;
+                    select(idx, false);
+                };
+
+                // Hover previews (after a short rest, so sweeping the pointer across
+                // the list doesn't flicker the detail pane); click opens full details.
+                const list = document.getElementById("cardsGrid");
+                let hoverTimer = null;
+                list.addEventListener("mouseover", (e) => {
+                    const row = e.target.closest(".inv-row");
+                    if (!row || !wide.matches) return;
+                    clearTimeout(hoverTimer);
+                    hoverTimer = setTimeout(() => {
+                        const i = Number(row.dataset.i);
+                        if (i !== sel) select(i, false);
+                    }, 110);
+                });
+                list.addEventListener("mouseleave", () => clearTimeout(hoverTimer));
+                list.addEventListener("click", (e) => {
+                    const row = e.target.closest(".inv-row");
+                    if (!row) return;
+                    clearTimeout(hoverTimer);
+                    const i = Number(row.dataset.i);
+                    select(i, false);
+                    openModal(rows[i], i);
+                });
+
+                // Closing the full details leaves the list on the game you ended on.
+                const coreCloseModal = window.closeModal;
+                window.closeModal = function () {
+                    const i = modalIndex;
+                    coreCloseModal.apply(this, arguments);
+                    if (currentView === "grid" && i >= 0 && i < rows.length && i !== sel) select(i, true);
+                };
+
+                document.addEventListener("keydown", (e) => {
+                    const t = e.target;
+                    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
+                    if (e.ctrlKey || e.metaKey || e.altKey) return;
+                    if (currentView !== "grid" || !rows.length) return;
+                    if (!document.getElementById("modal").classList.contains("hidden") || anyOverlayOpen()) return;
+                    if (e.key === "ArrowDown" || e.key === "j") {
+                        e.preventDefault();
+                        select(sel + 1, true);
+                    } else if (e.key === "ArrowUp" || e.key === "k") {
+                        e.preventDefault();
+                        select(sel - 1, true);
+                    } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        openModal(rows[sel], sel);
+                    }
+                });
+            })();
+        </script>
         <script src="theme-nav.js"></script>
     </body>
 </html>

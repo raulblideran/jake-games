@@ -201,17 +201,39 @@ body {
     height: 8px;
     border-radius: 50%;
 }
-/* Completeness pill: C = cover art, I = insert */
+/* Condition pill: CIB / Sealed / No manual / Loose */
 .cond {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    white-space: nowrap;
+}
+/* Progress marker on cards: ✓ completed / ▶ in progress */
+.prog {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     line-height: 1;
+}
+.prog-complete {
+    background: rgb(52 211 153 / 0.9);
+    color: rgb(0 0 0 / 0.8);
+}
+.prog-in-progress {
+    background: rgb(56 189 248 / 0.9);
+    color: rgb(0 0 0 / 0.8);
 }
 /* Dense table view */
 .gtable {

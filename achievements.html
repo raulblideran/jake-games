@@ -59,8 +59,8 @@
             rel="stylesheet"
         />
         <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+        <script src="sheet-config.js"></script>
+        <link rel="stylesheet" href="site.css" />
         <style>
             html {
                 background: #0a0a0a;
@@ -303,30 +303,33 @@
         </style>
     </head>
     <body class="min-h-screen bg-ink text-zinc-100 font-sans antialiased">
-        <!-- Sticky focus bar -->
-        <nav
-            class="sticky top-0 z-40 bg-ink/85 backdrop-blur border-b border-white/5"
-        >
-            <div
-                class="px-4 md:px-10 py-3 flex items-center gap-3 flex-wrap"
-            >
-                <a href="index.html" class="accent-btn">← Collection</a>
-                <a href="stats.html" class="accent-btn">📈 Stats</a>
-                <select id="focusSelect" class="field" aria-label="Focus on a game">
-                    <option value="">All games</option>
-                </select>
-                <button
-                    id="focusPill"
-                    class="hidden items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-gold/15 text-gold border border-gold/40 hover:bg-gold/25"
-                    title="Clear focus"
-                >
-                    <span id="focusPillText"></span><span aria-hidden="true">✕</span>
-                </button>
-                <span class="text-xs text-zinc-500 hidden md:inline"
-                    >Tip: click any game in any chart to focus the whole page on it.</span
-                >
+        <!-- Header: the three sections as tabs -->
+        <header class="site-head">
+            <div class="site-bar">
+                <a href="index.html" class="site-brand"><span class="site-dot"></span><span><small>Jake's</small>Game Collection</span></a>
+                <nav class="site-tabs" aria-label="Sections">
+                    <a href="index.html" class="site-tab"><span class="site-tab-ico" aria-hidden="true">🎮</span>Collection</a>
+                    <a href="achievements.html" class="site-tab on" aria-current="page"><span class="site-tab-ico" aria-hidden="true">🏆</span>Achievements</a>
+                    <a href="stats.html" class="site-tab"><span class="site-tab-ico" aria-hidden="true">📈</span>Stats</a>
+                </nav>
+                <div class="site-tools">
+                    <button
+                        id="focusPill"
+                        class="hidden items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-gold/15 text-gold border border-gold/40 hover:bg-gold/25"
+                        title="Clear focus"
+                    >
+                        <span id="focusPillText"></span><span aria-hidden="true">✕</span>
+                    </button>
+                    <select id="focusSelect" class="field" aria-label="Focus on a game">
+                        <option value="">All games</option>
+                    </select>
+                </div>
             </div>
-        </nav>
+            <div class="site-sub">
+                <span><b>Achievements</b> &nbsp;·&nbsp; <span id="achSub">Xbox &amp; PC</span></span>
+                <span class="site-sub-hint">Click any game in any chart to focus the page on it</span>
+            </div>
+        </header>
 
         <div id="loading" class="fixed inset-0 z-50 bg-ink flex flex-col items-center justify-center gap-4">
             <div class="spinner"></div>
@@ -342,7 +345,8 @@
                     ></div>
                     <span
                         class="text-xs uppercase tracking-[0.2em] text-zinc-500 font-medium"
-                        >Xbox 360 · Achievements</span
+                        id="platformPill"
+                        >Xbox &amp; PC · Achievements</span
                     >
                 </div>
                 <h1
@@ -375,6 +379,7 @@
                                 <th class="sortable text-left py-2 px-2" data-k="name">Achievement</th>
                                 <th class="sortable text-left py-2 px-2" data-k="game">Game</th>
                                 <th class="sortable text-left py-2 px-2" data-k="cat">Category</th>
+                                <th class="sortable text-left py-2 px-2" data-k="time">Unlocked</th>
                                 <th class="sortable text-right py-2 px-2" data-k="gs">G</th>
                             </tr>
                         </thead>
@@ -434,20 +439,6 @@
                 </section>
             </div>
 
-            <!-- 4. Sunburst + 5. Treemap -->
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <section class="card">
-                    <h2>🌞 Gamerscore Sunburst</h2>
-                    <p class="sub">Game, then unlocked or locked, then point value, sized by G. Click a slice to zoom in and the centre to zoom out.</p>
-                    <div id="sunburst" class="h-[520px] mt-2"></div>
-                </section>
-                <section class="card">
-                    <h2>🧱 Every Achievement, Mapped</h2>
-                    <p class="sub">All achievements as blocks sized by G, grouped by game. Click to zoom in and use the breadcrumb to go back.</p>
-                    <div id="treemap" class="h-[520px] mt-2"></div>
-                </section>
-            </div>
-
             <!-- 6. Radar + 7. Sankey -->
             <div class="grid grid-cols-1 xl:grid-cols-[1fr_1.4fr] gap-6">
                 <section class="card">
@@ -477,26 +468,12 @@
                 </section>
             </div>
 
-            <!-- 9. Word cloud + 10. Value -->
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <section class="card">
-                    <h2>☁️ The Language of Achievements</h2>
-                    <p class="sub">The most common words in achievement descriptions. Gold words come mostly from unlocked achievements. Click a word to search for it below.</p>
-                    <div id="cloud" class="h-[440px] mt-2"></div>
-                </section>
-                <section class="card">
-                    <h2>💷 Gamerscore Per Pound</h2>
-                    <p class="sub">Price paid (from MASTER) against G earned. Bubble size is the total G on offer.</p>
-                    <div id="valueHeadline" class="mt-3 text-sm"></div>
-                    <div id="scatter" class="h-[400px] mt-2"></div>
-                </section>
-            </div>
-
-            <!-- 11. Skyline -->
-            <section class="card" id="skylineCard">
-                <h2>🏙️ Achievement Skyline (3D)</h2>
-                <p class="sub">Games along one axis and point value along the other. Tower height is the number of achievements, gold for unlocked and slate for locked. Drag to rotate and scroll to zoom. This chart always shows every game.</p>
-                <div id="skyline" class="h-[560px] mt-2"></div>
+            <!-- Unlock timeline -->
+            <section class="card">
+                <h2>📆 The Unlock Timeline</h2>
+                <p class="sub">Gamerscore earned over time, from the Date Unlocked column. Bars are G per month, the line is the running total. Drag the slider to zoom.</p>
+                <div id="timelineNote" class="text-sm text-zinc-300 mt-2"></div>
+                <div id="timeline" class="h-[380px] mt-2"></div>
             </section>
 
             <!-- 12. To-do -->
@@ -527,15 +504,8 @@
 
         <script>
             // === CONFIG ============================================================
-            const SHEET_PUB =
-                "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM8N_x95reV1Y4vKQZfAyOfmJ0HqhRfcwEuCyIQLyYcmZWSxGCqFv1zJVGi-Q2wviNNl0gGzhd1MxG/pub";
-            const TABS = {
-                achievements: "296773517",
-                master: "1687075549",
-                titleMap: "2136415538",
-            };
-            const tabUrl = (gid) =>
-                `${SHEET_PUB}?gid=${gid}&single=true&output=csv`;
+            // The sheet (Achievement Tracker + one tab per console) is described
+            // in sheet-config.js.
 
             // Our proxies on Deno Deploy; a local copy uses the dev one.
             const PROXY_IS_LOCAL = ["localhost", "127.0.0.1", ""].includes(location.hostname);
@@ -580,8 +550,14 @@
                 "XBOX-360-SOFTWARE": "Xbox 360 Software",
                 "XBOX-360-RARITIES": "Xbox 360 Rarities",
                 "XBOX-ONE-GAMES": "Xbox One Software",
+                "XBOX-ONE-SOFTWARE": "Xbox One Software",
                 "XBOX-SERIES-GAMES": "Xbox Series Software",
+                "XBOX-SERIES-SOFTWARE": "Xbox Series Software",
                 "XBOX-SMART-DELIVERY-GAMES": "Xbox Smart Delivery Games",
+                "XBOX-SOFTWARE": "Xbox Software",
+                "XBOX-GAMES": "Xbox Software",
+                "PC-GAMES": "PC Games",
+                "PC-SOFTWARE": "PC Games",
             };
 
             // === FETCH =============================================================
@@ -637,17 +613,18 @@
             async function loadTab(gid) {
                 const cached = readCache(gid);
                 if (cached && cached.fresh) return cached.text;
-                const url = `${tabUrl(gid)}&_=${Date.now()}`;
-                try {
-                    const r = await fetchWithTimeout(url, 12000);
-                    if (r.ok) {
-                        const text = await r.text();
-                        writeCache(gid, text);
-                        return text;
+                const url = `${tabCsvUrl(gid)}&_=${Date.now()}`;
+                if (!OPENED_FROM_FILE)
+                    try {
+                        const r = await fetchWithTimeout(url, 12000);
+                        if (r.ok) {
+                            const text = await r.text();
+                            writeCache(gid, text);
+                            return text;
+                        }
+                    } catch (e) {
+                        console.warn("Direct sheet fetch failed", e.message);
                     }
-                } catch (e) {
-                    console.warn("Direct sheet fetch failed", e.message);
-                }
                 const r = await fetchWithProxy(url);
                 if (r) {
                     const text = await r.text();
@@ -656,6 +633,19 @@
                 }
                 if (cached) return cached.text;
                 throw new Error(`Could not load sheet tab ${gid}`);
+            }
+
+            // Plain text fetch (direct, then proxy) for the sheet's tab list.
+            async function fetchText(url) {
+                if (!OPENED_FROM_FILE)
+                    try {
+                        const r = await fetchWithTimeout(url, 12000);
+                        if (r.ok) return r.text();
+                    } catch (e) {
+                        console.warn("Direct fetch failed", e.message);
+                    }
+                const r = await fetchWithProxy(url);
+                return r ? r.text() : "";
             }
 
             // === CSV ===============================================================
@@ -828,7 +818,6 @@
             let GAMES = []; // per-game aggregates over ACH
             let GAME_COLOR = {};
             let focus = null;
-            let wordFilter = null;
             let wallSort = "game";
             let browserSort = { k: "game", dir: 1 };
             let browserStatus = "all";
@@ -840,7 +829,7 @@
                 const by = new Map();
                 list.forEach((a) => {
                     if (!by.has(a.game))
-                        by.set(a.game, { name: a.game, total: 0, unl: 0, gs: 0, gsUnl: 0 });
+                        by.set(a.game, { name: a.game, platform: a.platform, total: 0, unl: 0, gs: 0, gsUnl: 0 });
                     const g = by.get(a.game);
                     g.total++;
                     g.gs += a.gs;
@@ -853,109 +842,194 @@
             }
 
             // === LOAD ==============================================================
-            async function init() {
-                const [achText, masterText, mapText] = await Promise.allSettled([
-                    loadTab(TABS.achievements),
-                    loadTab(TABS.master),
-                    loadTab(TABS.titleMap),
-                ]);
-                if (achText.status !== "fulfilled") throw achText.reason;
+            // "Xbox One / PC" → its parts. A Smart Delivery disc sits on either the
+            // Xbox One or the Xbox Series tab, so those two count as one family.
+            function platformParts(platform) {
+                const parts = String(platform || "")
+                    .split("/")
+                    .map((p) => p.trim())
+                    .filter(Boolean);
+                return parts.length ? parts : ["Unknown"];
+            }
+            function platformTabKeys(platform) {
+                const keys = new Set(platformParts(platform).map(norm));
+                if (keys.has("xboxone")) keys.add("xboxseries");
+                if (keys.has("xboxseries")) keys.add("xboxone");
+                return keys;
+            }
+            const PLATFORM_ORDER = ["Xbox 360", "Xbox One", "Xbox Series", "PC"];
+            const platformRank = (p) => {
+                const i = PLATFORM_ORDER.indexOf(platformParts(p)[0]);
+                return (i < 0 ? 9 : i) + (p.includes("/") ? 0.5 : 0);
+            };
 
-                const t = tableFrom(achText.value, (c) =>
+            async function init() {
+                const all = await listSheetTabs(fetchText);
+                const achTab = (all || []).find((t) => NON_CONSOLE_TAB.test(t.name)) || ACHIEVEMENT_TAB_FALLBACK;
+                const consoleTabs = all ? all.filter((t) => !NON_CONSOLE_TAB.test(t.name)) : FALLBACK_TABS;
+
+                const t = tableFrom(await loadTab(achTab.gid), (c) =>
                     c.some((h) => /^achievement$/i.test(h)) && c.some((h) => /^game$/i.test(h)),
                 );
-                if (!t) throw new Error("Could not find the Achievements header row");
+                if (!t) throw new Error(`Could not find the header row on the "${achTab.name}" tab`);
                 const ci = {
                     name: colIndex(t.headers, /^achievement$/i),
-                    gs: colIndex(t.headers, /gamerscore/i),
-                    check: colIndex(t.headers, /check|unlocked|done/i),
+                    gs: colIndex(t.headers, /^(gs|g|gamerscore)$/i),
+                    check: colIndex(t.headers, /^(status|unlocked|done|checked?)$/i),
                     desc: colIndex(t.headers, /desc/i),
+                    date: colIndex(t.headers, /date/i),
                     game: colIndex(t.headers, /^game$/i),
+                    platform: colIndex(t.headers, /platform|console/i),
                 };
-                // Most of the tab is padding rows holding only an unticked checkbox.
+                const cell = (r, k) => (ci[k] >= 0 ? (r[ci[k]] ?? "").trim() : "");
+                // The tab may carry padding rows holding only an unticked checkbox.
                 ACH = t.rows
-                    .map((r) => ({
-                        name: (r[ci.name] ?? "").trim(),
-                        game: (r[ci.game] ?? "").trim(),
-                        gs: parseInt(r[ci.gs], 10) || 0,
-                        on: String(r[ci.check] ?? "").trim().toUpperCase() === "TRUE",
-                        desc: (r[ci.desc] ?? "").trim(),
-                    }))
-                    .filter((a) => a.name && a.game);
-                if (!ACH.length) throw new Error("The Achievements tab has no rows");
+                    .map((r) => {
+                        const dateStr = cell(r, "date");
+                        const date = parseSheetDate(dateStr);
+                        return {
+                            name: cell(r, "name"),
+                            title: cell(r, "game"),
+                            platform: cell(r, "platform") || "Unknown",
+                            gs: parseInt(cell(r, "gs"), 10) || 0,
+                            on: cell(r, "check").toUpperCase() === "TRUE",
+                            desc: cell(r, "desc"),
+                            dateStr: date ? dateStr : "",
+                            date,
+                            time: date ? date.getTime() : 0,
+                        };
+                    })
+                    .filter((a) => a.name && a.title);
+                if (!ACH.length) throw new Error(`The "${achTab.name}" tab has no achievements yet`);
+
+                // A title tracked on two platforms is two separate games.
+                const platformsOf = {};
+                ACH.forEach((a) => (platformsOf[a.title] ||= new Set()).add(a.platform));
                 ACH.forEach((a, i) => {
+                    a.game = platformsOf[a.title].size > 1 ? `${a.title} (${a.platform})` : a.title;
                     a.id = i;
                     a.cat = classify(a);
                     a.bucket = bucketOf(a.gs);
                 });
 
-                GAMES = aggregate(ACH);
+                // Games grouped by platform, so neighbouring colours share a platform.
+                GAMES = aggregate(ACH).sort(
+                    (a, b) => platformRank(a.platform) - platformRank(b.platform) || a.name.localeCompare(b.name),
+                );
                 GAMES.forEach((g, i) => {
                     const h = Math.round((i * 360) / GAMES.length + 190) % 360;
                     GAME_COLOR[g.name] = `hsl(${h}, 70%, 62%)`;
+                    g.title = ACH.find((a) => a.game === g.name).title;
                 });
 
-                joinMaster(
-                    masterText.status === "fulfilled" ? masterText.value : null,
-                    mapText.status === "fulfilled" ? mapText.value : null,
+                // Only the console tabs these platforms can match.
+                const wanted = new Set(GAMES.flatMap((g) => [...platformTabKeys(g.platform)]));
+                const tabs = consoleTabs.filter((tab) => wanted.has(norm(tab.name)));
+                const texts = await Promise.allSettled(tabs.map((tab) => loadTab(tab.gid)));
+                joinCollection(
+                    tabs
+                        .map((tab, i) => ({ name: tab.name, text: texts[i].status === "fulfilled" ? texts[i].value : null }))
+                        .filter((x) => x.text),
                 );
 
                 const sel = document.getElementById("focusSelect");
-                [...GAMES]
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .forEach((g) => {
+                [...new Set(GAMES.map((g) => g.platform))].forEach((p) => {
+                    const grp = document.createElement("optgroup");
+                    grp.label = p;
+                    GAMES.filter((g) => g.platform === p).forEach((g) => {
                         const o = document.createElement("option");
                         o.value = g.name;
                         o.textContent = g.name;
-                        sel.appendChild(o);
+                        grp.appendChild(o);
                     });
+                    sel.appendChild(grp);
+                });
 
+                const matched = GAMES.filter((g) => g.owned).length;
                 document.getElementById("footer").textContent =
-                    `${fmt(ACH.length)} achievements across ${GAMES.length} games, read live from the "360 Achievements" tab. Categories are guessed from description keywords.`;
+                    `${fmt(ACH.length)} achievements across ${GAMES.length} games, read live from the "${achTab.name}" tab. ` +
+                    `${matched} of those games were matched to a copy in the collection for price and box art. Categories are guessed from description keywords.`;
             }
 
-            // Pulls price, purchase date and box art from MASTER. The achievement
-            // tab uses the same game names as MASTER, with Title Map's API names
-            // as a fallback alias.
-            function joinMaster(masterText, mapText) {
-                const alias = {};
-                if (mapText) {
-                    const t = tableFrom(mapText, (c) => c.includes("Game") && c.includes("API Name"));
-                    if (t) {
-                        const gi = t.headers.indexOf("Game");
-                        const ai = t.headers.indexOf("API Name");
-                        t.rows.forEach((r) => {
-                            if (r[gi] && r[ai]) alias[norm(r[ai])] = norm(r[gi]);
+            // Collection titles and achievement titles are written differently
+            // ("GTA V" / "Grand Theft Auto V", "Call of Duty: WaW" / "Call of
+            // Duty: World at War"), so both sides are reduced to a comparable key.
+            const TITLE_ABBR = {
+                gta: "grand theft auto",
+                waw: "world at war",
+                wwii: "world war 2",
+                ww2: "world war 2",
+                cod: "call of duty",
+            };
+            const ROMAN = { ii: "2", iii: "3", iv: "4", v: "5", vi: "6", vii: "7", viii: "8", ix: "9", x: "10" };
+            function titleKey(s) {
+                return String(s ?? "")
+                    .toLowerCase()
+                    .replace(/\s*\((xbox[^)]*|pc|playstation[^)]*|ps\d)\)\s*$/, "")
+                    .replace(/&/g, " and ")
+                    .replace(/[^a-z0-9]+/g, " ")
+                    .trim()
+                    .split(" ")
+                    .filter((w) => w !== "the")
+                    .map((w) => TITLE_ABBR[w] || ROMAN[w] || w)
+                    .join("")
+                    .replace(/\s+/g, "");
+            }
+
+            // Pulls price, purchase date, progress and box art from the console
+            // tab(s) matching each game's platform.
+            function joinCollection(tabs) {
+                const entries = [];
+                tabs.forEach(({ name, text }) => {
+                    const t = tableFrom(text, (c) => c.some((h) => /^(game\s*)?title$|^game$/i.test(h)));
+                    if (!t) return;
+                    const h = t.headers;
+                    const ci = {
+                        game: colIndex(h, /^(game\s*)?title$|^game$/i),
+                        price: colIndex(h, /(purchase|paid)\s*price|price\s*purchased/i),
+                        date: colIndex(h, /date\s*purchas/i),
+                        progress: colIndex(h, /progress/i),
+                        links: colIndex(h, /cex|listing|link/i),
+                    };
+                    const cell = (r, k) => (ci[k] >= 0 ? (r[ci[k]] ?? "").trim() : "");
+                    t.rows.forEach((r) => {
+                        const title = cell(r, "game");
+                        if (!title) return;
+                        const d = parseSheetDate(cell(r, "date"));
+                        entries.push({
+                            title,
+                            key: titleKey(title),
+                            console: name,
+                            consoleKey: norm(name),
+                            price: parsePrice(cell(r, "price")),
+                            date: cell(r, "date"),
+                            time: d ? d.getTime() : Infinity,
+                            progress: cell(r, "progress"),
+                            cover: coverFromLinks(cell(r, "links")),
                         });
-                    }
-                }
-                if (!masterText) return;
-                const t = tableFrom(masterText, (c) =>
-                    c.some((h) => /^game$/i.test(h)) && c.some((h) => /console/i.test(h)),
-                );
-                if (!t) return;
-                const h = t.headers;
-                const ci = {
-                    game: colIndex(h, /^game$/i),
-                    console: colIndex(h, /console/i),
-                    price: colIndex(h, /(purchase|paid)\s*price|price\s*purchased/i),
-                    date: colIndex(h, /date\s*purchas/i),
-                    completed: colIndex(h, /complete/i),
-                    links: colIndex(h, /cex|listing/i),
-                };
-                const byName = {};
-                t.rows.forEach((r) => {
-                    if (!/360/.test(r[ci.console] ?? "")) return;
-                    const k = norm(r[ci.game]);
-                    if (k && !byName[k]) byName[k] = r;
+                    });
                 });
+
                 GAMES.forEach((g) => {
-                    const r = byName[norm(g.name)] || byName[alias[norm(g.name)]];
-                    if (!r) return;
-                    g.price = ci.price >= 0 ? parsePrice(r[ci.price]) : null;
-                    g.date = ci.date >= 0 ? r[ci.date] : "";
-                    g.completedFlag = ci.completed >= 0 && /true/i.test(r[ci.completed]);
-                    g.cover = ci.links >= 0 ? coverFromLinks(r[ci.links]) : null;
+                    const keys = platformTabKeys(g.platform);
+                    const cands = entries.filter((e) => keys.has(e.consoleKey));
+                    const k = titleKey(g.title);
+                    let hit = cands.filter((e) => e.key === k);
+                    // "Modern Warfare 2" → "Call of Duty: Modern Warfare 2",
+                    // "Onechanbara" → "Onechanbara - Bikini Samurai Squad".
+                    // Only when exactly one title fits.
+                    if (!hit.length && k.length >= 6) {
+                        const edge = cands.filter((e) => e.key.endsWith(k) || e.key.startsWith(k));
+                        if (new Set(edge.map((e) => e.key)).size === 1) hit = edge;
+                    }
+                    if (!hit.length) return;
+                    // Two copies of the same game: the first one bought.
+                    const e = [...hit].sort((a, b) => a.time - b.time)[0];
+                    g.owned = { title: e.title, console: e.console };
+                    g.price = e.price;
+                    g.date = e.date;
+                    g.progress = e.progress;
+                    g.cover = e.cover;
                 });
             }
 
@@ -996,7 +1070,13 @@
             const achTip = (a) =>
                 `<div style="font-weight:700;color:#fff">${a.on ? "🏆 " : "🔒 "}${escapeHtml(a.name)}</div>` +
                 `<div style="color:${GOLD};font-weight:600;margin:2px 0">${a.gs}G · ${escapeHtml(a.game)}</div>` +
+                `<div style="color:#71717a;font-size:11px;margin-bottom:2px">${escapeHtml(a.platform)}${a.dateStr ? ` · unlocked ${escapeHtml(a.dateStr)}` : ""}</div>` +
                 `<div style="color:#a1a1aa">${escapeHtml(a.desc || "No description")}</div>`;
+            // One line on the copy in the collection, for game tooltips.
+            const ownedLine = (g) =>
+                g.owned
+                    ? `<span style="color:#71717a">In the collection: ${escapeHtml(g.owned.console)}${g.price ? `, paid £${g.price.toFixed(2)}` : ""}${g.progress ? ` · ${escapeHtml(g.progress)}` : ""}</span>`
+                    : `<span style="color:#52525b">Not in the collection</span>`;
 
             // === FOCUS =============================================================
             function setFocus(name) {
@@ -1033,6 +1113,15 @@
                 );
             }
 
+            // "Xbox 360, Xbox One, Xbox Series and PC"
+            function listPlatforms(games, sep) {
+                const ps = [...new Set(games.flatMap((g) => platformParts(g.platform)))].sort(
+                    (a, b) => platformRank(a) - platformRank(b),
+                );
+                if (sep) return ps.join(sep);
+                return ps.length > 1 ? `${ps.slice(0, -1).join(", ")} and ${ps[ps.length - 1]}` : ps[0] || "";
+            }
+
             function renderHero() {
                 const v = view();
                 const gs = v.reduce((s, a) => s + a.gs, 0);
@@ -1044,7 +1133,11 @@
                 document.getElementById("heroTitle").textContent = focus || "Achievement Hall";
                 document.getElementById("heroSub").textContent = focus
                     ? `${unl} of ${v.length} achievements unlocked in ${focus}.`
-                    : `${fmt(v.length)} achievements across ${games.length} Xbox 360 games, and how Jake is getting on with them.`;
+                    : `${fmt(v.length)} achievements across ${games.length} games on ${listPlatforms(games)}, and how Jake is getting on with them.`;
+                document.getElementById("platformPill").textContent = focus
+                    ? `${gameInfo(focus).platform || ""} · Achievements`
+                    : `${listPlatforms(games, " · ")} · Achievements`;
+                document.getElementById("achSub").textContent = `${fmt(unl)} of ${fmt(v.length)} unlocked · ${fmt(gsUnl)}G`;
                 setOdometer(document.getElementById("odo"), gsUnl);
                 document.getElementById("gsTotal").textContent = fmt(gs);
 
@@ -1131,19 +1224,22 @@
             // === 2. RACE ===========================================================
             let raceTimer = null;
             function renderRace(animate) {
+                // ~24px per game keeps the box-art labels from overlapping.
+                document.getElementById("race").style.height = `${Math.max(720, GAMES.length * 24 + 40)}px`;
                 const c = chart("race");
+                c.resize();
                 const names = GAMES.map((g) => g.name);
                 const rich = {
                     n: { color: "#d4d4d8", fontSize: 11, padding: [0, 0, 0, 6] },
-                    ph: { fontSize: 16, width: 22, align: "center" },
+                    ph: { fontSize: 12, width: 15, align: "center" },
                 };
                 const key = {};
                 GAMES.forEach((g, i) => {
                     key[g.name] = g.cover ? `c${i}` : "ph";
                     if (g.cover)
                         rich[`c${i}`] = {
-                            width: 22,
-                            height: 30,
+                            width: 15,
+                            height: 20,
                             borderRadius: 3,
                             backgroundColor: { image: g.cover },
                         };
@@ -1181,7 +1277,7 @@
                             trigger: "item",
                             formatter: (p) => {
                                 const g = gameInfo(p.name);
-                                return `<b style="color:#fff">${escapeHtml(g.name)}</b><br>${g.unl}/${g.total} achievements<br>${fmt(g.gsUnl)} / ${fmt(g.gs)}G`;
+                                return `<b style="color:#fff">${escapeHtml(g.name)}</b> <span style="color:#71717a">${escapeHtml(g.platform)}</span><br>${g.unl}/${g.total} achievements<br>${fmt(g.gsUnl)} / ${fmt(g.gs)}G<br>${ownedLine(g)}`;
                             },
                         },
                         xAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
@@ -1193,6 +1289,7 @@
                             animationDurationUpdate: 300,
                             triggerEvent: true,
                             axisLabel: {
+                                interval: 0,
                                 formatter: (n) => `{${key[n]}|${key[n] === "ph" ? "🎮" : "\u00a0"}}{n|${short(n, window.innerWidth < 640 ? 14 : 24).replace(/[{}|]/g, "")}}`,
                                 rich,
                             },
@@ -1303,127 +1400,6 @@
             }
             const hideTip = () => (document.getElementById("tip").style.opacity = "0");
 
-            // === 4. SUNBURST =======================================================
-            function renderSunburst() {
-                const games = aggregate(view());
-                const v = view();
-                const data = games.map((g) => {
-                    const mine = v.filter((a) => a.game === g.name);
-                    const side = (on) => {
-                        const list = mine.filter((a) => a.on === on);
-                        return {
-                            name: on ? "Unlocked" : "Locked",
-                            itemStyle: { color: on ? GOLD : "#1e293b" },
-                            children: GS_BUCKETS.map((b, bi) => {
-                                const val = list.filter((a) => a.bucket === bi).reduce((s, a) => s + a.gs, 0);
-                                return {
-                                    name: b.label,
-                                    value: val,
-                                    itemStyle: {
-                                        color: on
-                                            ? `rgba(250,204,21,${0.35 + bi * 0.08})`
-                                            : `rgba(100,116,139,${0.25 + bi * 0.07})`,
-                                    },
-                                };
-                            }).filter((x) => x.value > 0),
-                        };
-                    };
-                    return {
-                        name: g.name,
-                        itemStyle: { color: GAME_COLOR[g.name] },
-                        children: [side(true), side(false)].filter((s) => s.children.length),
-                    };
-                });
-                chart("sunburst").setOption(
-                    {
-                        ...base(),
-                        tooltip: {
-                            ...TOOLTIP,
-                            formatter: (p) =>
-                                `<b style="color:#fff">${p.treePathInfo.slice(1).map((x) => escapeHtml(x.name)).join(" › ")}</b><br>${fmt(p.value)}G`,
-                        },
-                        series: [
-                            {
-                                type: "sunburst",
-                                data,
-                                radius: [0, "95%"],
-                                sort: null,
-                                emphasis: { focus: "ancestor" },
-                                itemStyle: { borderColor: "#111", borderWidth: 1.5 },
-                                levels: [
-                                    {},
-                                    {
-                                        r0: "14%",
-                                        r: "52%",
-                                        label: { rotate: "radial", color: "#0a0a0a", fontWeight: 700, fontSize: 10, minAngle: 9, formatter: (p) => short(p.name, 16) },
-                                    },
-                                    { r0: "52%", r: "76%", label: { color: "#e4e4e7", fontSize: 10, minAngle: 12 } },
-                                    { r0: "76%", r: "92%", label: { show: false } },
-                                ],
-                            },
-                        ],
-                    },
-                    true,
-                );
-            }
-
-            // === 5. TREEMAP ========================================================
-            function renderTreemap() {
-                const games = aggregate(view());
-                const v = view();
-                const data = games.map((g) => ({
-                    name: g.name,
-                    itemStyle: { borderColor: GAME_COLOR[g.name] },
-                    children: v
-                        .filter((a) => a.game === g.name)
-                        .map((a) => ({
-                            name: a.name,
-                            value: Math.max(a.gs, 2),
-                            ach: a,
-                            itemStyle: { color: a.on ? GOLD : "#1f2937" },
-                            label: { color: a.on ? "#0a0a0a" : "#94a3b8" },
-                        })),
-                }));
-                chart("treemap").setOption(
-                    {
-                        ...base(),
-                        tooltip: {
-                            ...TOOLTIP,
-                            formatter: (p) => {
-                                if (p.data && p.data.ach) return achTip(p.data.ach);
-                                const g = gameInfo(p.name);
-                                return `<b style="color:#fff">${escapeHtml(p.name)}</b><br>${g.unl ?? 0}/${g.total ?? 0} unlocked`;
-                            },
-                        },
-                        series: [
-                            {
-                                type: "treemap",
-                                data,
-                                roam: false,
-                                width: "100%",
-                                height: "88%",
-                                top: 0,
-                                nodeClick: "zoomToNode",
-                                visibleMin: 200,
-                                breadcrumb: {
-                                    show: true,
-                                    bottom: 0,
-                                    itemStyle: { color: "#18181b", borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#e4e4e7" } },
-                                },
-                                label: { show: false },
-                                upperLabel: { show: true, height: 20, color: "#fff", fontWeight: 700, fontSize: 11 },
-                                levels: [
-                                    { itemStyle: { borderColor: "#0a0a0a", borderWidth: 0, gapWidth: 4 }, upperLabel: { show: false } },
-                                    { itemStyle: { borderWidth: 2, gapWidth: 1 } },
-                                    { itemStyle: { borderColor: "#0a0a0a", borderWidth: 1, gapWidth: 0 } },
-                                ],
-                            },
-                        ],
-                    },
-                    true,
-                );
-            }
-
             // === 6. RADAR ==========================================================
             function renderRadar() {
                 const v = view();
@@ -1497,6 +1473,8 @@
             function renderSankey() {
                 const v = view();
                 const games = aggregate(v);
+                document.getElementById("sankey").style.height = `${Math.max(620, games.length * 16 + 60)}px`;
+                chart("sankey").resize();
                 const links = new Map();
                 const add = (s, t, val) => {
                     const k = `${s}→${t}`;
@@ -1627,188 +1605,74 @@
                 );
             }
 
-            // === 9. WORD CLOUD =====================================================
-            const STOP = new Set(
-                "the a an and or of to in on at for with without your you all any each every by from as is be into than then that this it its get got have has one two three four five six seven eight nine ten times time are was were not but out up over under while after before during more most least using use used can will per off yourself their them they his her him she he who which what when where how only same total least through being been least other another least also least just".split(
-                    " ",
-                ),
-            );
-            function renderCloud() {
+            // === UNLOCK TIMELINE =====================================================
+            function renderTimeline() {
                 const v = view();
-                const words = new Map();
-                v.forEach((a) => {
-                    const seen = new Set(
-                        (a.desc.toLowerCase().match(/[a-z][a-z'-]+/g) || [])
-                            .map((w) => w.replace(/'s$/, "").replace(/^-|-$/g, ""))
-                            .filter((w) => w.length > 2 && !STOP.has(w)),
-                    );
-                    seen.forEach((w) => {
-                        const e = words.get(w) || { n: 0, on: 0 };
-                        e.n++;
-                        if (a.on) e.on++;
-                        words.set(w, e);
-                    });
+                const dated = v.filter((a) => a.on && a.date).sort((a, b) => a.time - b.time);
+                const undated = v.filter((a) => a.on && !a.date).length;
+                const note = document.getElementById("timelineNote");
+                const c = chart("timeline");
+                if (!dated.length) {
+                    c.clear();
+                    note.innerHTML = undated
+                        ? `${fmt(undated)} unlock${undated > 1 ? "s have" : " has"} no date in the sheet yet, so there's nothing to plot.`
+                        : `<span class="text-zinc-500">No unlocks yet.</span>`;
+                    return;
+                }
+                const mk = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                const first = dated[0].date;
+                const last = dated[dated.length - 1].date;
+                const months = [];
+                for (let d = new Date(first.getFullYear(), first.getMonth(), 1); d <= last; d.setMonth(d.getMonth() + 1)) months.push(mk(d));
+                const gsBy = {};
+                const nBy = {};
+                dated.forEach((a) => {
+                    const k = mk(a.date);
+                    gsBy[k] = (gsBy[k] || 0) + a.gs;
+                    nBy[k] = (nBy[k] || 0) + 1;
                 });
-                const top = [...words].sort((a, b) => b[1].n - a[1].n).slice(0, 130);
-                const color = (e) => {
-                    const r = e.on / e.n;
-                    if (r >= 0.3) return GOLD;
-                    if (r > 0) return "#fde68a";
-                    return ["#67e8f9", "#22d3ee", "#a1a1aa", "#64748b", "#38bdf8"][Math.floor(Math.random() * 5)];
+                let run = 0;
+                const cum = months.map((k) => (run += gsBy[k] || 0));
+                const label = (k) => {
+                    const [y, m] = k.split("-");
+                    return new Date(+y, +m - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
                 };
-                chart("cloud").setOption(
+                const best = Object.entries(gsBy).sort((a, b) => b[1] - a[1])[0];
+                note.innerHTML =
+                    `🗓️ <b class="text-white">${fmt(dated.length)}</b> dated unlocks worth <b class="text-gold">${fmt(run)}G</b>, from ${escapeHtml(dated[0].dateStr)} to ${escapeHtml(dated[dated.length - 1].dateStr)}. ` +
+                    `Best month: <b class="text-gold">${label(best[0])}</b> with ${fmt(best[1])}G.` +
+                    (undated ? ` <span class="text-zinc-500">${fmt(undated)} more unlock${undated > 1 ? "s have" : " has"} no date and ${undated > 1 ? "aren't" : "isn't"} shown.</span>` : "");
+                // Start zoomed on the last two years when the history is long.
+                const start = months.length > 24 ? Math.round((1 - 24 / months.length) * 100) : 0;
+                c.setOption(
                     {
                         ...base(),
+                        legend: { top: 0, right: 0, data: ["G that month", "Running total"] },
+                        grid: { left: 8, right: 8, top: 36, bottom: 48, containLabel: true },
                         tooltip: {
                             ...TOOLTIP,
-                            formatter: (p) => `<b style="color:#fff">“${escapeHtml(p.name)}”</b><br>in ${p.data.n} descriptions, ${p.data.on} unlocked`,
-                        },
-                        series: [
-                            {
-                                type: "wordCloud",
-                                shape: "circle",
-                                left: "center",
-                                top: "center",
-                                width: "100%",
-                                height: "100%",
-                                sizeRange: [11, 58],
-                                rotationRange: [-45, 45],
-                                rotationStep: 45,
-                                gridSize: 6,
-                                drawOutOfBound: false,
-                                layoutAnimation: !REDUCED,
-                                textStyle: { fontFamily: "Inter, sans-serif", fontWeight: 700 },
-                                emphasis: { textStyle: { shadowBlur: 12, shadowColor: "rgba(250,204,21,0.8)" } },
-                                data: top.map(([w, e]) => ({
-                                    name: w,
-                                    value: e.n,
-                                    n: e.n,
-                                    on: e.on,
-                                    textStyle: { color: color(e) },
-                                })),
+                            trigger: "axis",
+                            formatter: (ps) => {
+                                const k = months[ps[0].dataIndex];
+                                return `<b style="color:#fff">${label(k)}</b><br>${fmt(gsBy[k] || 0)}G from ${nBy[k] || 0} unlock${nBy[k] === 1 ? "" : "s"}<br><span style="color:#71717a">Running total ${fmt(cum[ps[0].dataIndex])}G</span>`;
                             },
+                        },
+                        dataZoom: [
+                            { type: "slider", start, end: 100, height: 18, bottom: 8, borderColor: "transparent", textStyle: { color: "#71717a" } },
+                            { type: "inside", start, end: 100 },
+                        ],
+                        xAxis: { type: "category", data: months.map(label) },
+                        yAxis: [
+                            { type: "value", name: "G / month", nameTextStyle: { color: "#71717a" } },
+                            { type: "value", name: "Total", nameTextStyle: { color: "#71717a" }, splitLine: { show: false } },
+                        ],
+                        series: [
+                            { name: "G that month", type: "bar", data: months.map((k) => gsBy[k] || 0), itemStyle: { color: GOLD, borderRadius: [4, 4, 0, 0] } },
+                            { name: "Running total", type: "line", yAxisIndex: 1, step: "end", symbol: "none", data: cum, lineStyle: { color: CYAN, width: 2 }, areaStyle: { color: "rgba(34,211,238,0.08)" } },
                         ],
                     },
                     true,
                 );
-            }
-
-            // === 10. VALUE SCATTER =================================================
-            function renderScatter() {
-                const priced = GAMES.filter((g) => g.price);
-                const head = document.getElementById("valueHeadline");
-                if (!priced.length) {
-                    head.innerHTML = `<span class="text-zinc-500">Couldn't match these games to prices in MASTER.</span>`;
-                    chart("scatter").clear();
-                    return;
-                }
-                const best = [...priced].sort((a, b) => b.gsUnl / b.price - a.gsUnl / a.price)[0];
-                const untapped = [...priced].sort((a, b) => b.gs - b.gsUnl - (a.gs - a.gsUnl))[0];
-                const missing = GAMES.length - priced.length;
-                head.innerHTML =
-                    `<div class="flex flex-wrap gap-3">` +
-                    `<div class="rounded-lg bg-gold/10 border border-gold/30 px-3 py-2"><span class="text-zinc-400">Best value:</span> <b class="text-gold">${escapeHtml(best.name)}</b>, ${(best.gsUnl / best.price).toFixed(0)}G per £</div>` +
-                    `<div class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2"><span class="text-zinc-400">Most untapped:</span> <b class="text-accent">${escapeHtml(untapped.name)}</b>, ${fmt(untapped.gs - untapped.gsUnl)}G still waiting</div>` +
-                    `</div>` +
-                    (missing ? `<div class="text-xs text-zinc-600 mt-2">${missing} game${missing > 1 ? "s" : ""} had no price in MASTER and aren't plotted.</div>` : "");
-                chart("scatter").setOption(
-                    {
-                        ...base(),
-                        grid: { left: 8, right: 24, top: 36, bottom: 28, containLabel: true },
-                        tooltip: {
-                            ...TOOLTIP,
-                            formatter: (p) => {
-                                const g = gameInfo(p.data.name);
-                                return `<b style="color:#fff">${escapeHtml(g.name)}</b><br>Paid £${g.price.toFixed(2)}${g.date ? ` on ${escapeHtml(g.date)}` : ""}<br>${fmt(g.gsUnl)} / ${fmt(g.gs)}G<br><b style="color:${GOLD}">${(g.gsUnl / g.price).toFixed(1)}G per £</b>`;
-                            },
-                        },
-                        // Prices run from about £1 to £50, so a log axis stops the cheap games piling up.
-                        xAxis: { type: "log", logBase: 2, min: 1, name: "Paid (£, log)", nameLocation: "middle", nameGap: 28, nameTextStyle: { color: "#71717a" }, axisLabel: { formatter: (v) => `£${v}` }, splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } }, axisLine: { lineStyle: { color: "#3f3f46" } } },
-                        yAxis: { type: "value", name: "G earned", nameTextStyle: { color: "#71717a" }, max: (e) => Math.ceil((e.max * 1.15) / 100) * 100 },
-                        series: [
-                            {
-                                type: "scatter",
-                                data: priced.map((g) => ({
-                                    name: g.name,
-                                    value: [Math.max(g.price, 1), g.gsUnl],
-                                    symbolSize: Math.sqrt(g.gs) * 1.3,
-                                    itemStyle: {
-                                        color: GAME_COLOR[g.name],
-                                        opacity: focus && g.name !== focus ? 0.15 : 0.85,
-                                        borderColor: g.unl === g.total ? GOLD : "rgba(255,255,255,0.3)",
-                                        borderWidth: g.unl === g.total ? 3 : 1,
-                                        shadowBlur: 12,
-                                        shadowColor: GAME_COLOR[g.name],
-                                    },
-                                })),
-                                label: { show: true, position: "top", color: "#a1a1aa", fontSize: 10, formatter: (p) => short(p.name, 16) },
-                                labelLayout: { hideOverlap: true },
-                                animationDelay: (i) => i * 60,
-                            },
-                        ],
-                    },
-                    true,
-                );
-            }
-
-            // === 11. SKYLINE =======================================================
-            function renderSkyline() {
-                if (!window["echarts-gl"]) {
-                    document.getElementById("skylineCard").style.display = "none";
-                    return;
-                }
-                const names = GAMES.map((g) => g.name);
-                const cell = (on) => {
-                    const out = [];
-                    names.forEach((n, xi) =>
-                        GS_BUCKETS.forEach((b, yi) => {
-                            const c = ACH.filter((a) => a.game === n && a.bucket === yi && a.on === on).length;
-                            if (c) out.push([xi, yi, c]);
-                        }),
-                    );
-                    return out;
-                };
-                const axisText = { color: "#a1a1aa", fontSize: 10 };
-                // WebGL can be missing (old GPU, locked-down browser); lose the
-                // card rather than the page.
-                try {
-                chart("skyline").setOption({
-                    tooltip: {
-                        ...TOOLTIP,
-                        formatter: (p) => `<b style="color:#fff">${escapeHtml(names[p.value[0]])}</b><br>${GS_BUCKETS[p.value[1]].label} · ${p.seriesName}: ${p.value[2]}`,
-                    },
-                    xAxis3D: { type: "category", data: names.map((n) => short(n, 12)), axisLabel: { ...axisText, interval: 0 }, name: "" },
-                    yAxis3D: { type: "category", data: GS_BUCKETS.map((b) => b.label), axisLabel: axisText, name: "" },
-                    zAxis3D: { type: "value", axisLabel: axisText, name: "" },
-                    grid3D: {
-                        boxWidth: 220,
-                        boxDepth: 90,
-                        boxHeight: 70,
-                        axisLine: { lineStyle: { color: "#3f3f46" } },
-                        axisPointer: { lineStyle: { color: GOLD } },
-                        splitLine: { lineStyle: { color: "rgba(255,255,255,0.06)" } },
-                        environment: "none",
-                        viewControl: {
-                            autoRotate: !REDUCED,
-                            autoRotateSpeed: 6,
-                            distance: 210,
-                            alpha: 22,
-                            beta: 35,
-                        },
-                        light: {
-                            main: { intensity: 1.3, shadow: true, alpha: 40, beta: 30 },
-                            ambient: { intensity: 0.35 },
-                        },
-                    },
-                    series: [
-                        { name: "Locked", type: "bar3D", stack: "st", data: cell(false), shading: "lambert", itemStyle: { color: "#475569" }, bevelSize: 0.3 },
-                        { name: "Unlocked", type: "bar3D", stack: "st", data: cell(true), shading: "lambert", itemStyle: { color: GOLD }, bevelSize: 0.3, emphasis: { itemStyle: { color: "#fef08a" } } },
-                    ],
-                });
-                } catch (e) {
-                    console.warn("3D skyline unavailable", e);
-                    document.getElementById("skylineCard").style.display = "none";
-                }
             }
 
             // === 12. TO-DO =========================================================
@@ -1863,10 +1727,7 @@
                 if (!v.length) return;
                 const on = v.filter((a) => a.on);
                 const off = v.filter((a) => !a.on);
-                const games = aggregate(v);
                 const byGs = (l) => [...l].sort((a, b) => b.gs - a.gs)[0];
-                const longest = [...v].sort((a, b) => b.desc.length - a.desc.length)[0];
-                const shortest = [...v].sort((a, b) => a.name.length - b.name.length)[0];
                 const zero = v.filter((a) => a.gs === 0);
                 const killers = v.filter((a) => /\bkill|takedown|headshot|defeat/i.test(a.desc));
                 const bodyCount = killers.reduce((s, a) => {
@@ -1876,17 +1737,19 @@
                 const gsCounts = {};
                 v.forEach((a) => (gsCounts[a.gs] = (gsCounts[a.gs] || 0) + 1));
                 const commonGs = Object.entries(gsCounts).sort((a, b) => b[1] - a[1])[0];
-                const untouched = games.filter((g) => g.unl === 0);
                 const remainingGs = off.reduce((s, a) => s + a.gs, 0);
+                const dated = on.filter((a) => a.date).sort((a, b) => b.time - a.time);
+                const perDay = {};
+                dated.forEach((a) => (perDay[a.dateStr] = (perDay[a.dateStr] || 0) + 1));
+                const bestDay = Object.entries(perDay).sort((a, b) => b[1] - a[1])[0];
                 const facts = [
+                    dated[0] && ["🆕", "Latest unlock", dated[0].name, `${dated[0].game}, ${dated[0].dateStr} (${dated[0].gs}G)`],
+                    bestDay && ["🔥", "Best day", `${bestDay[1]} unlocks`, `All on ${bestDay[0]}`],
                     on.length && ["💎", "Biggest unlock", `${byGs(on).gs}G`, `${byGs(on).name} (${byGs(on).game})`],
                     off.length && ["🎯", "Juiciest locked", `${byGs(off).gs}G`, `${byGs(off).name} (${byGs(off).game}): ${byGs(off).desc}`],
                     ["💀", "Body count demanded", fmt(bodyCount), `${killers.length} achievements want kills, takedowns or headshots. This adds up the numbers they ask for.`],
-                    ["📜", "Wordiest description", `${longest.desc.length} chars`, `${longest.name}: “${longest.desc}”`],
-                    ["🔤", "Shortest name", `“${shortest.name}”`, shortest.game],
                     ["🥚", "Worth nothing", `${zero.length} × 0G`, zero.length ? zero.slice(0, 3).map((a) => a.name).join(", ") + (zero.length > 3 ? "…" : "") : "Every achievement here is worth something"],
                     ["🎰", "Most common value", `${commonGs[0]}G`, `${commonGs[1]} achievements are worth exactly ${commonGs[0]}G`],
-                    ["🪦", "Untouched games", String(untouched.length), untouched.length ? untouched.map((g) => g.name).join(", ") : "Every game has at least one unlock"],
                     ["🧮", "G still on the table", `${fmt(remainingGs)}G`, `That's ${(remainingGs / 1000).toFixed(1)} full 1000G games' worth`],
                 ].filter(Boolean);
                 document.getElementById("facts").innerHTML = facts
@@ -1902,28 +1765,25 @@
             // === 14. BROWSER =======================================================
             function renderBrowser() {
                 const q = document.getElementById("search").value.trim().toLowerCase();
-                const wordRe = wordFilter ? new RegExp(`\\b${wordFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i") : null;
                 const { k, dir } = browserSort;
                 const list = view()
                     .filter((a) => browserStatus === "all" || (browserStatus === "on") === a.on)
-                    .filter((a) => !q || `${a.name} ${a.desc} ${a.game} ${a.cat}`.toLowerCase().includes(q))
-                    .filter((a) => !wordRe || wordRe.test(a.desc))
+                    .filter((a) => !q || `${a.name} ${a.desc} ${a.game} ${a.platform} ${a.cat}`.toLowerCase().includes(q))
                     .sort((a, b) => {
                         const x = a[k];
                         const y = b[k];
                         const c = typeof x === "string" ? x.localeCompare(y) : x - y;
                         return c * dir || a.id - b.id;
                     });
-                document.getElementById("browserCount").innerHTML =
-                    `${fmt(list.length)} shown` +
-                    (wordFilter ? ` · word: <button id="clearWord" class="text-gold underline">“${escapeHtml(wordFilter)}” ✕</button>` : "");
+                document.getElementById("browserCount").textContent = `${fmt(list.length)} shown`;
                 document.getElementById("browserBody").innerHTML = list
                     .map(
                         (a) => `<tr class="border-t border-white/5 hover:bg-white/[0.02]">
                         <td class="py-2 px-2 text-center">${a.on ? "🏆" : '<span class="text-zinc-700">🔒</span>'}</td>
                         <td class="py-2 px-2"><div class="font-semibold ${a.on ? "text-gold" : "text-zinc-200"}">${escapeHtml(a.name)}</div><div class="text-xs text-zinc-500">${escapeHtml(a.desc)}</div></td>
-                        <td class="py-2 px-2 text-zinc-400 whitespace-nowrap">${escapeHtml(a.game)}</td>
+                        <td class="py-2 px-2 whitespace-nowrap"><div class="text-zinc-400">${escapeHtml(a.game)}</div><div class="text-[11px] text-zinc-600">${escapeHtml(a.platform)}</div></td>
                         <td class="py-2 px-2"><span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="color:${CAT_COLOR[a.cat]};background:${CAT_COLOR[a.cat]}1f">${a.cat}</span></td>
+                        <td class="py-2 px-2 text-xs text-zinc-500 whitespace-nowrap">${a.dateStr || (a.on ? '<span class="text-zinc-700">no date</span>' : "")}</td>
                         <td class="py-2 px-2 text-right font-bold ${a.on ? "text-gold" : "text-zinc-400"}">${a.gs}</td></tr>`,
                     )
                     .join("");
@@ -1937,15 +1797,11 @@
                 renderHero();
                 renderRace(first);
                 renderWall();
-                renderSunburst();
-                renderTreemap();
                 renderRadar();
                 renderSankey();
                 renderHist();
                 renderRose();
-                renderCloud();
-                renderScatter();
-                if (first) renderSkyline();
+                renderTimeline();
                 renderTodo();
                 renderFacts();
                 renderBrowser();
@@ -1958,13 +1814,7 @@
                 };
                 chart("race").on("click", focusFrom);
                 chart("rose").on("click", focusFrom);
-                chart("scatter").on("click", (p) => setFocus(p.data.name));
                 chart("sankey").on("click", (p) => p.dataType === "node" && GAME_COLOR[p.name] && setFocus(p.name));
-                chart("cloud").on("click", (p) => {
-                    wordFilter = p.name;
-                    renderBrowser();
-                    document.getElementById("browserCard").scrollIntoView({ behavior: "smooth" });
-                });
 
                 document.getElementById("focusSelect").addEventListener("change", (e) => setFocus(e.target.value || null));
                 document.getElementById("focusPill").addEventListener("click", () => setFocus(null));
@@ -2008,16 +1858,10 @@
                 document.querySelectorAll("th.sortable").forEach((th) =>
                     th.addEventListener("click", () => {
                         const k = th.dataset.k;
-                        browserSort = { k, dir: browserSort.k === k ? -browserSort.dir : k === "gs" || k === "on" ? -1 : 1 };
+                        browserSort = { k, dir: browserSort.k === k ? -browserSort.dir : k === "gs" || k === "on" || k === "time" ? -1 : 1 };
                         renderBrowser();
                     }),
                 );
-                document.getElementById("browserCount").addEventListener("click", (e) => {
-                    if (e.target.id === "clearWord") {
-                        wordFilter = null;
-                        renderBrowser();
-                    }
-                });
 
                 let rt;
                 window.addEventListener("resize", () => {

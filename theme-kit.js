@@ -27,7 +27,7 @@
         <div class="kit-controls">
             <div class="kit-search">
                 <input type="text" id="searchBox" autocomplete="off"
-                    placeholder="${L("search", "Search title, console, edition, notes…   ( / )")}"
+                    placeholder="${L("search", "Search title, console, condition, notes…   ( / )")}"
                     oninput="onSearchInput()" />
             </div>
             <div class="seg kit-views">
@@ -173,7 +173,7 @@
 
         <div id="loadingOverlay" class="kit-loading fixed inset-0 z-[300] hidden items-center justify-center">
             <div class="kit-loading-panel text-center">
-                ${THEME.loadingHTML || `<div class="kit-loading-title">${L("loading", "Loading MASTER sheet…")}</div>`}
+                ${THEME.loadingHTML || `<div class="kit-loading-title">${L("loading", "Loading collection…")}</div>`}
             </div>
         </div>
 
@@ -239,6 +239,11 @@
             tier: kit.tier(value),
             hasCoverArt: hasCover(row),
             hasInsert: hasInsert(row),
+            condition: conditionOf(row),
+            conditionLabel: conditionLabel(row),
+            progress: progressOf(row),
+            progressLabel: progressLabel(row),
+            inProgress: isInProgress(row),
         };
     };
 
@@ -288,6 +293,9 @@
                 : 0,
             sealed: owned.filter(isSealed).length,
             complete: owned.filter(isComplete).length,
+            inProgress: owned.filter(isInProgress).length,
+            noManual: owned.filter((r) => conditionOf(r) === "no-manual").length,
+            loose: owned.filter((r) => conditionOf(r) === "loose").length,
             totals: t,
         };
     };
@@ -452,7 +460,7 @@
             orig.apply(this, arguments);
             if (THEME.onRender) THEME.onRender();
         });
-        kit.wrap("parseCSV", (orig) => function () {
+        kit.wrap("parseSheets", (orig) => function () {
             const ok = orig.apply(this, arguments);
             if (ok && THEME.onData) THEME.onData();
             return ok;

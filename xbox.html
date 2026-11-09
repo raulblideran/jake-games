@@ -616,7 +616,7 @@
                         <div class="gt">Jake</div>
                         <div class="gs"><span class="gicon">G</span><span id="gscore">0</span></div>
                         <div class="rep" id="rep" title="Reputation: share of games finished">★★★★★</div>
-                        <div class="motto">Physical games · completeness · live CeX value</div>
+                        <div class="motto">Physical games · condition · live CeX value</div>
                     </div>
                 </div>
                 <div class="clock">
@@ -681,7 +681,7 @@
             window.THEME = {
                 sfxDemo: "chime",
                 labels: {
-                    search: "Search games, consoles, editions…  ( Y )",
+                    search: "Search games, consoles, condition…  ( Y )",
                     grid: "Tiles",
                     table: "List",
                     refresh: "Sync",
@@ -695,6 +695,7 @@
             };
         </script>
         <script src="theme-kit.js"></script>
+        <script src="sheet-config.js"></script>
         <script src="collection-core.js"></script>
         <script>
             (function () {
@@ -773,7 +774,8 @@
                         tile("wide t-blue", "🏆", `${s.completed}`, "completed", `${s.completedPct}% of collection`, 0.2) +
                         tile("t-gold", "✨", s.sealed, "sealed", "", 0.25) +
                         tile("t-dark", "🕹", s.consoles, "consoles", "", 0.3) +
-                        (s.toBuy > 0 ? tile("t-purple", "⭐", s.toBuy, "wishlist", "", 0.35) : "");
+                        tile("t-purple", "▶", s.inProgress, "in progress", "", 0.35) +
+                        (s.toBuy > 0 ? tile("t-purple", "⭐", s.toBuy, "wishlist", "", 0.4) : "");
                     kit.countUp(document.getElementById("gscore"), Math.round(s.value), (n) => Math.round(n).toLocaleString("en-GB"));
                     const stars = Math.max(1, Math.round((s.completedPct / 100) * 5 + 1));
                     document.getElementById("rep").textContent = "★".repeat(Math.min(5, stars)) + "☆".repeat(Math.max(0, 5 - stars));
@@ -801,7 +803,7 @@
                             <div class="xt-shine"></div>
                             ${c.tbc ? `<span class="xt-badge" style="background:#7e3fbf">Wishlist</span><div class="soon">coming soon</div>`
                               : c.edition !== "Standard" ? `<span class="xt-badge" style="background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.3)">${escapeHtml(c.edition)}</span>` : ""}
-                            ${c.sealed ? `<div class="xt-new">SEALED</div>` : c.completed ? `<div class="xt-ring" style="--p:100" title="Completed"><span>100%</span></div>` : ""}
+                            ${c.sealed ? `<div class="xt-new">SEALED</div>` : c.completed ? `<div class="xt-ring" style="--p:100" title="Completed"><span>100%</span></div>` : c.inProgress ? `<div class="xt-ring" style="--p:50" title="In progress"><span>▶</span></div>` : ""}
                             <div class="hint"><i class="btn-a a">A</i>Open</div>
                             <div class="xt-info">
                                 <div class="xt-title">${escapeHtml(c.title)}</div>
@@ -814,7 +816,7 @@
                                     <span>${!c.tbc && c.paid > 0 ? `paid ${fmtMoney(c.paid)}` : ""}</span>
                                 </div>
                             </div>`;
-                        el.querySelectorAll(".cond").forEach((p) => (p.style.cssText = "width:18px;height:18px;font-size:9px"));
+                        el.querySelectorAll(".cond").forEach((p) => (p.style.cssText = "height:18px;padding:0 6px;font-size:9px"));
                         el.onclick = () => openModal(row, index);
                         el.onkeydown = (e) => {
                             if (e.key === "Enter" || e.key === "a") openModal(row, index);

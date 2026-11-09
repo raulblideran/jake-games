@@ -329,8 +329,8 @@
             }
             .mctip .tt { font-size: 16px; }
             .r0 { color: #fff; } .r1 { color: #ffff55; } .r2 { color: #55ffff; } .r3 { color: #ff55ff; }
-            .c-gray { color: #aaa; } .c-dgray { color: #555; } .c-gold { color: #ffaa00; } .c-green { color: #55ff55; } .c-red { color: #ff5555; } .c-blue { color: #5555ff; } .c-aqua { color: #55ffff; } .c-purple { color: #aa00aa; }
-            .cond { border-radius: 0; width: 18px; height: 18px; font-size: 10px; }
+            .c-gray { color: #aaa; } .c-dgray { color: #555; } .c-gold { color: #ffaa00; } .c-green { color: #55ff55; } .c-red { color: #ff5555; } .c-blue { color: #5555ff; } .c-aqua { color: #55ffff; } .c-purple { color: #aa00aa; } .c-yellow { color: #ffff55; }
+            .cond { border-radius: 0; height: 18px; padding: 0 5px; font-size: 10px; }
             .delta-up { color: #55ff55; } .delta-down { color: #ff5555; }
 
             /* ---- Table / wall / shelf ----------------------------------- */
@@ -407,7 +407,7 @@
             <div class="cloud" style="top: 110px; width: 60px; animation-duration: 95s; animation-delay: -50s"></div>
             <div class="cloud" style="top: 70px; width: 100px; animation-duration: 120s; animation-delay: -90s"></div>
             <div class="logo">GAME<br />COLLECTION<span class="splash" id="splash">Also try Terraria!</span></div>
-            <div class="tag mc-text">Physical games · completeness · live CeX value</div>
+            <div class="tag mc-text">Physical games · condition · live CeX value</div>
             <div class="menu">
                 <a class="mcb big" href="achievements.html">🏆 Achievements</a>
                 <a class="mcb big" href="stats.html">📈 Statistics</a>
@@ -472,6 +472,7 @@
             };
         </script>
         <script src="theme-kit.js"></script>
+        <script src="sheet-config.js"></script>
         <script src="collection-core.js"></script>
         <script>
             (function () {
@@ -507,7 +508,7 @@
                         ["🏆", s.completed, `${s.completed} completed (${s.completedPct}%)`],
                         ["📦", s.complete, `${s.complete} complete in the box`],
                         ["✨", s.sealed, `${s.sealed} still sealed — enchanted!`],
-                        ["⭐", s.toBuy, s.toBuy ? `${s.toBuy} still on the wishlist` : "Wishlist empty"],
+                        ["⛏️", s.inProgress, s.inProgress ? `${s.inProgress} in progress — still mining` : "Nothing in progress"],
                     ];
                     hotLabels = slots.map((x) => x[2]);
                     document.getElementById("stats").innerHTML = `
@@ -544,8 +545,9 @@
                     if (c.edition !== "Standard") lines.push(`<div class="c-aqua">${escapeHtml(c.edition)}</div>`);
                     if (c.sealed) lines.push(`<div class="c-gold">✦ Sealed</div>`);
                     if (c.completed) lines.push(`<div class="c-green">✔ Completed</div>`);
+                    else if (c.inProgress) lines.push(`<div class="c-yellow">⛏ In progress</div>`);
                     if (c.tbc) lines.push(`<div class="c-purple">Wishlist · not owned</div>`);
-                    lines.push(`<div class="c-gray">Cover art: ${c.hasCoverArt === true ? "yes" : c.hasCoverArt === false ? "missing" : "n/a"} · Insert: ${c.hasInsert === true ? "yes" : c.hasInsert === false ? "missing" : "n/a"}</div>`);
+                    lines.push(`<div class="c-gray">Condition: ${escapeHtml(c.conditionLabel)}</div>`);
                     lines.push(`<div style="height:6px"></div><div class="c-gray">When on shelf:</div>`);
                     if (c.value > 0) lines.push(`<div class="c-blue">${fmtMoney(c.value)} Value</div>`);
                     if (!c.tbc && c.paid > 0) lines.push(`<div class="c-blue">${fmtMoney(c.paid)} Paid</div>`);
@@ -564,7 +566,7 @@
                     tip.style.left = `${x}px`;
                     tip.style.top = `${Math.max(8, y)}px`;
                 };
-                const CONSOLE_ICON = (n) => (/xbox/i.test(n) ? "🟩" : /playstation|psp/i.test(n) ? "🟦" : /wii|ds|nintendo|gameboy/i.test(n) ? "🟥" : /pc/i.test(n) ? "🖥" : "📦");
+                const CONSOLE_ICON = (n) => (/xbox/i.test(n) ? "🟩" : /playstation|psp/i.test(n) ? "🟦" : /wii|\bds\b|nintendo|gameboy|gba/i.test(n) ? "🟥" : /pc/i.test(n) ? "🖥" : "📦");
 
                 window.displayCards = function (data) {
                     const grid = document.getElementById("cardsGrid");
@@ -579,14 +581,15 @@
                         const el = document.createElement("div");
                         el.className = `slot${c.tbc ? " tbc" : ""}`;
                         el.style.animationDelay = `${Math.min(index * 0.01, 0.3)}s`;
+                        // Durability: box + manual + finished.
                         const dur = (c.hasCoverArt !== false ? 1 : 0) + (c.hasInsert !== false ? 1 : 0) + (c.completed ? 1 : 0);
                         const durColor = ["#ff3333", "#ffaa00", "#aaff00", "#33ff33"][dur];
                         el.innerHTML = `
                             <div class="slot-box ${c.sealed ? "glint" : ""}">
                                 <div class="slot-art">${c.cover || c.coverS ? kit.img(c.coverS || c.cover, "", c.title) : `<div class="noart">${CONSOLE_ICON(c.consoleName)}</div>`}</div>
-                                ${c.completed ? `<span class="badge-tl">✔</span>` : c.tbc ? `<span class="badge-tl">⭐</span>` : ""}
+                                ${c.completed ? `<span class="badge-tl">✔</span>` : c.inProgress ? `<span class="badge-tl">⛏</span>` : c.tbc ? `<span class="badge-tl">⭐</span>` : ""}
                                 ${c.value > 0 ? `<span class="slot-count">£${Math.round(c.value)}</span>` : ""}
-                                ${c.tbc ? "" : `<div class="dura" title="Cover, insert, completed"><i style="width:${Math.max(8, (dur / 3) * 100)}%;background:${durColor}"></i></div>`}
+                                ${c.tbc ? "" : `<div class="dura" title="Box, manual, completed"><i style="width:${Math.max(8, (dur / 3) * 100)}%;background:${durColor}"></i></div>`}
                             </div>
                             <div class="slot-name">${escapeHtml(c.title)}</div>`;
                         el.onmouseenter = (e) => {

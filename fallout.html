@@ -234,7 +234,7 @@
             .inv-stats div:nth-child(odd) { background: var(--g-faint); }
             .inv-hint { margin-top: 12px; font-size: 12px; color: var(--g-dim); text-align: center; animation: blink 1.2s steps(2) infinite; }
             @keyframes blink { 50% { opacity: 0.3; } }
-            .cond { border-radius: 0; width: 18px; height: 18px; font-size: 10px; }
+            .cond { border-radius: 0; height: 18px; padding: 0 5px; font-size: 10px; }
             .delta-up { color: var(--g); }
             .delta-down { color: var(--amber); }
 
@@ -444,10 +444,11 @@
                     close: "[ Exit ]",
                     empty: "> NO MATCHING ITEMS IN INVENTORY",
                 },
-                loadingHTML: `<div>LOADING MASTER HOLOTAPE…</div><div style="font-size:20px;margin-top:6px">▮▮▮▮▮▯▯▯▯▯</div>`,
+                loadingHTML: `<div>LOADING COLLECTION HOLOTAPE…</div><div style="font-size:20px;margin-top:6px">▮▮▮▮▮▯▯▯▯▯</div>`,
             };
         </script>
         <script src="theme-kit.js"></script>
+        <script src="sheet-config.js"></script>
         <script src="collection-core.js"></script>
         <script>
             (function () {
@@ -541,9 +542,9 @@
                         ["S", "Strength", "games carried", clamp10(s.games / 30), `Carrying ${s.games} games. Every 30 adds a point of Strength.`],
                         ["P", "Perception", "priced at CeX", clamp10((s.priced / Math.max(1, s.games)) * 10), `${s.priced} of ${s.games} games have a live CeX price.`],
                         ["E", "Endurance", "consoles", clamp10(s.consoles), `Surviving across ${s.consoles} different consoles.`],
-                        ["C", "Charisma", "editions", clamp10(editions * 1.5), `${editions} different editions on the shelf — Steelcases, GOTYs and all.`],
-                        ["I", "Intelligence", "complete in box", clamp10((s.complete / Math.max(1, s.games)) * 10), `${s.complete} of ${s.games} games have every piece the box came with.`],
-                        ["A", "Agility", "finished", clamp10(s.completedPct / 10 + 1), `${s.completed} games completed (${s.completedPct}%).`],
+                        ["C", "Charisma", "editions", clamp10(editions * 1.5), `${editions} different editions on the shelf — Steelcases, Sleeves and all.`],
+                        ["I", "Intelligence", "complete in box", clamp10((s.complete / Math.max(1, s.games)) * 10), `${s.complete} of ${s.games} games are complete in the box (${s.sealed} still sealed).`],
+                        ["A", "Agility", "finished", clamp10(s.completedPct / 10 + 1), `${s.completed} games completed (${s.completedPct}%), ${s.inProgress} in progress.`],
                         ["L", "Luck", "return on spend", clamp10(5 + s.gainPct / 10), `Spent ${fmtMoney(s.paid)}, worth ${fmtMoney(s.value)}: ${fmtSigned(s.gain)} (${s.gainPct >= 0 ? "+" : "−"}${Math.abs(s.gainPct)}%).`],
                     ];
                     special.forEach((sp) => (DESCS[sp[0]] = sp[4]));
@@ -569,6 +570,7 @@
                                     <div><span>CAPS SPENT</span><span>${fmtMoney(s.paid)}</span></div>
                                     <div><span>AVG PER GAME</span><span>${fmtMoney(avg)}</span></div>
                                     <div><span>SEALED</span><span>${s.sealed}</span></div>
+                                    <div><span>IN PROGRESS</span><span>${s.inProgress}</span></div>
                                     ${s.toBuy > 0 ? `<div><span>WANTED</span><span>${s.toBuy}</span></div>` : ""}
                                 </div>
                             </div>
@@ -585,7 +587,7 @@
                     document.getElementById("stHp").textContent = `HP ${s.completed}/${s.games}`;
                     document.getElementById("stLvl").textContent = `LEVEL ${lvl}`;
                     document.getElementById("stXp").style.width = `${(s.games % 10) * 10}%`;
-                    document.getElementById("stAp").textContent = `AP ${s.sealed}/${s.sealed}`;
+                    document.getElementById("stAp").textContent = `AP ${s.complete}/${s.games}`;
                     document.getElementById("stCaps").textContent = `CAPS ${fmtMoney(s.value)}`;
                 };
 
@@ -594,7 +596,6 @@
                 let sel = 0;
                 const detailHTML = (row) => {
                     const c = kit.card(row);
-                    const yn = (v) => (v === true ? "YES" : v === false ? "NO" : "N/A");
                     return `
                         <div class="inv-art">${c.cover || c.coverL ? kit.img(c.coverL || c.cover) : `<div class="noimg">?</div>`}</div>
                         <div class="inv-title">${escapeHtml(c.title)}</div>
@@ -604,10 +605,8 @@
                             <div><span>VAL</span><span>${c.value > 0 ? fmtMoney(c.value) : "—"}</span></div>
                             <div><span>PAID</span><span>${c.tbc ? "NOT OWNED" : fmtMoney(c.paid)}</span></div>
                             <div><span>GAIN</span><span class="${c.gain < 0 ? "delta-down" : ""}">${c.value > 0 || c.paid > 0 ? fmtSigned(c.gain) : "—"}</span></div>
-                            <div><span>COVER ART</span><span>${yn(c.hasCoverArt)}</span></div>
-                            <div><span>INSERT</span><span>${yn(c.hasInsert)}</span></div>
-                            <div><span>SEALED</span><span>${c.sealed ? "YES" : "NO"}</span></div>
-                            <div><span>COMPLETED</span><span>${c.completed ? "YES" : "NOT YET"}</span></div>
+                            <div><span>CONDITION</span><span>${escapeHtml(c.conditionLabel.toUpperCase())}</span></div>
+                            <div><span>PROGRESS</span><span>${escapeHtml(c.progressLabel.toUpperCase())}</span></div>
                             <div><span>ACQUIRED</span><span>${escapeHtml(c.date || "—")}</span></div>
                         </div>
                         <div class="inv-hint">[ CLICK / ENTER ] INSPECT</div>`;
@@ -635,7 +634,7 @@
                                 ${data
                                     .map((row, i) => {
                                         const c = kit.card(row);
-                                        const mark = c.tbc ? "○" : c.sealed ? "★" : c.completed ? "✓" : "■";
+                                        const mark = c.tbc ? "○" : c.sealed ? "★" : c.completed ? "✓" : c.inProgress ? "▶" : "■";
                                         return `<div class="inv-row${c.tbc ? " tbc" : ""}" data-i="${i}">
                                             <span class="mark">${mark}</span>
                                             <span class="t">${escapeHtml(c.title)}${c.edition !== "Standard" ? ` <span class="dim">(${escapeHtml(c.edition)})</span>` : ""}${c.dup ? ` <span class="dim">${escapeHtml(c.date)}</span>` : ""}</span>
