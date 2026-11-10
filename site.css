@@ -2,6 +2,11 @@
    brand, Pip-Boy-style section tabs that sit on a ruled line, and a slot
    for each page's own tools. Plain CSS so it works next to each page's
    Tailwind config. */
+/* Room for a scrollbar on every page, so pages with and without one put
+   the header (and its tabs) in exactly the same place. */
+html {
+    scrollbar-gutter: stable;
+}
 .site-head {
     position: sticky;
     top: 0;
@@ -12,7 +17,9 @@
 }
 .site-bar {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    /* Equal side columns keep the tabs in the same place on every page,
+       whatever each page puts in its tools slot. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 760px) minmax(0, 1fr);
     align-items: end;
     gap: 8px 24px;
     padding: 12px 40px 0;
@@ -63,9 +70,12 @@
     box-shadow: 0 0 14px rgba(34, 211, 238, 0.7);
     flex: none;
 }
+/* One equal slot per tab, each tab centred in its slot. */
 .site-tabs {
-    display: flex;
-    justify-content: space-around;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    justify-items: center;
     max-width: 760px;
     width: 100%;
     margin: 0 auto;
@@ -211,7 +221,7 @@
 
 @media (max-width: 900px) {
     .site-bar {
-        grid-template-columns: 1fr auto;
+        grid-template-columns: minmax(0, 1fr) auto;
         padding: 10px 16px 0;
     }
     .site-brand {
@@ -224,6 +234,8 @@
         grid-column: 1 / -1;
         grid-row: 2;
         max-width: none;
+        display: flex;
+        justify-content: space-around;
     }
     .site-tab {
         padding: 9px 12px 11px;
