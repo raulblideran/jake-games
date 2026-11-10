@@ -732,6 +732,9 @@
                 background: rgba(255, 255, 255, 0.025);
                 min-width: 0;
             }
+            .d-facts .d-art {
+                grid-column: 1 / -1;
+            }
             .d-facts dt {
                 color: var(--muted);
             }
@@ -1124,7 +1127,6 @@
 
         <script src="sheet-config.js"></script>
         <script src="collection-core.js"></script>
-        <script src="tgdb.js"></script>
         <script>
             // Home page: the Pip-Boy INV layout in the Original look, kept dense.
             // One-line list on the left, the selected game pinned on the right,
@@ -1134,19 +1136,40 @@
                 // Consoles are the tabs above the list, so the Filters panel skips them.
                 window.HIDE_CONSOLE_FILTER = true;
 
-                // Box art: TheGamesDB first (tgdb.js caches it per browser), CeX
-                // as the fallback. Everything that shows art goes through here:
-                // list, detail, wall, shelf, the full popup and the random pick.
-                const coreCoverFromRow = window.coverFromRow;
-                window.coverFromRow = (row, size = "m") => tgdb.cover(row, size) || coreCoverFromRow(row, size);
-                // An <img> for a cover that falls back to the CeX picture if the
-                // TheGamesDB one fails to load, and disappears if neither does.
+                // Box art comes only from the sheet: its Cover column (filled by
+                // tools/covers.gs, or a link pasted by hand). Games with an empty
+                // Cover cell show CeX's picture, built from the sheet's CeX link.
+                // No cover APIs are called from the browser. (collection-core.js's
+                // coverFromRow already does sheet → CeX.)
+                // Old browser-side cover caches, no longer used.
+                try {
+                    ["tgdbCovers_v1", "tgdbCovers_v2", "wikiCovers_v1", "tgdbMeta_v1", "tgdbLock"].forEach((k) => localStorage.removeItem(k));
+                } catch (e) {}
+
+                // Where a game's art comes from, for labels.
+                const SHEET_HOSTS = [
+                    [/thumbnails\.libretro\.com/, "RetroArch"],
+                    [/store-images\.s-microsoft\.com/, "Microsoft Store"],
+                    [/thegamesdb\.net/, "TheGamesDB"],
+                    [/wiki(m|p)edia\.org/, "Wikipedia"],
+                ];
+                const artSource = (row) => {
+                    const url = String(row["Cover"] || "").trim();
+                    if (/^https?:\/\//i.test(url)) {
+                        const host = SHEET_HOSTS.find(([re]) => re.test(url));
+                        return { src: "sheet", label: host ? host[1] : "your link", url };
+                    }
+                    return { src: "cex", label: cexCoverFromRow(row) ? "CeX (no cover in the sheet)" : "none (no cover in the sheet)" };
+                };
+                // A cover <img> that falls back to the CeX picture if the sheet's
+                // link fails to load, and disappears if neither does.
                 const coverImg = (row, size, attrs = "") => {
                     const src = coverFromRow(row, size);
                     if (!src) return "";
-                    const cex = coreCoverFromRow(row, size);
+                    const cex = cexCoverFromRow(row, size);
                     const backup = cex && cex !== src ? ` data-backup="${escapeHtml(cex)}"` : "";
-                    return `<img src="${escapeHtml(src)}"${backup} ${attrs} onerror="coverFailed(this)" />`;
+                    const from = artSource(row);
+                    return `<img src="${escapeHtml(src)}"${backup} title="Box art: ${escapeHtml(from.label)}" ${attrs} onerror="coverFailed(this)" />`;
                 };
                 window.coverFailed = (img) => {
                     const backup = img.dataset.backup;
@@ -1175,14 +1198,6 @@
                         ? `<img src="logos/${CONSOLE_LOGO[name]}.svg" alt="${escapeHtml(name)}" title="${escapeHtml(name)}" />`
                         : `<span class="wordmark" title="${escapeHtml(name)}">${escapeHtml(name)}</span>`;
 
-                // Hand the collection to tgdb.js once it's loaded or reloaded.
-                const coreParseSheets = window.parseSheets;
-                window.parseSheets = function () {
-                    const ok = coreParseSheets.apply(this, arguments);
-                    if (ok) tgdb.setRows(allData);
-                    return ok;
-                };
-
                 const root = document.documentElement;
                 const head = document.getElementById("siteHead");
                 const tabsEl = document.getElementById("consoleTabs");
@@ -1201,7 +1216,6 @@
                 let sel = 0;
                 let selKey = null;
                 let lastSig = "";
-                let wantTimer = null;
 
                 // ---- Summary: replaces both the stat tiles and the CeX strip ----------
                 function renderSummary() {
@@ -1337,6 +1351,14 @@
                                     ${fact("Progress", `<span class="dot ${isCompleted(r) ? "bg-emerald-400" : isInProgress(r) ? "bg-sky-400" : "bg-zinc-600"}"></span>${escapeHtml(progressLabel(r))}`)}
                                     ${fact("Edition", escapeHtml(ed))}
                                     ${fact("Bought", escapeHtml(r["Date Purchased"] || "—"))}
+                                    ${(() => {
+                                        const a = artSource(r);
+                                        const dot = a.src === "sheet" ? "bg-emerald-400" : "bg-zinc-600";
+                                        const label = a.url
+                                            ? `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener" class="hover:text-white underline decoration-white/20 underline-offset-2" title="Open the image from the sheet's Cover column">${escapeHtml(a.label)} ↗</a>`
+                                            : escapeHtml(a.label);
+                                        return `<div class="d-art"><dt>Box art</dt><dd><span class="dot ${dot}"></span>${label}</dd></div>`;
+                                    })()}
                                 </dl>
                                 ${isDuplicate(r) ? `<div class="d-notes">You own more than one copy on ${escapeHtml(consoleName)}.</div>` : ""}
                                 ${notes ? `<div class="d-notes">${escapeHtml(notes)}</div>` : ""}
@@ -1360,17 +1382,6 @@
                         refreshChipStates();
                         applyFilters();
                     };
-                    // No CeX box art: try RAWG, as the cards used to.
-                    if (!coverFromRow(r, "l")) {
-                        const key = rowKey(r);
-                        fetchGameCover(r["Game"], normalizeConsole(r["Console Version"])).then((url) => {
-                            if (!url || selKey !== key) return;
-                            const top = d.querySelector(".d-top");
-                            if (!top) return;
-                            top.insertAdjacentHTML("afterbegin", `<div class="bg" style="background-image:url('${escapeHtml(url)}')"></div>`);
-                            top.querySelector(".d-cover").innerHTML = `<img src="${escapeHtml(url)}" alt="" onerror="this.remove()" />`;
-                        });
-                    }
                 }
 
                 function select(i, scroll) {
@@ -1388,11 +1399,6 @@
                         if (scroll) el.scrollIntoView({ block: "nearest" });
                     }
                     showDetail(rows[sel]);
-                    // Look this game's cover up next, once the selection rests
-                    // (holding ↓ shouldn't queue every game it passes).
-                    clearTimeout(wantTimer);
-                    const r = rows[sel];
-                    wantTimer = setTimeout(() => tgdb.want(r), 400);
                 }
 
                 // ---- Column sorting ---------------------------------------------------------
@@ -1494,41 +1500,6 @@
                     if (currentView === "grid" && i >= 0 && i < rows.length && i !== sel) select(i, true);
                 };
 
-                // The full popup counts as viewing a game, too.
-                const coreOpenModal = window.openModal;
-                window.openModal = function (row) {
-                    if (row) tgdb.want(row);
-                    return coreOpenModal.apply(this, arguments);
-                };
-
-                // ---- Covers arriving: update what's on screen in place --------------------
-                const keyIndexes = (key) => visibleData.reduce((acc, r, i) => (tgdb.keyOf(r) === key ? acc.concat(i) : acc), []);
-                document.addEventListener("tgdb:cover", (e) => {
-                    for (const i of keyIndexes(e.detail.key)) {
-                        const r = visibleData[i];
-                        const thumb = document.querySelector(`#invList .inv-row[data-i="${i}"] .inv-thumb`);
-                        if (thumb) thumb.innerHTML = coverImg(r, "s", `alt="" decoding="async"`);
-                        const tile = document.querySelector(`#wallView .wall-tile[data-idx="${i}"]`);
-                        if (tile) {
-                            const img = tile.querySelector("img");
-                            if (img) img.src = coverFromRow(r, "m");
-                            else tile.firstElementChild.outerHTML = `<img src="${escapeHtml(coverFromRow(r, "m"))}" alt="" decoding="async" />`;
-                        }
-                        const spine = document.querySelector(`#shelfView .spine[data-idx="${i}"]`);
-                        if (spine) {
-                            spine.style.setProperty("--art", `url('${coverFromRow(r, "m")}')`);
-                            spine.classList.add("art");
-                        }
-                    }
-                    if (rows[sel] && tgdb.keyOf(rows[sel]) === e.detail.key) showDetail(rows[sel]);
-                    const open = !document.getElementById("modal").classList.contains("hidden") && modalList[modalIndex];
-                    if (open && tgdb.keyOf(open) === e.detail.key) {
-                        const poster = document.getElementById("modalPoster");
-                        poster.src = coverFromRow(open, "l");
-                        poster.classList.remove("hidden");
-                    }
-                });
-
                 // ---- Shelf: spines with a strip of the box art ---------------------------
                 window.renderShelf = function (data) {
                     const shelf = document.getElementById("shelfView");
@@ -1552,47 +1523,32 @@
                     shelf.querySelectorAll(".spine").forEach((t) => (t.onclick = () => openModalByIndex(Number(t.dataset.idx))));
                 };
 
-                // ---- Cover lookup status ---------------------------------------------------
+                // ---- Covers in the sheet: counter + Data health --------------------------
+                const hasSheetCover = (r) => /^https?:\/\//i.test(String(r["Cover"] || "").trim());
                 function showCoverStatus() {
-                    const st = tgdb.status();
                     const el = document.getElementById("sumCovers");
-                    if (!st.total) return (el.textContent = "");
-                    const reset = st.refreshAt ? new Date(st.refreshAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : null;
-                    el.innerHTML = `Covers <b>${st.cached}/${st.total}</b>`;
-                    el.title = [
-                        `${st.cached} of ${st.total} games have box art: ${st.fromTgdb} from TheGamesDB, ${st.fromWiki} from Wikipedia.`,
-                        st.misses ? `${st.misses} found on neither (CeX art is used for those).` : "",
-                        st.remaining !== null ? `TheGamesDB: ${st.remaining} lookups left this month${reset ? `, resets ${reset}` : ""}.` : "",
-                        st.paused
-                            ? "TheGamesDB is paused until then; Wikipedia fills in meanwhile."
-                            : st.saving
-                              ? "TheGamesDB lookups are being saved for games you open; Wikipedia fills in the rest."
-                              : "",
-                        st.proxyBlocked ? "The proxy isn't allowing api.thegamesdb.net." : "",
-                    ]
-                        .filter(Boolean)
-                        .join(" ");
+                    const total = allData.length;
+                    if (!total) return (el.textContent = "");
+                    const n = allData.filter(hasSheetCover).length;
+                    el.innerHTML = `Covers <b>${n}/${total}</b>`;
+                    el.title = `${n} of ${total} games have a cover in the sheet's Cover column. The rest show CeX's picture.`;
                 }
-                document.addEventListener("tgdb:status", showCoverStatus);
-                document.addEventListener("tgdb:cover", showCoverStatus);
                 const coreParseForStatus = window.parseSheets;
                 window.parseSheets = function () {
                     const ok = coreParseForStatus.apply(this, arguments);
                     if (ok) showCoverStatus();
                     return ok;
                 };
-
-                // ---- Data health: games TheGamesDB couldn't match -------------------------
                 const coreHealthChecks = window.healthChecks;
                 window.healthChecks = function () {
                     const checks = coreHealthChecks.apply(this, arguments);
-                    const misses = allData.filter((r) => tgdb.isMiss(r));
-                    if (misses.length)
+                    const missing = allData.filter((r) => !hasSheetCover(r));
+                    if (missing.length)
                         checks.push({
-                            label: "No box art found on TheGamesDB or Wikipedia",
+                            label: "No cover in the sheet",
                             level: "info",
-                            why: "These titles didn't match on either site. Fixing a typo in the sheet usually sorts it; until then they use CeX art.",
-                            rows: misses,
+                            why: "Their Cover cell is empty: the covers script found nothing (usually a typo in the title). Fix the title and run fillCoversNow, or paste an image link into the cell.",
+                            rows: missing,
                         });
                     return checks;
                 };

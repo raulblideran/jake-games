@@ -1,7 +1,6 @@
 // === CONFIG ============================================================
 // The sheet source (one tab per console) lives in sheet-config.js, which
 // must load before this file.
-const RAWG_API_KEY = "d6b5463dab6046898cccf5575f84f9d1";
 
 // Our CeX proxies on Deno Deploy: a local copy (localhost or a file opened
 // directly) uses the dev one, so testing doesn't eat the live site's quota.
@@ -509,6 +508,7 @@ const HEADER_ALIASES = [
     [/date\s*purchas/i, "Date Purchased"],
     [/(purchase|paid)\s*price|price\s*purchased/i, "Purchase Price"],
     [/current\s*price/i, "Current Price"],
+    [/^cover$/i, "Cover"], // box-art link, filled by tools/covers.gs
     [/cex|listing|link/i, "CEX Listing"],
     [/console/i, "Console Version"],
 ];
@@ -672,7 +672,26 @@ function cexImageFromUrl(cexUrl, size = "m") {
 
 // Once a SKU has been priced we know its exact image path from the API,
 // which is the only reliable source for DS / PSP / PC / GBA titles.
+// The sheet's Cover column (filled by tools/covers.gs, or pasted by hand).
+// Hosts that can resize are asked for a lighter image at small sizes.
+const SHEET_COVER_SIZES = { s: [150, "small"], m: [300, "thumb"], l: [720, "medium"] };
+function sheetCoverUrl(row, size = "m") {
+    const url = String(row["Cover"] || "").trim();
+    if (!/^https?:\/\//i.test(url)) return null;
+    const [w, tgdbSize] = SHEET_COVER_SIZES[size] || SHEET_COVER_SIZES.m;
+    if (/store-images\.s-microsoft\.com/.test(url))
+        return url.replace(/\?.*$/, "") + `?w=${w}`;
+    if (/cdn\.thegamesdb\.net\/images\//.test(url))
+        return url.replace(/\/images\/[a-z_]+\//, `/images/${tgdbSize}/`);
+    return url;
+}
+
+// Box art: the sheet's Cover link if there is one, otherwise CeX's.
 function coverFromRow(row, size = "m") {
+    return sheetCoverUrl(row, size) || cexCoverFromRow(row, size);
+}
+
+function cexCoverFromRow(row, size = "m") {
     const links = parseCexLinks(row["CEX Listing"]);
     if (links.length === 0) return null;
     const sku = extractCexSku(links[0]);
@@ -961,31 +980,12 @@ function timeAgo(ts) {
     return hrs === 1 ? "1 hour ago" : `${hrs} hours ago`;
 }
 
-// === RAWG COVERS (fallback for rows with no CeX SKU) ====================
-async function fetchGameCover(title, consoleName) {
-    const key = `${title}__${consoleName}`;
-    if (coverCache[key] !== undefined) return coverCache[key];
-    if (!RAWG_API_KEY) {
-        coverCache[key] = null;
-        return null;
-    }
-    try {
-        const url = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(
-            title,
-        )}&page_size=1`;
-        const resp = await fetch(url);
-        if (!resp.ok) {
-            coverCache[key] = null;
-            return null;
-        }
-        const json = await resp.json();
-        const img = json?.results?.[0]?.background_image || null;
-        coverCache[key] = img;
-        return img;
-    } catch (e) {
-        coverCache[key] = null;
-        return null;
-    }
+// === EXTRA COVER LOOKUPS =================================================
+// Covers come only from the sheet (its Cover column, else the CeX link), so
+// nothing is looked up from the browser. Callers (the themes' "no art yet"
+// fallback) get null and keep their placeholder.
+async function fetchGameCover() {
+    return null;
 }
 
 // === STATS =============================================================
@@ -1788,7 +1788,7 @@ function displayCards(data) {
         `;
         frag.appendChild(card);
 
-        // RAWG is only needed for the handful of rows with no CeX SKU
+        // Rows with no art from the sheet or CeX keep the placeholder (no lookups)
         // (eBay links, mostly). Hold the element itself rather than
         // looking it up later — a re-render would rebind the id to a
         // different game.
@@ -2015,7 +2015,7 @@ async function openModal(row, index) {
     modal.classList.add("flex");
     document.body.style.overflow = "hidden";
 
-    // Cover art — CeX box art preferred, RAWG as fallback.
+    // Cover art: the sheet's Cover link, else CeX's picture.
     poster.classList.add("hidden");
     poster.src = "";
     poster.onerror = null;

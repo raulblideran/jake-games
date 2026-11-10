@@ -252,7 +252,8 @@
             ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="${cls}" loading="lazy" decoding="async" onerror="this.remove()" />`
             : "";
 
-    // RAWG fallback for rows CeX can't picture. Holds the element itself so a
+    // Fallback hook for rows with no art (fetchGameCover returns null now: covers
+    // come only from the sheet). Holds the element itself so a
     // re-render can't send the image to a different game.
     kit.coverFallback = (el, c, cls = "kit-fallback-img") => {
         if (c.cover || !el) return;
