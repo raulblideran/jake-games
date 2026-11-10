@@ -120,7 +120,8 @@ let duplicateKeys = new Set();
 const SORT_OPTIONS = [
     ["title", "Title (A–Z)"],
     ["title-desc", "Title (Z–A)"],
-    ["console", "Console"],
+    ["console", "Console (A–Z)"],
+    ["console-desc", "Console (Z–A)"],
     ["value-desc", "CeX value (high → low)"],
     ["value-asc", "CeX value (low → high)"],
     ["gain-desc", "Biggest gain"],
@@ -1519,11 +1520,12 @@ function sortCards() {
     filteredData.sort((a, b) => {
         switch (currentSort) {
             case "console":
-                return (
-                    normalizeConsole(a["Console Version"]).localeCompare(
-                        normalizeConsole(b["Console Version"]),
-                    ) || byTitle(a, b)
+            case "console-desc": {
+                const c = normalizeConsole(a["Console Version"]).localeCompare(
+                    normalizeConsole(b["Console Version"]),
                 );
+                return (currentSort === "console" ? c : -c) || byTitle(a, b);
+            }
             case "title-desc":
                 return byTitle(b, a);
             case "value-desc":

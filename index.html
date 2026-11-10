@@ -318,7 +318,7 @@
             .inv-head,
             .inv-row {
                 display: grid;
-                grid-template-columns: 34px minmax(0, 1fr) 104px 76px 84px;
+                grid-template-columns: 34px minmax(0, 1fr) 118px 104px 76px 84px;
                 gap: 14px;
                 align-items: center;
                 padding: 0 16px;
@@ -425,6 +425,37 @@
                 font-size: 12.5px;
                 margin-left: 10px;
             }
+            /* Console column: the platform's logo, white like the text. */
+            .inv-console {
+                display: flex;
+                align-items: center;
+                min-width: 0;
+                height: 22px;
+            }
+            .inv-console img {
+                height: 15px;
+                width: auto;
+                max-width: 100%;
+                object-fit: contain;
+                object-position: left center;
+                filter: brightness(0) invert(1);
+                opacity: 0.62;
+            }
+            .inv-row:hover .inv-console img,
+            .inv-row.sel .inv-console img {
+                opacity: 0.95;
+            }
+            .wordmark {
+                font-weight: 800;
+                letter-spacing: -0.01em;
+                color: #d4d4d8;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .inv-console .wordmark {
+                font-size: 12px;
+            }
             .inv-flags {
                 display: flex;
                 align-items: center;
@@ -467,7 +498,9 @@
                     height: 50px;
                 }
                 .inv-head .h-cond,
-                .inv-head .h-paid {
+                .inv-head .h-paid,
+                .inv-head .h-console,
+                .inv-console {
                     display: none;
                 }
                 .inv-thumb {
@@ -568,6 +601,48 @@
                 min-width: 0;
                 display: flex;
                 flex-direction: column;
+            }
+            /* The console, big: the first thing in the panel's header. */
+            .d-logo {
+                height: clamp(40px, 3.4vw, 58px);
+                display: flex;
+                align-items: center;
+                margin-bottom: 14px;
+            }
+            .d-logo img {
+                height: 100%;
+                width: auto;
+                max-width: 100%;
+                object-fit: contain;
+                object-position: left center;
+                filter: brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0, 0, 0, 0.5));
+            }
+            .d-logo .wordmark {
+                font-size: clamp(28px, 2.6vw, 44px);
+                color: #fff;
+            }
+            /* Shelf spines show a strip of the box art under the title. */
+            #shelfView .spine {
+                background: var(--spine);
+            }
+            #shelfView .spine.art {
+                background:
+                    linear-gradient(90deg, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.18) 50%, rgba(0, 0, 0, 0.62)),
+                    var(--art) center / cover no-repeat,
+                    var(--spine);
+                color: #fff;
+                text-shadow:
+                    0 1px 2px #000,
+                    0 0 6px rgba(0, 0, 0, 0.9);
+            }
+            .sum-covers {
+                font-size: 11px;
+                color: var(--faint);
+                white-space: nowrap;
+            }
+            .sum-covers b {
+                color: #a1a1aa;
+                font-weight: 600;
             }
             .d-badges {
                 display: flex;
@@ -837,6 +912,7 @@
                         <span id="calcCexIcon">↻</span><span>CeX prices</span>
                     </button>
                     <div id="cexStatus">Waiting for collection data…</div>
+                    <span class="sum-covers" id="sumCovers"></span>
                 </div>
             </section>
 
@@ -1048,6 +1124,7 @@
 
         <script src="sheet-config.js"></script>
         <script src="collection-core.js"></script>
+        <script src="tgdb.js"></script>
         <script>
             // Home page: the Pip-Boy INV layout in the Original look, kept dense.
             // One-line list on the left, the selected game pinned on the right,
@@ -1056,6 +1133,55 @@
             (function () {
                 // Consoles are the tabs above the list, so the Filters panel skips them.
                 window.HIDE_CONSOLE_FILTER = true;
+
+                // Box art: TheGamesDB first (tgdb.js caches it per browser), CeX
+                // as the fallback. Everything that shows art goes through here:
+                // list, detail, wall, shelf, the full popup and the random pick.
+                const coreCoverFromRow = window.coverFromRow;
+                window.coverFromRow = (row, size = "m") => tgdb.cover(row, size) || coreCoverFromRow(row, size);
+                // An <img> for a cover that falls back to the CeX picture if the
+                // TheGamesDB one fails to load, and disappears if neither does.
+                const coverImg = (row, size, attrs = "") => {
+                    const src = coverFromRow(row, size);
+                    if (!src) return "";
+                    const cex = coreCoverFromRow(row, size);
+                    const backup = cex && cex !== src ? ` data-backup="${escapeHtml(cex)}"` : "";
+                    return `<img src="${escapeHtml(src)}"${backup} ${attrs} onerror="coverFailed(this)" />`;
+                };
+                window.coverFailed = (img) => {
+                    const backup = img.dataset.backup;
+                    if (backup) {
+                        delete img.dataset.backup;
+                        img.src = backup;
+                    } else img.remove();
+                };
+
+                // Console logos (logos/*.svg). Anything unlisted gets a wordmark.
+                const CONSOLE_LOGO = {
+                    "Xbox 360": "xbox-360",
+                    "Xbox One": "xbox-one",
+                    "Xbox Series": "xbox-series",
+                    "PlayStation 1": "playstation",
+                    "PlayStation 2": "playstation-2",
+                    "PlayStation 4": "playstation-4",
+                    PSP: "psp",
+                    PC: "pc",
+                    GBA: "gba",
+                    DS: "ds",
+                    Wii: "wii",
+                };
+                const consoleLogo = (name) =>
+                    CONSOLE_LOGO[name]
+                        ? `<img src="logos/${CONSOLE_LOGO[name]}.svg" alt="${escapeHtml(name)}" title="${escapeHtml(name)}" />`
+                        : `<span class="wordmark" title="${escapeHtml(name)}">${escapeHtml(name)}</span>`;
+
+                // Hand the collection to tgdb.js once it's loaded or reloaded.
+                const coreParseSheets = window.parseSheets;
+                window.parseSheets = function () {
+                    const ok = coreParseSheets.apply(this, arguments);
+                    if (ok) tgdb.setRows(allData);
+                    return ok;
+                };
 
                 const root = document.documentElement;
                 const head = document.getElementById("siteHead");
@@ -1075,6 +1201,7 @@
                 let sel = 0;
                 let selKey = null;
                 let lastSig = "";
+                let wantTimer = null;
 
                 // ---- Summary: replaces both the stat tiles and the CeX strip ----------
                 function renderSummary() {
@@ -1147,14 +1274,14 @@
 
                 // ---- List rows: one line each -------------------------------------------
                 function rowHTML(r, i) {
-                    const thumb = coverFromRow(r, "s");
                     const value = rowValue(r);
                     const paid = rowPaid(r);
                     const ed = editionOf(r);
-                    const sub = [normalizeConsole(r["Console Version"]), ed !== "Standard" ? ed : "", isDuplicate(r) ? r["Date Purchased"] : ""].filter(Boolean).join(" · ");
+                    const sub = [ed !== "Standard" ? ed : "", isDuplicate(r) ? r["Date Purchased"] : ""].filter(Boolean).join(" · ");
                     return `<div class="inv-row" data-i="${i}" role="option" aria-selected="false">
-                        <div class="inv-thumb">${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy" decoding="async" onerror="this.remove()" />` : ""}</div>
+                        <div class="inv-thumb">${coverImg(r, "s", `alt="" loading="lazy" decoding="async"`)}</div>
                         <div class="inv-name"><span class="inv-t">${escapeHtml(r["Game"] || "Untitled")}</span><span class="inv-s">${escapeHtml(sub)}</span></div>
+                        <div class="inv-console">${consoleLogo(normalizeConsole(r["Console Version"]))}</div>
                         <div class="inv-flags">${progressPill(r)}${completenessPills(r)}</div>
                         <div class="inv-paid">${paid > 0 ? fmtMoney(paid) : "free"}</div>
                         <div class="inv-v${value > 0 ? "" : " none"}">${value > 0 ? fmtMoney(value) : "—"}</div>
@@ -1182,7 +1309,6 @@
                         }
                     };
                     const badges = [
-                        `<span class="d-badge">${escapeHtml(consoleName)}</span>`,
                         ed !== "Standard" ? `<span class="d-badge ed">${escapeHtml(ed)}</span>` : "",
                         isSealed(r) ? `<span class="d-badge sealed">Sealed</span>` : "",
                         isCompleted(r) ? `<span class="d-badge done">✓ Completed</span>` : "",
@@ -1193,8 +1319,9 @@
                         <div class="panel">
                             <div class="d-top" style="--hue:${consoleHue(consoleName)}">
                                 ${cover ? `<div class="bg" style="background-image:url('${escapeHtml(cover)}')"></div>` : ""}
-                                <div class="d-cover">${cover ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(r["Game"] || "")}" onerror="this.remove()" />` : `<div class="noart">${escapeHtml(consoleName)}</div>`}</div>
+                                <div class="d-cover">${cover ? coverImg(r, "l", `alt="${escapeHtml(r["Game"] || "")}"`) : `<div class="noart">${escapeHtml(consoleName)}</div>`}</div>
                                 <div class="d-head">
+                                    <div class="d-logo">${consoleLogo(consoleName)}</div>
                                     <div class="d-badges">${badges}</div>
                                     <h2 class="d-title">${escapeHtml(r["Game"] || "Untitled")}</h2>
                                     <div class="d-money">
@@ -1261,12 +1388,18 @@
                         if (scroll) el.scrollIntoView({ block: "nearest" });
                     }
                     showDetail(rows[sel]);
+                    // Look this game's cover up next, once the selection rests
+                    // (holding ↓ shouldn't queue every game it passes).
+                    clearTimeout(wantTimer);
+                    const r = rows[sel];
+                    wantTimer = setTimeout(() => tgdb.want(r), 400);
                 }
 
                 // ---- Column sorting ---------------------------------------------------------
                 // [ascending, descending] sort keys per column.
                 const SORT_DIRS = {
                     game: ["title", "title-desc"],
+                    console: ["console", "console-desc"],
                     // ▼ = best condition first (sealed at the top).
                     cond: ["condition-worst", "condition-best"],
                     paid: ["paid-asc", "paid-desc"],
@@ -1276,6 +1409,7 @@
                 // first, then reversed, then back to the default.
                 const SORT_CYCLE = {
                     game: ["title", "title-desc"],
+                    console: ["console", "console-desc", "title"],
                     cond: ["condition-best", "condition-worst", "title"],
                     paid: ["paid-desc", "paid-asc", "title"],
                     value: ["value-desc", "value-asc", "title"],
@@ -1316,6 +1450,7 @@
                             <div class="inv-head" role="presentation">
                                 <span></span>
                                 <span>${sortBtn("game", "Game")}</span>
+                                <span class="h-console">${sortBtn("console", "Console")}</span>
                                 <span class="h-cond r">${sortBtn("cond", "Condition")}</span>
                                 <span class="h-paid r">${sortBtn("paid", "Paid")}</span>
                                 <span class="r">${sortBtn("value", "CeX price")}</span>
@@ -1357,6 +1492,109 @@
                     const i = modalIndex;
                     coreCloseModal.apply(this, arguments);
                     if (currentView === "grid" && i >= 0 && i < rows.length && i !== sel) select(i, true);
+                };
+
+                // The full popup counts as viewing a game, too.
+                const coreOpenModal = window.openModal;
+                window.openModal = function (row) {
+                    if (row) tgdb.want(row);
+                    return coreOpenModal.apply(this, arguments);
+                };
+
+                // ---- Covers arriving: update what's on screen in place --------------------
+                const keyIndexes = (key) => visibleData.reduce((acc, r, i) => (tgdb.keyOf(r) === key ? acc.concat(i) : acc), []);
+                document.addEventListener("tgdb:cover", (e) => {
+                    for (const i of keyIndexes(e.detail.key)) {
+                        const r = visibleData[i];
+                        const thumb = document.querySelector(`#invList .inv-row[data-i="${i}"] .inv-thumb`);
+                        if (thumb) thumb.innerHTML = coverImg(r, "s", `alt="" decoding="async"`);
+                        const tile = document.querySelector(`#wallView .wall-tile[data-idx="${i}"]`);
+                        if (tile) {
+                            const img = tile.querySelector("img");
+                            if (img) img.src = coverFromRow(r, "m");
+                            else tile.firstElementChild.outerHTML = `<img src="${escapeHtml(coverFromRow(r, "m"))}" alt="" decoding="async" />`;
+                        }
+                        const spine = document.querySelector(`#shelfView .spine[data-idx="${i}"]`);
+                        if (spine) {
+                            spine.style.setProperty("--art", `url('${coverFromRow(r, "m")}')`);
+                            spine.classList.add("art");
+                        }
+                    }
+                    if (rows[sel] && tgdb.keyOf(rows[sel]) === e.detail.key) showDetail(rows[sel]);
+                    const open = !document.getElementById("modal").classList.contains("hidden") && modalList[modalIndex];
+                    if (open && tgdb.keyOf(open) === e.detail.key) {
+                        const poster = document.getElementById("modalPoster");
+                        poster.src = coverFromRow(open, "l");
+                        poster.classList.remove("hidden");
+                    }
+                });
+
+                // ---- Shelf: spines with a strip of the box art ---------------------------
+                window.renderShelf = function (data) {
+                    const shelf = document.getElementById("shelfView");
+                    if (!data.length) {
+                        shelf.innerHTML = `<p class="w-full text-center text-zinc-500 py-16 text-sm">No games match these filters.</p>`;
+                        return;
+                    }
+                    shelf.innerHTML = data
+                        .map((row, index) => {
+                            const name = normalizeConsole(row["Console Version"]);
+                            const hue = consoleHue(name);
+                            const paid = rowPaid(row);
+                            // Fatter spine for a pricier game, as before.
+                            const width = Math.round(Math.max(19, Math.min(44, 19 + paid * 1.1)));
+                            const light = 26 + ((index * 7) % 10);
+                            const cover = coverFromRow(row, "m");
+                            const style = `width:${width}px;--spine:linear-gradient(90deg,hsl(${hue} 42% ${light + 8}%),hsl(${hue} 46% ${light}%))${cover ? `;--art:url('${escapeHtml(cover)}')` : ""}`;
+                            return `<div class="spine${isSealed(row) ? " sealed" : ""}${cover ? " art" : ""}" data-idx="${index}" style="${style}" title="${escapeHtml(`${row["Game"]} · ${name} · ${fmtMoney(paid)}`)}">${escapeHtml(row["Game"])}</div>`;
+                        })
+                        .join("");
+                    shelf.querySelectorAll(".spine").forEach((t) => (t.onclick = () => openModalByIndex(Number(t.dataset.idx))));
+                };
+
+                // ---- Cover lookup status ---------------------------------------------------
+                function showCoverStatus() {
+                    const st = tgdb.status();
+                    const el = document.getElementById("sumCovers");
+                    if (!st.total) return (el.textContent = "");
+                    const reset = st.refreshAt ? new Date(st.refreshAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : null;
+                    el.innerHTML = `Covers <b>${st.cached}/${st.total}</b>`;
+                    el.title = [
+                        `${st.cached} of ${st.total} games have box art: ${st.fromTgdb} from TheGamesDB, ${st.fromWiki} from Wikipedia.`,
+                        st.misses ? `${st.misses} found on neither (CeX art is used for those).` : "",
+                        st.remaining !== null ? `TheGamesDB: ${st.remaining} lookups left this month${reset ? `, resets ${reset}` : ""}.` : "",
+                        st.paused
+                            ? "TheGamesDB is paused until then; Wikipedia fills in meanwhile."
+                            : st.saving
+                              ? "TheGamesDB lookups are being saved for games you open; Wikipedia fills in the rest."
+                              : "",
+                        st.proxyBlocked ? "The proxy isn't allowing api.thegamesdb.net." : "",
+                    ]
+                        .filter(Boolean)
+                        .join(" ");
+                }
+                document.addEventListener("tgdb:status", showCoverStatus);
+                document.addEventListener("tgdb:cover", showCoverStatus);
+                const coreParseForStatus = window.parseSheets;
+                window.parseSheets = function () {
+                    const ok = coreParseForStatus.apply(this, arguments);
+                    if (ok) showCoverStatus();
+                    return ok;
+                };
+
+                // ---- Data health: games TheGamesDB couldn't match -------------------------
+                const coreHealthChecks = window.healthChecks;
+                window.healthChecks = function () {
+                    const checks = coreHealthChecks.apply(this, arguments);
+                    const misses = allData.filter((r) => tgdb.isMiss(r));
+                    if (misses.length)
+                        checks.push({
+                            label: "No box art found on TheGamesDB or Wikipedia",
+                            level: "info",
+                            why: "These titles didn't match on either site. Fixing a typo in the sheet usually sorts it; until then they use CeX art.",
+                            rows: misses,
+                        });
+                    return checks;
                 };
 
                 document.addEventListener("keydown", (e) => {
